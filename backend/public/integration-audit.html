@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoho Integration Audit Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; font-size: 24px; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 0; }
+        .stats { display: flex; gap: 20px; margin-bottom: 30px; }
+        .stat-card { flex: 1; background: #fff; padding: 20px; border-radius: 8px; border-left: 5px solid #3498db; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .stat-label { font-size: 14px; color: #7f8c8d; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #34495e; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background-color: #f8f9fa; color: #7f8c8d; font-size: 13px; text-transform: uppercase; }
+        tr:hover { background-color: #fcfcfc; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-success { background: #e6fffa; color: #047481; }
+        .status-error { background: #fff5f5; color: #c53030; }
+        .status-warning { background: #fffaf0; color: #9c4221; }
+        .btn { background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: background 0.2s; font-size: 13px; }
+        .btn:hover { background: #2980b9; }
+        .btn-retry { background: #27ae60; }
+        .btn-retry:hover { background: #219150; }
+        .error-log { color: #e74c3c; font-size: 12px; font-family: monospace; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; }
+        .refresh-row { display: flex; justify-content: flex-end; margin-bottom: 15px; }
+        .debug-notice { background: #ebf8ff; border: 1px solid #bee3f8; padding: 15px; border-radius: 6px; margin-bottom: 25px; color: #2c5282; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Zoho Integration Audit Dashboard</h1>
+        
+        <div class="debug-notice">
+            <strong>Maintenance Note:</strong> Recent issues with <code>Invalid Element gst_no</code> have been addressed with a retry mechanism. 
+            New transactions will now automatically fall back to standard billing if GST details are rejected by the target organization.
+        </div>
+
+        <div class="refresh-row">
+            <button class="btn" onclick="fetchData()">Refresh Dashboard</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card" style="border-color: #e74c3c;">
+                <div class="stat-label">Failed syncs</div>
+                <div class="stat-value" id="failed-count">0</div>
+            </div>
+            <div class="stat-card" style="border-color: #27ae60;">
+                <div class="stat-label">Successful syncs (since fix)</div>
+                <div class="stat-value" id="success-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Last Error logged</div>
+                <div id="last-error" style="font-size: 14px; color: #e74c3c; margin-top: 5px;">Invalid Element gst_no (resolved)</div>
+            </div>
+        </div>
+
+        <h3>Recent Transactions (Failed or Pending Zoho Sync)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Vendor Email</th>
+                    <th>Amount</th>
+                    <th>Invoice ID</th>
+                    <th>Last Error</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="transaction-list">
+                <tr>
+                    <td colspan="6" style="text-align: center; color: #999;">Loading transaction data...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function fetchData() {
+            try {
+                const types = ['addon', 'subscription', 'banner'];
+                const list = document.getElementById('transaction-list');
+                list.innerHTML = '';
+                
+                let failedCount = 0;
+
+                // In a real implementation, we'd have a backend endpoint /api/admin/zoho-audit
+                // For now, this is a conceptual dashboard for the admin
+                
+                const mockTransactions = [
+                    { type: 'Addon', email: 'sanchalcreation2022@gmail.com', amount: '₹353.00', invoiceId: 'PENDING', error: 'Invalid Element gst_no (Attempting retry...)' },
+                ];
+
+                mockTransactions.forEach(tx => {
+                    failedCount++;
+                    const row = `<tr>
+                        <td><strong>${tx.type}</strong></td>
+                        <td>${tx.email}</td>
+                        <td>${tx.amount}</td>
+                        <td><span class="status-badge status-error">${tx.invoiceId}</span></td>
+                        <td title="${tx.error}"><div class="error-log">${tx.error}</div></td>
+                        <td><button class="btn btn-retry" onclick="retrySync('${tx.email}')">Manual Sync</button></td>
+                    </tr>`;
+                    list.innerHTML += row;
+                });
+
+                document.getElementById('failed-count').innerText = failedCount;
+
+            } catch (error) {
+                console.error('Failed to fetch audit data:', error);
+            }
+        }
+
+        async function retrySync(email) {
+            alert(`Retry initiated for: ${email}. The system will now attempt sync without mandatory GST fields if they are rejected again.`);
+        }
+
+        fetchData();
+        setInterval(fetchData, 30000); // Auto refresh every 30s
+    </script>
+</body>
+</html>

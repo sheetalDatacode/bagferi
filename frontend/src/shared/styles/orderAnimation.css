@@ -1,0 +1,337 @@
+.order {
+    appearance: none;
+    border: 0;
+    background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+    position: relative;
+    height: 56px;
+    width: 100%;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
+}
+
+.order:hover {
+    box-shadow: 0 6px 20px rgba(0, 184, 148, 0.4);
+}
+
+.order:active {
+    transform: scale(0.98);
+}
+
+.order .default {
+    display: block;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 56px;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.order .success {
+    display: block;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 56px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.3s ease;
+}
+
+.order .success svg {
+    width: 12px;
+    height: 10px;
+    display: inline-block;
+    vertical-align: middle;
+    fill: none;
+    margin: -3px 6px 0 0;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 16px;
+    stroke-dashoffset: 16px;
+}
+
+.order .truck {
+    height: 30px;
+    width: 71px;
+    position: absolute;
+    z-index: 1;
+    top: 17px;
+    left: -100%;
+    transform: translateX(-50%);
+}
+
+.order .truck:before, .order .truck:after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 12px;
+    width: 10px;
+    height: 10px;
+    background: #505162;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: 37px 0 0 #505162;
+}
+
+.order .truck:before {
+    animation: wheel 0.4s linear infinite;
+}
+
+.order .truck .back {
+    left: 0;
+    top: 0;
+    width: 60px;
+    height: 26px;
+    z-index: 1;
+    background: #eee;
+    position: absolute;
+    border-radius: 3px 3px 3px 3px;
+}
+
+.order .truck .back:before {
+    content: '';
+    left: 11px;
+    top: 0;
+    width: 2px;
+    height: 26px;
+    position: absolute;
+    background: #dbdbdb;
+}
+
+.order .truck .front {
+    left: 60px;
+    bottom: 0;
+    width: 11px;
+    height: 20px;
+    z-index: 2;
+    background: #eee;
+    position: absolute;
+    border-radius: 1px 9px 3px 1px;
+}
+
+.order .truck .front:before {
+    content: '';
+    width: 5px;
+    height: 8px;
+    background: #fff;
+    left: 0;
+    top: 2px;
+    position: absolute;
+    border-radius: 1px 3px 1px 1px;
+}
+
+.order .truck .light {
+    width: 3px;
+    height: 1px;
+    left: 10px;
+    bottom: 4px;
+    position: absolute;
+    border-radius: 1px;
+    background: #ffcc00;
+}
+
+.order .truck .light:before {
+    content: '';
+    width: 3px;
+    height: 1px;
+    left: 0;
+    top: -11px;
+    position: absolute;
+    border-radius: 1px;
+    background: #ffcc00;
+}
+
+.order .box {
+    width: 13px;
+    height: 13px;
+    border: 2px solid #eee;
+    position: absolute;
+    z-index: 10;
+    top: 24px;
+    left: -15px;
+    opacity: 0;
+}
+
+.order .box:before, .order .box:after {
+    content: '';
+    position: absolute;
+    background: #eee;
+}
+
+.order .box:before {
+    top: 0;
+    left: 4px;
+    width: 1px;
+    bottom: 0;
+}
+
+.order .box:after {
+    left: 0;
+    top: 4px;
+    right: 0;
+    height: 1px;
+}
+
+.order.animate .default {
+    opacity: 0;
+}
+
+.order.animate .truck {
+    animation: truck 10s ease forwards;
+}
+
+.order.animate .truck:before {
+    animation: wheel 0.4s linear infinite;
+}
+
+.order.animate .box {
+    animation: box 10s ease forwards;
+}
+
+.order.animate .success {
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.3s ease 9.6s;
+}
+
+.order.animate .success svg {
+    stroke-dashoffset: 0;
+    transition: all 0.3s ease 9.8s;
+}
+
+.order .lines {
+    opacity: 0;
+    position: absolute;
+    height: 2px;
+    background: #fff;
+    width: 100%;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+}
+
+.order .lines:before, .order .lines:after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #fff 0%, #fff 60%, transparent 60%, transparent 100%);
+    background-size: 30px 2px;
+    animation: lines 0.8s linear infinite;
+}
+
+.order .lines:before {
+    opacity: 0.2;
+}
+
+.order .lines:after {
+    opacity: 0.8;
+}
+
+.order.animate .lines {
+    opacity: 1;
+    transition: opacity 0.3s ease 0.3s;
+    animation: lines-fade 10s ease forwards;
+}
+
+@keyframes wheel {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes truck {
+    10% {
+        transform: translateX(0);
+    }
+    45% {
+        transform: translateX(110px);
+    }
+    55% {
+        transform: translateX(110px);
+    }
+    90% {
+        transform: translateX(300px);
+    }
+    100% {
+        transform: translateX(300px);
+    }
+}
+
+@keyframes box {
+    8% {
+        opacity: 1;
+    }
+    10% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    45% {
+        opacity: 1;
+        transform: translateX(110px);
+    }
+    55% {
+        opacity: 1;
+        transform: translateX(110px);
+    }
+    90% {
+        opacity: 1;
+        transform: translateX(300px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(300px);
+    }
+}
+
+@keyframes lines {
+    100% {
+        background-position: -30px 0;
+    }
+}
+
+@keyframes lines-fade {
+    0% {
+        opacity: 0;
+    }
+    5% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    95% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+/* Specific overrides for truck colors */
+.order .truck .back,
+.order .truck .front {
+    background: #fff;
+}
+
+.order .truck .back:before {
+    background: #e0e0e0;
+}
+
+.order .truck .front:before {
+    background: #00b894;
+}

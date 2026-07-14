@@ -1,0 +1,76 @@
+.sidebarContainer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #f9fafb; /* gray-50 */
+  border-right: 1px solid #e5e7eb; /* gray-200 */
+  overflow: hidden;
+  will-change: transform;
+}
+
+.fixedHeader {
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.scrollableContent {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent; /* gray-300 */
+}
+
+/* Custom Scrollbar for Webkit Browsers */
+.scrollableContent::-webkit-scrollbar {
+  width: 5px;
+  background-color: transparent;
+}
+
+.scrollableContent::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.scrollableContent::-webkit-scrollbar-thumb {
+  background-color: #d1d5db; /* gray-300 */
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+/* Hover effects for scrollbar on desktop */
+@media (hover: hover) {
+  .scrollableContent::-webkit-scrollbar-thumb {
+    background-color: transparent;
+  }
+
+  .sidebarContainer:hover .scrollableContent::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+  }
+
+  .scrollableContent::-webkit-scrollbar-thumb:hover {
+    background-color: #9ca3af; /* gray-400 */
+  }
+}
+
+.fixedFooter {
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+/* Vendor Prefixes & Compatibility */
+.scrollableContent {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+/* For older Safari versions */
+@supports (-webkit-overflow-scrolling: touch) {
+  .scrollableContent {
+    -webkit-overflow-scrolling: touch;
+  }
+}

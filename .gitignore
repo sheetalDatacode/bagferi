@@ -1,0 +1,5 @@
+# Ignore service account credentials and similar secret JSONs
+*firebase-adminsdk*.json
+*service-account*.json
+temp_auto_push.bat
+temp_interactive_push.bat

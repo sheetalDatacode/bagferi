@@ -1,0 +1,122 @@
+[
+  {
+    "title": "Dashboard",
+    "route": "/admin/dashboard",
+    "children": []
+  },
+  {
+    "title": "Transactions",
+    "route": "/admin/transactions",
+    "children": []
+  },
+  {
+    "title": "Manage",
+    "route": "/admin/b2b-vendors/manage",
+    "children": []
+  },
+  {
+    "title": "Pending",
+    "route": "/admin/b2b-vendors/pending",
+    "children": []
+  },
+  {
+    "title": "Users",
+    "route": "/admin/users",
+    "children": []
+  },
+  {
+    "title": "Products",
+    "route": "/admin/b2b-vendors/products",
+    "children": []
+  },
+  {
+    "title": "Lot Slots",
+    "route": "/admin/b2b-vendors/lot-slots",
+    "children": []
+  },
+  {
+    "title": "Properties",
+    "route": "/admin/b2b-vendors/properties",
+    "children": []
+  },
+  {
+    "title": "Wallet",
+    "route": "/admin/b2b-vendors/wallet",
+    "children": []
+  },
+  {
+    "title": "Analytics",
+    "route": "/admin/b2b-vendors/analytics",
+    "children": []
+  },
+  {
+    "title": "Subscriptions",
+    "route": "/admin/b2b-vendors/subscriptions",
+    "children": []
+  },
+  {
+    "title": "Add-on Plans",
+    "route": "/admin/b2b-vendors/addon-plans",
+    "children": []
+  },
+  {
+    "title": "Categories",
+    "route": "/admin/b2b-vendors/categories",
+    "children": []
+  },
+  {
+    "title": "Job Categories",
+    "route": "/admin/b2b-vendors/job-categories",
+    "children": []
+  },
+  {
+    "title": "Job Listings",
+    "route": "/admin/b2b-vendors/job-listings",
+    "children": []
+  },
+  {
+    "title": "Banner Bookings",
+    "route": "/admin/b2b-vendors/banner-bookings",
+    "children": []
+  },
+  {
+    "title": "Default Banners",
+    "route": "/admin/b2b-vendors/default-banners",
+    "children": []
+  },
+  {
+    "title": "Business Config",
+    "route": "/admin/b2b-vendors/business-type-config",
+    "children": []
+  },
+  {
+    "title": "Support Settings",
+    "route": "/admin/support-settings",
+    "children": []
+  },
+  {
+    "title": "Notifications",
+    "route": "/admin/notifications",
+    "children": []
+  },
+  {
+    "title": "Reel Moderation",
+    "route": "/admin/reels",
+    "children": []
+  },
+  {
+    "title": "Music Library",
+    "route": "/admin/music-library",
+    "children": []
+  },
+  {
+    "title": "Reel Reports",
+    "route": "/admin/reel-reports",
+    "children": []
+  },
+  {
+    "title": "Feedbacks",
+    "route": "/admin/feedbacks",
+    "children": []
+  }
+]

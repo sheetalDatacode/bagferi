@@ -1,0 +1,102 @@
+[
+    {
+        "title": "Dashboard",
+        "route": "/b2b-vendor/dashboard",
+        "children": []
+    },
+    {
+        "title": "Product Listings",
+        "route": "/b2b-vendor/products",
+        "children": [
+            "Manage Products",
+            "Add Product"
+        ]
+    },
+    {
+        "title": "Shop Listing",
+        "route": "/b2b-vendor/shop-listing",
+        "children": []
+    },
+    {
+        "title": "Property Management",
+        "route": "/b2b-vendor/properties",
+        "children": [
+            "Manage Properties",
+            "Add Commercial",
+            "Add Flat",
+            "Add Villa / Row House",
+            "Add Plot"
+        ]
+    },
+    {
+        "title": "Lot/Slot Listings",
+        "route": "/b2b-vendor/lotslot",
+        "children": [
+            "Manage Lots",
+            "Add Lot/Slot"
+        ]
+    },
+    {
+        "title": "Jobs",
+        "route": "/b2b-vendor/jobs",
+        "children": []
+    },
+    {
+        "title": "Subscription",
+        "route": "/b2b-vendor/subscription",
+        "children": []
+    },
+    {
+        "title": "Billing & Invoices",
+        "route": "/b2b-vendor/billing",
+        "children": []
+    },
+    {
+        "title": "My Wallet",
+        "route": "/b2b-vendor/wallet",
+        "children": []
+    },
+    {
+        "title": "Banner Booking",
+        "route": "/b2b-vendor/banner-booking",
+        "children": []
+    },
+    {
+        "title": "Reels",
+        "route": "/b2b-vendor/reels",
+        "children": []
+    },
+    {
+        "title": "Followers",
+        "route": "/b2b-vendor/followers",
+        "children": []
+    },
+    {
+        "title": "Referral",
+        "route": "/b2b-vendor/referral",
+        "children": []
+    },
+    {
+        "title": "Notifications",
+
+        "route": "/b2b-vendor/notifications",
+        "children": []
+    },
+    {
+        "title": "Account Settings",
+        "route": "/b2b-vendor/settings",
+        "children": [
+            "Profile"
+        ]
+    },
+    {
+        "title": "How to Use",
+        "route": "/b2b-vendor/how-to-use",
+        "children": []
+    },
+    {
+        "title": "Support & Feedback",
+        "route": "/b2b-vendor/support",
+        "children": []
+    }
+]
