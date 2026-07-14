@@ -5,7 +5,7 @@ import SupportConfig from './models/SupportConfig.model.js';
 
 dotenv.config();
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/dealing-india';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/bagferi';
 
 async function checkConfig() {
     try {

@@ -158,7 +158,7 @@ const B2BProductDetail = () => {
     const handleShareClick = async () => {
         await handleShare({
             title: product.name || 'Product Detail',
-            text: `Check out this product on Dealing India: ${product.name || ''}`,
+            text: `Check out this product on Bagferi: ${product.name || ''}`,
             url: window.location.href,
         });
     };

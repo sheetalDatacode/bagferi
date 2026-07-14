@@ -40,8 +40,8 @@ const B2BVendorReferral = () => {
         const backendBase = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase.replace(/\/api\/?$/, '');
         const shareUrl = `${backendBase}/api/referrals/share/${referralData.referralCode}`;
         await handleShare({
-            title: "Join Dealing India - B2B Marketplace",
-            text: `Join Dealing India using my referral code: ${referralData.referralCode}\nDownload App: https://play.google.com/store/apps/details?id=com.dealingindia.app`,
+            title: "Join Bagferi - B2B Marketplace",
+            text: `Join Bagferi using my referral code: ${referralData.referralCode}\nDownload App: https://play.google.com/store/apps/details?id=com.dealingindia.app`,
             url: shareUrl,
         });
     };

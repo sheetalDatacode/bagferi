@@ -212,7 +212,7 @@ export const verifyUserEmail = async (email, otp) => {
         recipientId: user._id,
         recipientType: 'user',
         type: 'system',
-        title: 'Welcome to Dealing India! \uD83D\uDE80',
+        title: 'Welcome to Bagferi! \uD83D\uDE80',
         message: `Hi ${user.name}, your account is now verified. Start exploring thousands of B2B products and real estate opportunities.`,
         actionUrl: '/b2b/catalog'
     }).catch(e => console.error('Notification Error:', e.message));

@@ -17,17 +17,13 @@
  */
 
 import Vendor from '../models/Vendor.model.js';
-import B2BAddonPlan from '../models/B2BAddonPlan.model.js';
 import B2BSettings from '../models/B2BSettings.model.js';
 import VendorSubscription from '../models/VendorSubscription.model.js';
 import B2BSubscriptionPlan from '../models/B2BSubscriptionPlan.model.js';
 import Product from '../models/Product.model.js';
-import LotSlot from '../models/LotSlot.model.js';
 import ShopUnit from '../models/ShopUnit.model.js';
 import Reel from '../models/Reel.model.js';
-import VendorAddon from '../models/VendorAddon.model.js';
-import Property from '../models/Property.model.js';
-import vendorAddonService from './vendorAddon.service.js';
+const vendorAddonService = { getTotalAvailableAddonUnits: async () => 0, deductAddonUsage: async () => {} };
 import BusinessTypeSettings from '../models/BusinessTypeSettings.model.js';
 import vendorWalletService from './vendorWallet.service.js';
 import * as emailService from './email.service.js';
@@ -326,7 +322,7 @@ class SubscriptionRulesService {
             
             // 1. Check for addon logic if NO subscription at all
             if (!subData && addonCount > 0) {
-                const currentCount = await Property.countDocuments({ vendorId, isActive: { $ne: false } });
+                const currentCount = await 0;
                 return { 
                     allowed: true, 
                     useAddon: true, 
@@ -347,11 +343,7 @@ class SubscriptionRulesService {
 
             const plan = subData.plan || {};
             const sinceDate = subData.subscription?.startDate || new Date(0);
-            const currentCount = await Property.countDocuments({ 
-                vendorId, 
-                isActive: { $ne: false },
-                createdAt: { $gte: sinceDate }
-            });
+            const currentCount = await 0;
 
             // 🔹 Determine Property Limit
             const subLimit = plan.propertyLimit === 'unlimited' ? -1 : (Number(plan.propertyLimit) || 0);
@@ -420,12 +412,8 @@ class SubscriptionRulesService {
             if (subData) {
                 const plan = subData.plan || {};
                 const sinceDate = subData.subscription?.startDate || new Date(0);
-                const { default: Job } = await import('../models/Job.model.js');
-                currentCount = await Job.countDocuments({
-                    vendorId,
-                    isDeleted: false,
-                    createdAt: { $gte: sinceDate }
-                });
+                const Job = { countDocuments: async () => 0 };
+                currentCount = await 0;
                 subLimit = plan.jobLimit === 'unlimited' ? -1 : (Number(plan.jobLimit) || 0);
             } else {
                 if (addonCount === 0) {
@@ -436,11 +424,8 @@ class SubscriptionRulesService {
                     };
                 }
                 subLimit = 0;
-                const { default: Job } = await import('../models/Job.model.js');
-                currentCount = await Job.countDocuments({
-                    vendorId,
-                    isDeleted: false
-                });
+                const Job = { countDocuments: async () => 0 };
+                currentCount = await 0;
             }
 
             if (subLimit === -1 || (subLimit > 0 && currentCount < subLimit)) {
@@ -552,7 +537,7 @@ class SubscriptionRulesService {
             if (sinceDate) {
                 query.createdAt = { $gte: sinceDate };
             }
-            return await LotSlot.countDocuments(query);
+            return await 0;
         } catch (error) {
             console.error('Error counting lot/slots:', error);
             return 0;
@@ -593,10 +578,7 @@ class SubscriptionRulesService {
         const [subData, shop, addons] = await Promise.all([
             this.getActiveSubscription(vendorId),
             ShopUnit.findOne({ vendorId }).select('_id').lean(),
-            VendorAddon.find({ 
-                vendorId, 
-                status: { $in: ['active', 'consumed'] } 
-            }).lean()
+            []
         ]);
 
         const hasShop = !!shop;
@@ -657,10 +639,10 @@ class SubscriptionRulesService {
             const productCount = await this.getProductCount(vendorId);
             const reelCount = await this.getReelCount(vendorId);
             const lotSlotCount = await this.getLotSlotCount(vendorId);
-            const propertyCount = await Property.countDocuments({ vendorId, isActive: { $ne: false } });
+            const propertyCount = await 0;
             
-            const { default: Job } = await import('../models/Job.model.js');
-            const jobCount = await Job.countDocuments({ vendorId, isDeleted: false });
+            const Job = { countDocuments: async () => 0 };
+            const jobCount = await 0;
 
             // Check if admin hasn't configured any plans for this business type
             const shopCheck = await this.canListShop(vendorId);
@@ -735,18 +717,10 @@ class SubscriptionRulesService {
         const productCount = await this.getProductCount(vendorId, sinceDate);
         const lotSlotCount = await this.getLotSlotCount(vendorId, sinceDate);
         const reelCount = await this.getReelCount(vendorId, sinceDate);
-        const propertyCount = await Property.countDocuments({ 
-            vendorId, 
-            isActive: { $ne: false },
-            createdAt: { $gte: sinceDate }
-        });
+        const propertyCount = await 0;
         
-        const { default: Job } = await import('../models/Job.model.js');
-        const jobCount = await Job.countDocuments({ 
-            vendorId, 
-            isDeleted: false,
-            createdAt: { $gte: sinceDate }
-        });
+        const Job = { countDocuments: async () => 0 };
+        const jobCount = await 0;
 
         // 🔹 Rule: Total Capacity = Plan Limit + ALL Addon Quantities
         const subProductLimit = plan.productLimit === 'unlimited' ? -1 : (Number(plan.productLimit) || 0);
@@ -927,7 +901,7 @@ class SubscriptionRulesService {
                 await emailService.sendEmail({
                     to: vendor.email,
                     subject: 'Wallet Deduction: Enquiry Unlock',
-                    text: `Dear ${vendor.businessName || 'Vendor'},\n\nYour wallet has been charged ₹${amount} for a new enquiry unlock, as your subscription quota was exhausted.\n\nYou can view your transaction history in your vendor dashboard.\n\nThank you for using Dealing India.`
+                    text: `Dear ${vendor.businessName || 'Vendor'},\n\nYour wallet has been charged ₹${amount} for a new enquiry unlock, as your subscription quota was exhausted.\n\nYou can view your transaction history in your vendor dashboard.\n\nThank you for using Bagferi.`
                 });
             }
             

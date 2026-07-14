@@ -389,7 +389,7 @@ const B2BBannerBooking = () => {
                 key: keyId,
                 amount: amount,
                 currency: 'INR',
-                name: 'Dealing India',
+                name: 'Bagferi',
                 description: `B2B Banner Booking - ${bookingId}`,
                 orderId: razorpayOrder.id,
                 prefill: {

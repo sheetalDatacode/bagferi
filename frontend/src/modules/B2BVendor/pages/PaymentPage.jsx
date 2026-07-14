@@ -70,7 +70,7 @@ const PaymentPage = () => {
                 key: razorpayData.razorpayKeyId,
                 amount: razorpayData.plan.price,
                 currency: 'INR',
-                name: 'Dealing India',
+                name: 'Bagferi',
                 description: `B2B Vendor Registration - ${razorpayData.plan.name}`,
                 orderId: razorpayData.razorpay.orderId,
                 prefill: {

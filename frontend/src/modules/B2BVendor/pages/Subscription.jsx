@@ -281,7 +281,7 @@ const B2BVendorSubscription = () => {
                         key: razorpayKeyId,
                         amount: razorpay.amount / 100,
                         orderId: razorpay.id || razorpay.orderId,
-                        name: 'Dealing India B2B Upgrade',
+                        name: 'Bagferi B2B Upgrade',
                         description: `Upgrade to ${planId}`,
                     });
 
@@ -358,7 +358,7 @@ const B2BVendorSubscription = () => {
                         key: razorpayKeyId,
                         amount: razorpay.amount / 100, // API returns paise, service expects rupees
                         orderId: razorpay.id || razorpay.orderId,
-                        name: 'Dealing India B2B',
+                        name: 'Bagferi B2B',
                         description: `Subscription: ${planId}`,
                         prefill: {
                             // You could add vendor details here if available
@@ -458,7 +458,7 @@ const B2BVendorSubscription = () => {
                     key: key,
                     amount: order.amount / 100,
                     orderId: order.id,
-                    name: 'Dealing India Add-on',
+                    name: 'Bagferi Add-on',
                     description: `Purchase Extra Feature Units`,
                 });
 
@@ -495,7 +495,7 @@ const B2BVendorSubscription = () => {
                 key: orderData.razorpayKeyId,
                 amount: orderData.amount / 100,
                 orderId: orderData.id,
-                name: 'Dealing India Wallet',
+                name: 'Bagferi Wallet',
                 description: `Wallet Recharge: ₹${amount} + 18% GST (Total: ₹${totalToPay})`,
             });
 

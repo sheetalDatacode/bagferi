@@ -78,7 +78,7 @@ const TermsAndConditions = () => {
 
                         <div className="mt-12 pt-8 border-t border-gray-100 text-center">
                             <p className="text-xs text-gray-400 font-bold uppercase tracking-widest leading-loose">
-                                Dealing India B2B Platform<br />
+                                Bagferi B2B Platform<br />
                                 © 2026 All Rights Reserved
                             </p>
                         </div>

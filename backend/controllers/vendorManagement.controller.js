@@ -16,8 +16,6 @@ import { sendVendorApprovalEmail, sendVendorRejectionEmail } from '../services/e
 import redisService from '../services/redis.service.js';
 import { getSignedUrl } from '../utils/cloudinary.util.js';
 import Product from '../models/Product.model.js';
-import Property from '../models/Property.model.js';
-import LotSlot from '../models/LotSlot.model.js';
 import BannerBooking from '../models/BannerBooking.model.js';
 import VendorSubscription from '../models/VendorSubscription.model.js';
 import Notification from '../models/Notification.model.js';
@@ -483,10 +481,10 @@ export const getVendorDashboardForAdmin = async (req, res, next) => {
       Vendor.findById(vendorId).select('-password').populate('businessTypeRef', 'name').lean(),
       Product.countDocuments({ vendorId }),
       Product.countDocuments({ vendorId, isActive: true }),
-      Property.countDocuments({ vendorId }),
-      Property.countDocuments({ vendorId, isActive: true }),
-      LotSlot.countDocuments({ vendorId }),
-      LotSlot.countDocuments({ vendorId, isActive: true }),
+      0,
+      0,
+      0,
+      0,
       BannerBooking.find({ vendorId, status: 'active' }).populate('slotId').lean(),
       VendorSubscription.find({ vendorId, status: 'active' }).populate('planId').lean(),
       Notification.find({ recipient: vendorId, recipientType: 'vendor' }).sort({ createdAt: -1 }).limit(5).lean(),

@@ -28,7 +28,7 @@ class SMSService {
         try {
             // Clean phone number (remove + if present)
             const mobile = phoneNumber.replace('+', '');
-            const message = `Welcome to MDB DealingIndia. Your secure login OTP is ${otp}. Valid for 10 minutes. Never share your OTP.`;
+            const message = `Welcome to MDB Bagferi. Your secure login OTP is ${otp}. Valid for 10 minutes. Never share your OTP.`;
 
             const params = {
                 APIKey: this.apiKey,

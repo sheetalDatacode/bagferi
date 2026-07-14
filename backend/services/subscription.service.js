@@ -1081,7 +1081,7 @@ class SubscriptionService {
   async getVendorBillingHistory(vendorId) {
     const [subs, addons, bannerBookings, walletRecharges] = await Promise.all([
       VendorSubscription.find({ vendorId }).populate('planId').sort({ createdAt: -1 }).lean(),
-      (await import('../models/VendorAddon.model.js')).default.find({ vendorId }).populate('addonPlanId').sort({ createdAt: -1 }).lean(),
+      Promise.resolve([]),
       (await import('../models/BannerBooking.model.js')).default
         .find({ vendorId, paymentStatus: 'paid' })
         .sort({ createdAt: -1 })

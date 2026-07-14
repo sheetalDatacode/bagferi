@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import Product from '../models/Product.model.js';
-import LotSlot from '../models/LotSlot.model.js';
 import Vendor from '../models/Vendor.model.js';
 import B2BCategory from '../models/B2BCategory.model.js';
 import ShopUnit from '../models/ShopUnit.model.js';
@@ -432,7 +431,7 @@ export const getPublicProductById = async (id) => {
 
     let isLotSlot = false;
     if (!item) {
-        item = await LotSlot.findOne({ _id: id, isActive: true })
+        item = await null
             .populate('vendorId', 'name storeName description logo phone address mfgOfWork')
             .populate('shopUnitId')
             .lean();
@@ -493,10 +492,7 @@ export const getB2BSearchSuggestions = async (query, vendorFilterId) => {
             name: searchRegex,
             isActive: true
         }).limit(100).select('name image vendorId formType'),
-        LotSlot.find({
-            name: searchRegex,
-            isActive: true
-        }).limit(100).select('name image vendorId'),
+        [].select('name image vendorId'),
         Vendor.find({
             storeName: searchRegex,
             status: 'approved',

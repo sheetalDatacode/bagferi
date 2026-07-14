@@ -1,7 +1,7 @@
 {
-  "name": "dealing-india-backend",
+  "name": "bagferi-backend",
   "version": "1.0.0",
-  "description": "Backend API for Dealing India B2B marketplace",
+  "description": "Backend API for Bagferi B2B marketplace",
   "main": "server.js",
   "type": "module",
   "scripts": {

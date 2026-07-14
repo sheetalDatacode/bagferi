@@ -191,7 +191,7 @@ const B2BUserRegister = () => {
                     });
                 } else {
                     localStorage.removeItem('b2b_user_register_draft');
-                    toast.success('Registration successful! Welcome to Dealing India.');
+                    toast.success('Registration successful! Welcome to Bagferi.');
                     navigate('/b2b/catalog', { replace: true });
                 }
             } else {

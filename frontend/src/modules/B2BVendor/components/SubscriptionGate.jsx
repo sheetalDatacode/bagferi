@@ -160,7 +160,7 @@ const SubscriptionGate = ({ action, children, showLimitInfo = true, fullPage = f
                 key: orderData.razorpayKeyId,
                 amount: orderData.amount / 100,
                 orderId: orderData.id,
-                name: 'Dealing India Wallet',
+                name: 'Bagferi Wallet',
                 description: `Wallet Recharge: ₹${amount} + 18% GST (Total: ₹${totalToPay})`,
             });
 
@@ -260,7 +260,7 @@ const SubscriptionGate = ({ action, children, showLimitInfo = true, fullPage = f
                     key: razorpayKeyId,
                     amount: razorpay.amount / 100,
                     orderId: razorpay.id || razorpay.orderId,
-                    name: 'Dealing India B2B',
+                    name: 'Bagferi B2B',
                     description: `Subscription: ${planId}`,
                 });
 

@@ -94,7 +94,7 @@ export const create = async (req, res, next) => {
 
     // 🔹 Consume addon if necessary (Middleware flagged this)
     if (req.subscriptionLimits?.products?.useAddon) {
-      const vendorAddonService = (await import('../services/vendorAddon.service.js')).default;
+      const vendorAddonService = { getTotalAvailableAddonUnits: async () => 0, deductAddonUsage: async () => {} };
       await vendorAddonService.consumeAddonUnit(vendorId, 'products');
     }
 

@@ -1,6 +1,5 @@
 import Vendor from '../models/Vendor.model.js';
 import Product from '../models/Product.model.js';
-import Property from '../models/Property.model.js';
 import User from '../models/User.model.js';
 
 import redisService from './redis.service.js';

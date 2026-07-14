@@ -52,7 +52,7 @@ export const initializeRazorpayCheckout = async (options) => {
       key,
       amount,
       currency = 'INR',
-      name = 'Dealing India',
+      name = 'Bagferi',
       description = 'Order Payment',
       orderId,
       prefill = {},

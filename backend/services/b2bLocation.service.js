@@ -1,7 +1,5 @@
 import Vendor from '../models/Vendor.model.js';
 import Product from '../models/Product.model.js';
-import LotSlot from '../models/LotSlot.model.js';
-import Property from '../models/Property.model.js';
 import { toTitleCase, normalizeState, normalizeCity } from '../utils/addressNormalizer.util.js';
 
 /**
@@ -46,7 +44,7 @@ export const getB2BAvailableLocations = async (options = {}) => {
     // This ensures that the filter only shows cities that will actually return search results.
     const [productVendorIds, lotSlotVendorIds] = await Promise.all([
       Product.distinct('vendorId', { isActive: true, isVisible: { $ne: false }, formType: { $ne: 'shop-listing' } }),
-      LotSlot.distinct('vendorId', { isActive: true, isVisible: { $ne: false } }),
+      Promise.resolve([]),
     ]);
 
     const activeVendorIds = new Set([
@@ -365,7 +363,7 @@ export const getB2BListingLocations = async (options = {}) => {
   if (includeProducts) {
     const [productVendorIds, lotSlotVendorIds] = await Promise.all([
       Product.distinct('vendorId', { isActive: true, isVisible: { $ne: false }, formType: { $ne: 'shop-listing' } }),
-      LotSlot.distinct('vendorId', { isActive: true, isVisible: { $ne: false } }),
+      Promise.resolve([]),
     ]);
 
     const listingVendorIds = new Set([
@@ -394,7 +392,7 @@ export const getB2BListingLocations = async (options = {}) => {
 
   // Property locations prefer property.location, fallback vendor address.
   if (includeProperties) {
-    const properties = await Property.find({ isActive: true })
+    const properties = await []
       .select('location vendorId propertyType')
       .lean();
 

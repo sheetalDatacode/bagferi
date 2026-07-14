@@ -517,7 +517,7 @@ export default function ReelFeed() {
 
     await handleShare({
       title: currentReel?.title || typeText,
-      text: currentReel?.description || `Check out this ${typeText.toLowerCase()} on Dealing India`,
+      text: currentReel?.description || `Check out this ${typeText.toLowerCase()} on Bagferi`,
       url: url
     });
   };
@@ -549,7 +549,7 @@ export default function ReelFeed() {
       `🎥 I'm interested in your ${typeText}`,
       currentReel?.title ? `${typeText.charAt(0).toUpperCase() + typeText.slice(1)}: ${currentReel.title}` : null,
       "",
-      siteUrl ? `Dealing India link: ${siteUrl}` : null,
+      siteUrl ? `Bagferi link: ${siteUrl}` : null,
     ].filter(Boolean);
     const userDetails = getWhatsAppUserDetailsSuffix(user);
     const msg = encodeURIComponent(`${lines.join("\n")}${userDetails ? `\n${userDetails}` : ""}`);

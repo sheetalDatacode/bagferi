@@ -1,6 +1,6 @@
 # Sharing & Flutter Bridge Documentation
 
-This document outlines the implementation and usage of the **Cross-Platform Sharing Utility** and the **Flutter JavaScript Bridge** used in the Dealing India application.
+This document outlines the implementation and usage of the **Cross-Platform Sharing Utility** and the **Flutter JavaScript Bridge** used in the Bagferi application.
 
 ## 1. Overview
 
@@ -32,7 +32,7 @@ import { handleShare } from '@/shared/utils/share';
 const onShareClick = () => {
   handleShare({
     title: 'Check out this Property',
-    text: 'Found an amazing deal on Dealing India!',
+    text: 'Found an amazing deal on Bagferi!',
     url: 'https://dealingindia.com/property/123'
   });
 };

@@ -35,18 +35,13 @@ import publicB2BLocationRoutes from "./routes/publicB2BLocation.routes.js";
 import publicB2BSubscriptionRoutes from "./routes/publicB2BSubscription.routes.js";
 import SubscriptionRoutes from "./routes/SubscriptionRoute.js";
 import upgradeRoutes from "./routes/upgrade.routes.js";
-import adminB2BAddonPlanRoutes from "./routes/adminB2BAddonPlan.routes.js";
-import vendorAddonRoutes from "./routes/vendorAddon.routes.js";
 import adminB2BSettingsRoutes from "./routes/adminB2BSettings.routes.js";
 import feedbackRoutes from "./routes/Feedback.routes.js";
 
 import b2bVendorProductsRoutes from "./routes/b2bVendorProducts.routes.js";
 import b2bVendorShopUnitRoutes from "./routes/b2bVendorShopUnit.routes.js";
-import lotSlotRoutes from "./routes/lotSlot.routes.js";
 
 import adminB2BProductManagementRoutes from "./routes/adminB2BProductManagement.routes.js";
-import adminLotSlotRoutes from "./routes/adminLotSlot.routes.js";
-import adminPropertyRoutes from "./routes/adminProperty.routes.js";
 import publicProductRoutes from "./routes/publicProduct.routes.js";
 import ratingRoutes from "./routes/rating.routes.js";
 
@@ -64,7 +59,6 @@ import publicBannerRoutes from "./routes/publicBanner.routes.js";
 import adminAnalyticsRoutes from "./routes/adminAnalytics.routes.js";
 import adminDashboardRoutes from "./routes/adminDashboard.routes.js";
 import businessTypeRoutes from "./routes/businessType.routes.js";
-import propertyRoutes from "./routes/property.routes.js";
 import adminBusinessSettingsRoutes from "./routes/adminBusinessSettings.routes.js";
 import adminNotificationRoutes from "./routes/adminNotification.routes.js";
 import adminUserRoutes from "./routes/adminUser.routes.js";
@@ -85,10 +79,6 @@ import musicRoutes from "./routes/music.routes.js";
 import vendorFollowRoutes from "./routes/vendorFollow.routes.js";
 import adminTransactionsRoutes from "./routes/adminTransactions.routes.js";
 import vendorWalletRoutes from "./routes/vendorWallet.routes.js";
-import adminJobCategoryRoutes from "./routes/adminJobCategory.routes.js";
-import adminJobsRoutes from "./routes/adminJobs.routes.js";
-import vendorJobRoutes from "./routes/vendorJob.routes.js";
-import publicJobRoutes from "./routes/publicJob.routes.js";
 
 // Initialize Express app
 const app = express();
@@ -107,13 +97,15 @@ const defaultOrigins = [
   "http://localhost:5000",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:5000",
-  "https://dealing-india.vercel.app",
-  "https://dealing-india-*.vercel.app",
+  "http://10.141.3.211:3000",
+  "http://10.141.3.211:5000",
+  "https://bagferi.vercel.app",
+  "https://bagferi-*.vercel.app",
   "https://www.dealingindia.com",
   "https://dealingindia.com",
   "https://www.dealingindia.in",
   "https://dealingindia.in",
-  "https://dealing-india.onrender.com",
+  "https://bagferi.onrender.com",
 ];
 
 const envOrigins = process.env.SOCKET_CORS_ORIGIN
@@ -161,7 +153,7 @@ app.use(
       if (isAllowedDomain) {
         return callback(null, true);
       }
-      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalized)) {
+      if (/^https?:\/\/(localhost|127\.0\.0\.1|10\.141\.3\.211)(:\d+)?$/.test(normalized)) {
         return callback(null, true);
       }
       console.warn(`⚠️ CORS rejected origin: ${origin}`);
@@ -286,13 +278,9 @@ app.use("/api/admin/b2b-vendors/subscriptions", adminB2BVendorSubscriptionRoutes
 app.use("/api/admin/b2b-vendors", adminB2BVendorManagementRoutes);
 app.use("/api/admin/b2b-categories", adminB2BCategoryManagementRoutes);
 app.use("/api/admin/b2b-products", adminB2BProductManagementRoutes);
-app.use("/api/admin/lot-slots", adminLotSlotRoutes);
-app.use("/api/admin/properties", adminPropertyRoutes);
 app.use("/api/vendor/dashboard", vendorDashboardRoutes);
 app.use("/api/vendor/subscriptions", vendorSubscriptionRoutes);
 app.use("/api/vendor/subscription", vendorSubscriptionRoutes);
-app.use("/api/vendor/addons", vendorAddonRoutes);
-app.use("/api/admin/b2b-addon-plans", adminB2BAddonPlanRoutes);
 app.use("/api/admin/b2b-settings", adminB2BSettingsRoutes);
 app.use("/api/vendor/analytics", vendorAnalyticsRoutes);
 app.use("/api/vendor/notifications", vendorNotificationRoutes);
@@ -301,7 +289,6 @@ app.use("/api/fcm-tokens", fcmTokenRoutes);
 
 app.use("/api/b2b-vendor/products", b2bVendorProductsRoutes);
 app.use("/api/b2b-vendor/shop-units", b2bVendorShopUnitRoutes);
-app.use("/api/b2b-vendor/lot-slots", lotSlotRoutes);
 app.use("/api/support-config", supportConfigRoutes);
 app.use("/api/referrals", referralRoutes);
 app.use("/api/admin/referral-settings", adminReferralSettingsRoutes);
@@ -312,7 +299,6 @@ app.use("/api/vendor/wallet", vendorWalletRoutes);
 
 app.use("/api/music", musicRoutes);
 app.use("/api/business-types", businessTypeRoutes);
-app.use("/api/property", propertyRoutes);
 app.use("/api/admin/business-settings", adminBusinessSettingsRoutes);
 app.use("/api/vendor/business-settings", adminBusinessSettingsRoutes);
 
@@ -326,10 +312,6 @@ app.use("/api/admin/reports", adminDashboardRoutes);
 app.use("/api/admin/transactions", adminTransactionsRoutes);
 app.use("/api/admin/notifications", adminNotificationRoutes);
 app.use("/api/admin/users", adminUserRoutes);
-app.use("/api/admin/job-categories", adminJobCategoryRoutes);
-app.use("/api/admin/jobs", adminJobsRoutes);
-app.use("/api/vendor/jobs", vendorJobRoutes);
-app.use("/api/jobs", publicJobRoutes);
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);

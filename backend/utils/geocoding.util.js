@@ -91,7 +91,7 @@ const geocodeWithNominatim = async (address) => {
                 limit: 1,
             },
             headers: {
-                'User-Agent': 'DealingIndia/1.0',
+                'User-Agent': 'Bagferi/1.0',
             },
             timeout: 5000,
         });

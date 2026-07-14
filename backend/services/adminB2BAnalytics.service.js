@@ -1,8 +1,6 @@
 import mongoose from 'mongoose';
 import Vendor from '../models/Vendor.model.js';
 import Product from '../models/Product.model.js';
-import Property from '../models/Property.model.js';
-import LotSlot from '../models/LotSlot.model.js';
 // import Chat from '../models/Chat.model.js';
 // import Message from '../models/Message.model.js';
 
@@ -79,20 +77,10 @@ export const getAdminB2BAnalytics = async (period = 'month') => {
         { $group: { _id: { $dateToString: { format: chartFormat, date: '$createdAt' } }, count: { $sum: 1 } } },
         { $sort: { _id: 1 } }
       ]),
-      Property.countDocuments({
-        vendorId: { $in: b2bVendorObjectIds }
-      }),
-      Property.countDocuments({
-        vendorId: { $in: b2bVendorObjectIds },
-        createdAt: { $gte: startDate }
-      }),
-      LotSlot.countDocuments({
-        vendorId: { $in: b2bVendorObjectIds }
-      }),
-      LotSlot.countDocuments({
-        vendorId: { $in: b2bVendorObjectIds },
-        createdAt: { $gte: startDate }
-      })
+      0,
+      0,
+      0,
+      0
     ]);
 
     // Trend calculation vs historical data could be complex, for now we reflect the period activity

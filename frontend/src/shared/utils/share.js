@@ -23,7 +23,7 @@ export const handleShare = async ({ title, text, url }) => {
   if (navigator.share) {
     try {
       const data = { 
-        title: title || 'Dealing India',
+        title: title || 'Bagferi',
         text: text || '',
         url: url 
       };

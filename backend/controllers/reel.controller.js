@@ -183,7 +183,7 @@ export const uploadReel = asyncHandler(async (req, res) => {
   // 🔹 Consume addon if necessary (Middleware flagged this)
   if (uploaderType === 'vendor' && req.subscriptionLimits?.reels?.useAddon) {
     try {
-      const vendorAddonService = (await import('../services/vendorAddon.service.js')).default;
+      const vendorAddonService = { getTotalAvailableAddonUnits: async () => 0, deductAddonUsage: async () => {} };
       await vendorAddonService.consumeAddonUnit(uploaderId, 'reels');
     } catch (addonError) {
       console.error('Error consuming reel addon:', addonError);
@@ -1362,9 +1362,9 @@ export const getReelSharePage = asyncHandler(async (req, res) => {
   const redirectUrl = `${fUrl}/b2b/reels/${id}`;
 
   // Default values
-  let title = "Check out this Reel on Dealing India";
+  let title = "Check out this Reel on Bagferi";
   let description = "Watch high-quality product reels and bulk deals on India's premiere B2B marketplace.";
-  let image = `${bUrl}/upload/dealing-india-logo.png`;
+  let image = `${bUrl}/upload/bagferi.png`;
 
   if (reel) {
     const type = reel.propertyId ? "Property" : (reel.productId ? "Product" : "Reel");
@@ -1372,14 +1372,14 @@ export const getReelSharePage = asyncHandler(async (req, res) => {
     // Handle custom title based on product/property if available
     if (reel.productId && reel.productId.name) {
       title = `Check out this product: ${reel.productId.name}`;
-      description = reel.description || `Watch this ${reel.categoryName || ''} product in action on Dealing India.`;
+      description = reel.description || `Watch this ${reel.categoryName || ''} product in action on Bagferi.`;
     } else if (reel.propertyId && reel.propertyId.title) {
       title = `Check out this property: ${reel.propertyId.title}`;
-      description = reel.description || `Explore this property listing on Dealing India.`;
+      description = reel.description || `Explore this property listing on Bagferi.`;
     } else {
-      title = reel.title || `${type} from ${reel.uploaderName || 'Dealing India'}`;
+      title = reel.title || `${type} from ${reel.uploaderName || 'Bagferi'}`;
       if (reel.price > 0) title = `₹${reel.price} - ${title}`;
-      description = reel.description || `Watch this ${reel.categoryName || ''} ${type.toLowerCase()} in action on Dealing India.`;
+      description = reel.description || `Watch this ${reel.categoryName || ''} ${type.toLowerCase()} in action on Bagferi.`;
     }
 
     // Handle images with fallback hierarchy
@@ -1430,7 +1430,7 @@ export const getReelSharePage = asyncHandler(async (req, res) => {
     <meta name="description" content="${description}">
 
     <!-- Open Graph / Meta -->
-    <meta property="og:site_name" content="Dealing India">
+    <meta property="og:site_name" content="Bagferi">
     <meta property="og:type" content="video.other">
     <meta property="og:url" content="${shareUrl}">
     <meta property="og:title" content="${title}">
@@ -1456,7 +1456,7 @@ export const getReelSharePage = asyncHandler(async (req, res) => {
         <p style="font-size: 14px; color: rgba(255, 255, 255, 0.6); margin: 0 0 30px 0;">Redirecting you to the app...</p>
         
         <a href="${redirectUrl}" style="display: inline-block; background: #7C3AED; color: white; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 15px; transition: transform 0.2s;">
-            Open in Dealing India
+            Open in Bagferi
         </a>
     </div>
     <style>

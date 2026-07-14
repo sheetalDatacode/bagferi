@@ -312,7 +312,7 @@ const SecureDealModal = ({ isOpen, onClose, product, buyer, products = [], onPro
                 {/* Footer Info */}
                 <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex items-center gap-3">
                     <FiInfo className="text-primary-500" />
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Dealing India Escrow ensures 100% payment safety.</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Bagferi Escrow ensures 100% payment safety.</p>
                 </div>
             </motion.div >
         </div >

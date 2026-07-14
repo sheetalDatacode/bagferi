@@ -54,7 +54,7 @@ const ShareModal = ({ isOpen, onClose, shareData }) => {
       try {
         await navigator.share({
           title: title,
-          text: `Check out this ${title} on Dealing India!`,
+          text: `Check out this ${title} on Bagferi!`,
           url: url,
         });
         return; // Success

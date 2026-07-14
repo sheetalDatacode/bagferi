@@ -192,7 +192,7 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                             >
                                 <img
                                     src={appLogo.src}
-                                    alt="Dealing India"
+                                    alt="Bagferi"
                                     className="h-10 lg:h-16 w-auto object-contain"
                                 />
                             </Link>

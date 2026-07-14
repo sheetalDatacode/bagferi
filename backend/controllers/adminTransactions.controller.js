@@ -1,7 +1,6 @@
 import { asyncHandler } from '../middleware/errorHandler.middleware.js';
 import VendorSubscription from '../models/VendorSubscription.model.js';
 import BannerBooking from '../models/BannerBooking.model.js';
-import VendorAddon from '../models/VendorAddon.model.js';
 import Vendor from '../models/Vendor.model.js';
 import VendorWalletTransaction from '../models/VendorWalletTransaction.model.js';
 
@@ -44,15 +43,7 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
       } },
       { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
     ]),
-    VendorAddon.aggregate([
-      { $match: { 
-        status: { $ne: 'failed' }, 
-        totalAmount: { $gt: 0 },
-        paymentMethod: { $ne: 'wallet' },
-        ...(vendorIds.length > 0 || businessType && businessType !== 'All Business Types' ? vendorMatch : {})
-      } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } }
-    ]),
+    [],
     VendorWalletTransaction.aggregate([
       { $match: { 
         referenceType: 'recharge',
@@ -150,7 +141,7 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
     if (vendorIds.length > 0 || businessType && businessType !== 'All Business Types') {
       query.vendorId = { $in: vendorIds };
     }
-    const docs = await VendorAddon.find(query)
+    const docs = await []
       .sort({ createdAt: -1 })
       .populate('vendorId', 'name storeName email phone gstNumber')
       .populate('addonPlanId', 'name price quantity featureType')

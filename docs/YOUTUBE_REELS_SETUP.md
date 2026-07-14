@@ -28,7 +28,7 @@ After that, the server can upload videos to **that channel** without you signing
 
 Videos are uploaded to **the YouTube channel linked to the Google account you use when getting the refresh token**.
 
-- **Channel name** = whatever you set when you created the channel (e.g. “Dealing India”, “My Brand Reels”, etc.). You can create or rename the channel at [youtube.com](https://www.youtube.com).
+- **Channel name** = whatever you set when you created the channel (e.g. “Bagferi”, “My Brand Reels”, etc.). You can create or rename the channel at [youtube.com](https://www.youtube.com).
 - **One Google account** = one YouTube channel (by default). So the “channel” is simply the channel of the account you use in the OAuth step below.
 
 ---
@@ -39,12 +39,12 @@ Videos are uploaded to **the YouTube channel linked to the Google account you us
 
 1. Sign in to YouTube with your **Google account** (the one you’ll use for the app).
 2. Go to [youtube.com](https://www.youtube.com) → click your avatar → **Create a channel** (or use an existing channel).
-3. Set the **channel name** (e.g. “Dealing India Reels”). This is the channel where reels will be uploaded.
+3. Set the **channel name** (e.g. “Bagferi Reels”). This is the channel where reels will be uploaded.
 
 ### 2. Create a Google Cloud project and enable the API
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a project (e.g. “Dealing India”) or select an existing one.
+2. Create a project (e.g. “Bagferi”) or select an existing one.
 3. In the left menu: **APIs & Services** → **Library**.
 4. Search for **YouTube Data API v3** → open it → click **Enable**.
 
@@ -52,7 +52,7 @@ Videos are uploaded to **the YouTube channel linked to the Google account you us
 
 1. **APIs & Services** → **Credentials** → **Create credentials** → **OAuth client ID**.
 2. If asked, set **Application type** = “Web application” (or “Desktop” if you prefer; both work).
-3. **Name**: e.g. “Dealing India Reels”.
+3. **Name**: e.g. “Bagferi Reels”.
 4. If Web application: add **Authorized redirect URI**:  
    `http://localhost:9765/oauth2callback`  
    (This is used by the script in step 4 to receive the auth code.)
@@ -125,5 +125,5 @@ Restart your Node server so it loads the new env vars. After that, when you **Ap
 |----------|--------|
 | Why `youtubeUploadFailed` true? | `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, or `YOUTUBE_REFRESH_TOKEN` is missing (or invalid) in `.env`. |
 | Can I use my YouTube email/password? | No. The API uses OAuth 2.0. You use your Google account once to get a refresh token, then the server uses that token. |
-| What is the “name of the channel”? | The channel **name** is whatever you set in YouTube for the channel (e.g. “Dealing India Reels”). The **account** used is the one you sign in with when getting the refresh token. |
+| What is the “name of the channel”? | The channel **name** is whatever you set in YouTube for the channel (e.g. “Bagferi Reels”). The **account** used is the one you sign in with when getting the refresh token. |
 | Where do videos go? | To the YouTube channel of the Google account you used in the OAuth step. |

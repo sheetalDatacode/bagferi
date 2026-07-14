@@ -98,8 +98,8 @@ const Profile = () => {
         const backendBase = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase.replace(/\/api\/?$/, '');
         const shareUrl = `${backendBase}/api/referrals/share/${referralData.referralCode}`;
         await handleShare({
-            title: 'Join Dealing India - B2B Marketplace',
-            text: `Join Dealing India using my referral code: ${referralData.referralCode}\nDownload App: https://play.google.com/store/apps/details?id=com.dealingindia.app`,
+            title: 'Join Bagferi - B2B Marketplace',
+            text: `Join Bagferi using my referral code: ${referralData.referralCode}\nDownload App: https://play.google.com/store/apps/details?id=com.dealingindia.app`,
             url: shareUrl,
         });
     };
@@ -350,7 +350,7 @@ const Profile = () => {
                         </div>
                     )}
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-loose">
-                        Dealing India B2B v1.0.4<br />
+                        Bagferi B2B v1.0.4<br />
                         © 2026 All Rights Reserved
                     </p>
                 </div>

@@ -30,16 +30,6 @@
     "children": []
   },
   {
-    "title": "Lot Slots",
-    "route": "/admin/b2b-vendors/lot-slots",
-    "children": []
-  },
-  {
-    "title": "Properties",
-    "route": "/admin/b2b-vendors/properties",
-    "children": []
-  },
-  {
     "title": "Wallet",
     "route": "/admin/b2b-vendors/wallet",
     "children": []
@@ -55,23 +45,8 @@
     "children": []
   },
   {
-    "title": "Add-on Plans",
-    "route": "/admin/b2b-vendors/addon-plans",
-    "children": []
-  },
-  {
     "title": "Categories",
     "route": "/admin/b2b-vendors/categories",
-    "children": []
-  },
-  {
-    "title": "Job Categories",
-    "route": "/admin/b2b-vendors/job-categories",
-    "children": []
-  },
-  {
-    "title": "Job Listings",
-    "route": "/admin/b2b-vendors/job-listings",
     "children": []
   },
   {

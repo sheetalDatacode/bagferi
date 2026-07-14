@@ -121,7 +121,7 @@ const Followers = () => {
                         <FiUsers size={40} />
                     </div>
                     <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight">No followers yet</h3>
-                    <p className="text-gray-400 max-w-sm mx-auto mt-2 text-sm font-medium">Start uploading reels and promoting your store to build your dealing India community.</p>
+                    <p className="text-gray-400 max-w-sm mx-auto mt-2 text-sm font-medium">Start uploading reels and promoting your store to build your bagferi community.</p>
                 </div>
             )}
         </div>

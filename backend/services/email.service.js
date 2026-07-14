@@ -14,8 +14,8 @@ const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASS = process.env.EMAIL_PASS;
 const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_USER || 'noreply@dealingindia.com';
 const EMAIL_LOGO_URL = process.env.EMAIL_LOGO_URL || 'https://dealingindia.com/assets/logo.png';
-const EMAIL_LOGO_PATH = process.env.EMAIL_LOGO_PATH || 'upload/dealing-india-logo.png';
-const EMAIL_LOGO_CID = 'dealing-india-logo';
+const EMAIL_LOGO_PATH = process.env.EMAIL_LOGO_PATH || 'upload/bagferi.png';
+const EMAIL_LOGO_CID = 'bagferi-logo';
 const EMAIL_BRAND_PRIMARY = process.env.EMAIL_BRAND_PRIMARY || '#7C3AED';
 const EMAIL_BRAND_ACCENT = process.env.EMAIL_BRAND_ACCENT || '#F97316';
 const EMAIL_BRAND_TEXT = process.env.EMAIL_BRAND_TEXT || '#111827';
@@ -126,7 +126,7 @@ export const sendEmail = async (to, subject, html, text, attachments) => {
   }
 
   const mailOptions = {
-    from: `"Dealing India" <${EMAIL_FROM}>`,
+    from: `"Bagferi" <${EMAIL_FROM}>`,
     to,
     subject,
     html,
@@ -191,7 +191,7 @@ const formatVendorBlock = (vendor) => {
  * Send email verification OTP
  */
 export const sendVerificationEmail = async (email, otp) => {
-  const subject = 'Verify Your Email - Dealing India';
+  const subject = 'Verify Your Email - Bagferi';
   const logoAttachment = getInlineLogoAttachment();
   const logoSrc = logoAttachment ? `cid:${EMAIL_LOGO_CID}` : EMAIL_LOGO_URL;
 
@@ -200,16 +200,16 @@ export const sendVerificationEmail = async (email, otp) => {
     <html>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background:#f3f4f6;">
       <div style="background-color: #ffffff; padding: 30px; border-radius: 16px; border: 1px solid #e5e7eb; text-align: center;">
-        <img src="${logoSrc}" alt="Dealing India" style="max-width:160px;height:auto;margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;" />
+        <img src="${logoSrc}" alt="Bagferi" style="max-width:160px;height:auto;margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;" />
         <h2 style="color: ${EMAIL_BRAND_PRIMARY}; margin-top: 0; font-size: 22px;">Email Verification</h2>
         <p style="text-align: left;">Hello,</p>
-        <p style="text-align: left;">Thank you for registering with Dealing India. Please use the following code to verify your email address:</p>
+        <p style="text-align: left;">Thank you for registering with Bagferi. Please use the following code to verify your email address:</p>
         <div style="background-color: #f9fafb; border: 2px dashed ${EMAIL_BRAND_PRIMARY}; padding: 25px; text-align: center; margin: 25px 0; border-radius: 12px;">
           <h1 style="color: ${EMAIL_BRAND_PRIMARY}; font-size: 36px; letter-spacing: 8px; margin: 0; font-family: monospace;">${otp}</h1>
         </div>
         <p style="text-align: left; font-size: 14px; color: #6b7280;">This code will expire in 10 minutes.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Dealing India. All rights reserved.</p>
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Bagferi. All rights reserved.</p>
       </div>
     </body>
     </html>
@@ -247,7 +247,7 @@ export const sendPaymentSuccessEmail = async ({
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827; margin:0; padding:0; background:#f3f4f6;">
       <div style="max-width:600px;margin:0 auto;padding:24px;">
         <div style="background:#ffffff;border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;border:1px solid #e5e7eb;border-bottom:none;">
-          <img src="${logoSrc}" alt="Dealing India" style="max-width:180px;height:auto;margin-bottom:16px;display:block;margin-left:auto;margin-right:auto;" />
+          <img src="${logoSrc}" alt="Bagferi" style="max-width:180px;height:auto;margin-bottom:16px;display:block;margin-left:auto;margin-right:auto;" />
           <h1 style="color:${EMAIL_BRAND_PRIMARY};margin:0;font-size:24px;font-weight:bold;">Payment Successful</h1>
         </div>
         <div style="background:#ffffff;border-radius:0 0 16px 16px;padding:24px;border:1px solid #e5e7eb;border-top:none;">
@@ -264,7 +264,7 @@ export const sendPaymentSuccessEmail = async ({
           ${vendorBlock}
           <p style="margin-top:16px;">Your detailed invoice is attached to this email.</p>
           <p style="margin-top:24px;font-size:12px;color:#6b7280;text-align:center;">
-            © ${new Date().getFullYear()} Dealing India. All rights reserved.
+            © ${new Date().getFullYear()} Bagferi. All rights reserved.
           </p>
         </div>
       </div>
@@ -301,7 +301,7 @@ export const sendPaymentCancelledEmail = async ({
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827; margin:0; padding:0; background:#f3f4f6;">
       <div style="max-width:600px;margin:0 auto;padding:24px;">
         <div style="background:#ffffff;border-radius:16px 16px 0 0;padding:32px 24px;text-align:center;border:1px solid #e5e7eb;border-bottom:none;">
-          <img src="${logoSrc}" alt="Dealing India" style="max-width:180px;height:auto;margin-bottom:16px;display:block;margin-left:auto;margin-right:auto;" />
+          <img src="${logoSrc}" alt="Bagferi" style="max-width:180px;height:auto;margin-bottom:16px;display:block;margin-left:auto;margin-right:auto;" />
           <h1 style="color:${EMAIL_BRAND_PRIMARY};margin:0;font-size:24px;font-weight:bold;">Payment Not Completed</h1>
         </div>
         <div style="background:#ffffff;border-radius:0 0 16px 16px;padding:24px;border:1px solid #e5e7eb;border-top:none;">
@@ -309,7 +309,7 @@ export const sendPaymentCancelledEmail = async ({
           ${vendorBlock}
           <p style="margin-top:16px;">No money has been charged. You can try the payment again from your dashboard.</p>
           <p style="margin-top:24px;font-size:12px;color:#6b7280;text-align:center;">
-            © ${new Date().getFullYear()} Dealing India. All rights reserved.
+            © ${new Date().getFullYear()} Bagferi. All rights reserved.
           </p>
         </div>
       </div>
@@ -324,7 +324,7 @@ export const sendPaymentCancelledEmail = async ({
  * Send password reset email
  */
 export const sendPasswordResetEmail = async (email, otp) => {
-  const subject = 'Password Reset Request - Dealing India';
+  const subject = 'Password Reset Request - Bagferi';
   const logoAttachment = getInlineLogoAttachment();
   const logoSrc = logoAttachment ? `cid:${EMAIL_LOGO_CID}` : EMAIL_LOGO_URL;
 
@@ -333,7 +333,7 @@ export const sendPasswordResetEmail = async (email, otp) => {
     <html>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background:#f3f4f6;">
       <div style="background-color: #ffffff; padding: 30px; border-radius: 16px; border: 1px solid #e5e7eb; text-align: center;">
-        <img src="${logoSrc}" alt="Dealing India" style="max-width:160px;height:auto;margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;" />
+        <img src="${logoSrc}" alt="Bagferi" style="max-width:160px;height:auto;margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;" />
         <h2 style="color: #c0392b; margin-top: 0; font-size: 22px;">Password Reset</h2>
         <p style="text-align: left;">Hello,</p>
         <p style="text-align: left;">We received a request to reset your password. Use the code below to proceed:</p>
@@ -342,7 +342,7 @@ export const sendPasswordResetEmail = async (email, otp) => {
         </div>
         <p style="text-align: left; font-size: 14px; color: #6b7280;">This code expires in 10 minutes.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Dealing India. All rights reserved.</p>
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Bagferi. All rights reserved.</p>
       </div>
     </body>
     </html>
@@ -355,7 +355,7 @@ export const sendPasswordResetEmail = async (email, otp) => {
  * Send welcome email
  */
 export const sendWelcomeEmail = async (email, name) => {
-  const subject = 'Welcome to Dealing India!';
+  const subject = 'Welcome to Bagferi!';
   const logoAttachment = getInlineLogoAttachment();
   const logoSrc = logoAttachment ? `cid:${EMAIL_LOGO_CID}` : EMAIL_LOGO_URL;
 
@@ -364,25 +364,25 @@ export const sendWelcomeEmail = async (email, name) => {
     <html>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background:#f3f4f6;">
       <div style="background-color: #ffffff; padding: 30px; border-radius: 16px; border: 1px solid #e5e7eb; text-align: center;">
-        <img src="${logoSrc}" alt="Dealing India" style="max-width:160px;height:auto;margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;" />
+        <img src="${logoSrc}" alt="Bagferi" style="max-width:160px;height:auto;margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;" />
         <h1 style="color:${EMAIL_BRAND_PRIMARY};">Welcome ${name}!</h1>
-        <p>Thank you for joining Dealing India. Your account is now verified.</p>
+        <p>Thank you for joining Bagferi. Your account is now verified.</p>
         <p>You can now browse and shop in our B2B marketplace.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Dealing India. All rights reserved.</p>
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Bagferi. All rights reserved.</p>
       </div>
     </body>
     </html>
   `;
 
-  return sendEmail(email, subject, html, `Welcome to Dealing India, ${name}!`, logoAttachment ? [logoAttachment] : undefined);
+  return sendEmail(email, subject, html, `Welcome to Bagferi, ${name}!`, logoAttachment ? [logoAttachment] : undefined);
 };
 
 /**
  * Send vendor approval email
  */
 export const sendVendorApprovalEmail = async (email, name) => {
-  const subject = 'Your Vendor Account is Approved! - Dealing India';
+  const subject = 'Your Vendor Account is Approved! - Bagferi';
   const logoAttachment = getInlineLogoAttachment();
   const logoSrc = logoAttachment ? `cid:${EMAIL_LOGO_CID}` : EMAIL_LOGO_URL;
 
@@ -391,16 +391,16 @@ export const sendVendorApprovalEmail = async (email, name) => {
     <html>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background:#f3f4f6;">
       <div style="background-color: #ffffff; padding: 30px; border-radius: 16px; border: 1px solid #e5e7eb; text-align: center;">
-        <img src="${logoSrc}" alt="Dealing India" style="max-width:160px;height:auto;margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;" />
+        <img src="${logoSrc}" alt="Bagferi" style="max-width:160px;height:auto;margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;" />
         <h1 style="color:${EMAIL_BRAND_PRIMARY};">Account Approved!</h1>
         <p>Hello ${name},</p>
         <p>Congratulations! Your vendor profile has been approved by the admin.</p>
-        <p>You can now log in to your vendor dashboard to start adding products, managing orders, and growing your business with Dealing India.</p>
+        <p>You can now log in to your vendor dashboard to start adding products, managing orders, and growing your business with Bagferi.</p>
         <div style="margin: 30px 0;">
           <a href="https://dealingindia.com/b2b-vendor/login" style="background-color: ${EMAIL_BRAND_PRIMARY}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
         </div>
         <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Dealing India. All rights reserved.</p>
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Bagferi. All rights reserved.</p>
       </div>
     </body>
     </html>
@@ -413,7 +413,7 @@ export const sendVendorApprovalEmail = async (email, name) => {
  * Send vendor rejection email
  */
 export const sendVendorRejectionEmail = async (email, name, reason) => {
-  const subject = 'Update on Your Vendor Application - Dealing India';
+  const subject = 'Update on Your Vendor Application - Bagferi';
   const logoAttachment = getInlineLogoAttachment();
   const logoSrc = logoAttachment ? `cid:${EMAIL_LOGO_CID}` : EMAIL_LOGO_URL;
 
@@ -424,15 +424,15 @@ export const sendVendorRejectionEmail = async (email, name, reason) => {
     <html>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background:#f3f4f6;">
       <div style="background-color: #ffffff; padding: 30px; border-radius: 16px; border: 1px solid #e5e7eb; text-align: center;">
-        <img src="${logoSrc}" alt="Dealing India" style="max-width:160px;height:auto;margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;" />
+        <img src="${logoSrc}" alt="Bagferi" style="max-width:160px;height:auto;margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;" />
         <h1 style="color:#dc2626;">Application Update</h1>
         <p>Hello ${name},</p>
-        <p>We have reviewed your vendor application for Dealing India.</p>
+        <p>We have reviewed your vendor application for Bagferi.</p>
         <p>Unfortunately, your application was not approved at this time.</p>
         ${reasonHtml}
         <p>If you have any questions or would like to appeal this decision, please contact our support team.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Dealing India. All rights reserved.</p>
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Bagferi. All rights reserved.</p>
       </div>
     </body>
     </html>

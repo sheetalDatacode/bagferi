@@ -59,7 +59,7 @@ const VendorHowToUse = () => {
 
                 <div className="space-y-2">
                     <h1 className="text-3xl font-bold font-futo">Vendor Dashboard Guide</h1>
-                    <p className="text-slate-400">Learn how to manage your business efficiently on Dealing India.</p>
+                    <p className="text-slate-400">Learn how to manage your business efficiently on Bagferi.</p>
                 </div>
 
                 {/* Main Content Card */}

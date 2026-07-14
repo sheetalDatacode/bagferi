@@ -33,7 +33,7 @@ const supportConfigSchema = new mongoose.Schema({
         default: [
             {
                 question: "How do I get GST invoices for my business?",
-                answer: "All bulk purchases through Dealing India B2B are GST compliant. You can download your Tax Invoice from the 'Order Details' section once the vendor confirms the dispatch."
+                answer: "All bulk purchases through Bagferi B2B are GST compliant. You can download your Tax Invoice from the 'Order Details' section once the vendor confirms the dispatch."
             },
             {
                 question: "What is Minimum Order Quantity (MOQ) and why is it required?",
@@ -48,7 +48,7 @@ const supportConfigSchema = new mongoose.Schema({
                 answer: "Most vendors allow sample ordering. You can request samples directly via the WhatsApp contact option on the product details page."
             },
             {
-                question: "How does Dealing India verify wholesalers?",
+                question: "How does Bagferi verify wholesalers?",
                 answer: "Every vendor on our B2B platform undergo a multi-step verification process, including GSTIN validation, business premises verification, and trade history checks to ensure safe transactions."
             }
         ]

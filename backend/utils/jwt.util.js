@@ -16,8 +16,8 @@ export const generateToken = (payload, expiresIn = JWT_EXPIRES_IN) => {
   try {
     return jwt.sign(payload, JWT_SECRET, {
       expiresIn,
-      issuer: 'dealing-india-api',
-      audience: 'dealing-india-client',
+      issuer: 'bagferi-api',
+      audience: 'bagferi-client',
     });
   } catch (error) {
     throw new Error('Failed to generate token');
@@ -33,8 +33,8 @@ export const generateToken = (payload, expiresIn = JWT_EXPIRES_IN) => {
 export const verifyToken = (token) => {
   try {
     return jwt.verify(token, JWT_SECRET, {
-      issuer: 'dealing-india-api',
-      audience: 'dealing-india-client',
+      issuer: 'bagferi-api',
+      audience: 'bagferi-client',
     });
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
@@ -56,8 +56,8 @@ export const generateRefreshToken = (payload) => {
   try {
     return jwt.sign(payload, JWT_SECRET, {
       expiresIn: '7d', // Refresh tokens last longer
-      issuer: 'dealing-india-api',
-      audience: 'dealing-india-client',
+      issuer: 'bagferi-api',
+      audience: 'bagferi-client',
     });
   } catch (error) {
     throw new Error('Failed to generate refresh token');

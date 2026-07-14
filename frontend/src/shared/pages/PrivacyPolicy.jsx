@@ -37,7 +37,7 @@ const PrivacyPolicy = ({ type = 'user' }) => {
                         
                         <h2 className="text-xl font-bold text-gray-800 mt-8 mb-4">1. Introduction</h2>
                         <p>
-                            Welcome to Dealing India. We respect your privacy and are committed to protecting your personal data. 
+                            Welcome to Bagferi. We respect your privacy and are committed to protecting your personal data. 
                             This privacy policy will inform you as to how we look after your personal data when you visit our website 
                             or use our {isVendor ? 'vendor application' : 'application'} and tell you about your privacy rights and how the law protects you.
                         </p>

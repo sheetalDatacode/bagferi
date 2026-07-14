@@ -897,7 +897,7 @@ const B2BLanding = () => {
                         {/* Logo - spans both rows */}
                         <div className="row-span-2 flex items-center pr-4 border-r border-gray-100">
                             <Link to={!isAuthenticated ? "/b2b/login" : (window.location.pathname.includes('/b2b/catalog') ? "/b2b/landing" : "/b2b/catalog")} className="hover:opacity-80 transition-opacity">
-                                <img src={appLogo.src} alt="Dealing India" className="h-24 w-auto object-contain" />
+                                <img src={appLogo.src} alt="Bagferi" className="h-24 w-auto object-contain" />
                             </Link>
                         </div>
                         {/* Row 1: Nav (Business Type, Lot, Real Estate, Become Seller, Profile) */}
@@ -1254,7 +1254,7 @@ const B2BLanding = () => {
                         <div className="flex items-center justify-between gap-2 flex-1 min-w-0">
                             <div className="flex-shrink-0">
                                 <Link to={!isAuthenticated ? "/b2b/login" : (window.location.pathname.includes('/b2b/catalog') ? "/b2b/landing" : "/b2b/catalog")} className="hover:opacity-80 transition-opacity">
-                                    <img src={appLogo.src} alt="Dealing India" className="h-10 md:h-12 w-auto object-contain" />
+                                    <img src={appLogo.src} alt="Bagferi" className="h-10 md:h-12 w-auto object-contain" />
                                 </Link>
                             </div>
                             {/* Mobile quick links beside logo */}

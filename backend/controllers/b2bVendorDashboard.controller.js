@@ -1,6 +1,4 @@
 import Product from '../models/Product.model.js';
-import Property from '../models/Property.model.js';
-import LotSlot from '../models/LotSlot.model.js';
 import BannerBooking from '../models/BannerBooking.model.js';
 import VendorSubscription from '../models/VendorSubscription.model.js';
 import Notification from '../models/Notification.model.js';
@@ -9,8 +7,6 @@ import ShopUnit from '../models/ShopUnit.model.js';
 import SecureDeal from '../models/SecureDeal.model.js';
 import VendorWallet from '../models/VendorWallet.model.js';
 import Reel from '../models/Reel.model.js';
-import Job from '../models/Job.model.js';
-
 /**
  * Get B2B Vendor Dashboard Data
  * GET /api/vendor/dashboard
@@ -36,10 +32,10 @@ export const getDashboardData = async (req, res, next) => {
         ] = await Promise.all([
             Product.countDocuments({ vendorId }),
             Product.countDocuments({ vendorId, isActive: true }),
-            Property.countDocuments({ vendorId }),
-            Property.countDocuments({ vendorId, isActive: true }),
-            LotSlot.countDocuments({ vendorId }),
-            LotSlot.countDocuments({ vendorId, isActive: true }),
+            0,
+            0,
+            0,
+            0,
             BannerBooking.find({ vendorId, status: 'active' }).populate('slotId').lean(),
             VendorSubscription.find({ vendorId, status: 'active' }).populate('planId').lean(),
             Notification.find({ recipient: vendorId, recipientType: 'vendor' }).sort({ createdAt: -1 }).limit(5).lean(),
@@ -49,8 +45,8 @@ export const getDashboardData = async (req, res, next) => {
             VendorWallet.findOne({ vendorId }).select('balance').lean(),
             Reel.countDocuments({ uploaderId: vendorId, uploaderType: 'vendor' }),
             Reel.countDocuments({ uploaderId: vendorId, uploaderType: 'vendor', status: 'approved' }),
-            Job.countDocuments({ vendorId, isDeleted: false }),
-            Job.countDocuments({ vendorId, isDeleted: false, isActive: true })
+            0,
+            0
         ]);
 
         // Format Data for Frontend

@@ -54,7 +54,7 @@ const HowToUse = () => {
                             <FiBookOpen size={24} />
                         </div>
                         <h1 className="text-2xl font-extrabold text-gray-900">User Guide & Tutorials</h1>
-                        <p className="text-gray-500 max-w-md mx-auto">Master the Dealing India B2B marketplace with these simple instructions.</p>
+                        <p className="text-gray-500 max-w-md mx-auto">Master the Bagferi B2B marketplace with these simple instructions.</p>
                     </div>
 
                     {/* Video Section */}

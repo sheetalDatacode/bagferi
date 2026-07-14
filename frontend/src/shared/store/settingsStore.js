@@ -1,12 +1,12 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import toast from "react-hot-toast";
-import logoImage from "../../../data/logos/dealing-india-logo.png";
+const logoImage = "/bagferi.png";
 import api from "../utils/api";
 
 const defaultSettings = {
   general: {
-    storeName: "Dealing India",
+    storeName: "Bagferi",
     storeLogo: logoImage,
     favicon: logoImage,
     contactEmail: "contact@example.com",
@@ -117,7 +117,7 @@ const defaultSettings = {
     smtpUser: "",
     smtpPassword: "",
     fromEmail: "noreply@example.com",
-    fromName: "Dealing India",
+    fromName: "Bagferi",
   },
   notifications: {
     email: {
@@ -133,7 +133,7 @@ const defaultSettings = {
     },
   },
   seo: {
-    metaTitle: "Dealing India - Join & Earn Reward Points",
+    metaTitle: "Bagferi - Join & Earn Reward Points",
     metaDescription: "Join India's premiere B2B marketplace",
     metaKeywords: "ecommerce, shopping, online store, b2b",
     ogImage: logoImage,

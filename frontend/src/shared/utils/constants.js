@@ -2,7 +2,7 @@
 // Auto-detect if running on Vercel or production
 const isVercel = typeof window !== 'undefined' &&
   (window.location.hostname.includes('vercel.app') ||
-    window.location.hostname === 'dealing-india.vercel.app');
+    window.location.hostname === 'bagferi.vercel.app');
 
 const isProduction = typeof window !== 'undefined' &&
   (window.location.hostname.includes('vercel.app') ||
@@ -54,7 +54,7 @@ export const API_BASE_URL = getBackendURL();
 export const SOCKET_URL = getSocketURL();
 
 // App Constants
-export const APP_NAME = 'Dealing India';
+export const APP_NAME = 'Bagferi';
 export const APP_DESCRIPTION = 'Join India\'s premiere B2B marketplace';
 
 // Animation Durations

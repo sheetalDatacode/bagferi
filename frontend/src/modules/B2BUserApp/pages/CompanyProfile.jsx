@@ -373,7 +373,7 @@ const CompanyProfile = () => {
                     </div>
                     <div>
                         <h3 className="font-bold text-teal-900 text-sm">Self-Verified Business</h3>
-                        <p className="text-[11px] text-teal-700 font-medium leading-tight">Your business details are private and used only for bulk order compliance on Dealing India.</p>
+                        <p className="text-[11px] text-teal-700 font-medium leading-tight">Your business details are private and used only for bulk order compliance on Bagferi.</p>
                     </div>
                 </div>
 

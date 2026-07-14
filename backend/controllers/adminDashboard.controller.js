@@ -2,19 +2,14 @@ import { asyncHandler } from '../middleware/errorHandler.middleware.js';
 import User from '../models/User.model.js';
 import Vendor from '../models/Vendor.model.js';
 import Product from '../models/Product.model.js';
-import Property from '../models/Property.model.js';
 import BannerBooking from '../models/BannerBooking.model.js';
 import Transaction from '../models/Transaction.model.js';
 import B2BCategory from '../models/B2BCategory.model.js';
 import VendorSubscription from '../models/VendorSubscription.model.js';
-import LotSlot from '../models/LotSlot.model.js';
-import VendorAddon from '../models/VendorAddon.model.js';
 import Reel from '../models/Reel.model.js';
 import ReelReport from '../models/ReelReport.model.js';
 import VendorWalletTransaction from '../models/VendorWalletTransaction.model.js';
 import Feedback from '../models/Feedback.model.js';
-import Job from '../models/Job.model.js';
-
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1'];
 
 /**
@@ -52,7 +47,7 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
         User.countDocuments(),
         Vendor.countDocuments({ vendorType: { $ne: 'admin' } }),
         Product.countDocuments(),
-        Property.countDocuments(),
+        0,
         BannerBooking.countDocuments({
             status: 'active',
             paymentStatus: 'paid',
@@ -66,7 +61,7 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
             .lean(),
         Vendor.countDocuments({ vendorType: { $ne: 'admin' }, status: 'approved' }),
         Product.countDocuments({ isActive: true }),
-        Property.countDocuments({ isActive: true }),
+        0,
         Vendor.aggregate([
             { $match: { vendorType: { $ne: 'admin' } } },
             { $group: { _id: { $ifNull: ['$businessType', 'General'] }, count: { $sum: 1 } } }
@@ -89,27 +84,18 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
             { $limit: 10 }
         ]),
         // Top 5 Property Locations
-        Property.aggregate([
-            {
-                $group: {
-                    _id: { $ifNull: ['$location.city', 'Unknown'] },
-                    count: { $sum: 1 }
-                }
-            },
-            { $sort: { count: -1 } },
-            { $limit: 5 }
-        ]),
+        [],
         // Real revenue calculation from Transactions
         Transaction.aggregate([
             { $match: { status: 'completed', type: 'payment' } },
             { $group: { _id: null, total: { $sum: '$amount' } } }
         ]),
         VendorSubscription.countDocuments({ status: 'active' }),
-        LotSlot.countDocuments(),
-        LotSlot.countDocuments({ isActive: true }),
+        0,
+        0,
         Reel.countDocuments(),
         Reel.countDocuments({ status: 'approved' }),
-        Job.countDocuments()
+        0
     ]);
 
     // Format vendor distribution for frontend based on business type
@@ -151,14 +137,7 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
         { $match: { paymentStatus: 'paid' } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
-      VendorAddon.aggregate([
-        { $match: { 
-          status: { $ne: 'failed' }, 
-          totalAmount: { $gt: 0 },
-          paymentMethod: { $ne: 'wallet' }
-        } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-      ]),
+      [],
       VendorWalletTransaction.aggregate([
         { $match: { referenceType: 'recharge', type: 'credit' } },
         { $group: { 
@@ -231,7 +210,7 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
             .limit(5)
             .populate('vendorId', 'name storeName email')
             .lean(),
-        VendorAddon.find({ status: { $ne: 'failed' }, totalAmount: { $gt: 0 } })
+        []
             .sort({ createdAt: -1 })
             .limit(5)
             .populate('vendorId', 'name storeName email')

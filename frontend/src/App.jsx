@@ -39,13 +39,10 @@ const Notifications = lazyWithRetry(
 );
 // const PushNotifications = lazyWithRetry(() => import("./modules/Admin/pages/notifications/PushNotifications"));
 // const CustomMessages = lazyWithRetry(() => import("./modules/Admin/pages/notifications/CustomMessages"));
-
 // Consolidated Settings pages removed as per user request
-
 // Firebase child pages removed
 // const PushConfig = lazyWithRetry(() => import("./modules/Admin/pages/firebase/PushConfig"));
 // const Authentication = lazyWithRetry(() => import("./modules/Admin/pages/firebase/Authentication"));
-
 // Admin B2B Vendor Routes
 const AdminB2BVendors = lazyWithRetry(
   () => import("./modules/Admin/pages/B2BVendors"),
@@ -64,18 +61,6 @@ const AdminB2BProductDetail = lazyWithRetry(
 );
 const AdminB2BSubscriptionWallet = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/SubscriptionWallet"),
-);
-const AdminB2BVendorLotSlots = lazyWithRetry(
-  () => import("./modules/Admin/pages/b2b-vendors/LotSlots"),
-);
-const AdminB2BVendorLotSlotDetail = lazyWithRetry(
-  () => import("./modules/Admin/pages/b2b-vendors/LotSlotDetail"),
-);
-const AdminB2BVendorProperties = lazyWithRetry(
-  () => import("./modules/Admin/pages/b2b-vendors/Properties"),
-);
-const AdminB2BVendorPropertyDetail = lazyWithRetry(
-  () => import("./modules/Admin/pages/b2b-vendors/PropertyDetail"),
 );
 const AdminB2BVendorAnalyticsPage = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/B2BVendorAnalytics"),
@@ -101,9 +86,6 @@ const AdminDefaultBannerManagement = lazyWithRetry(
 const AdminBusinessTypeConfiguration = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/BusinessTypeConfiguration"),
 );
-const AdminB2BAddonPlans = lazyWithRetry(
-  () => import("./modules/Admin/pages/b2b-vendors/AddonPlans"),
-);
 const AdminVendorDashboardView = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/AdminVendorDashboardView"),
 );
@@ -121,12 +103,6 @@ const AdminReelReports = lazyWithRetry(
 );
 const AdminFeedbacks = lazyWithRetry(
   () => import("./modules/Admin/pages/Feedbacks"),
-);
-const AdminJobCategories = lazyWithRetry(
-  () => import("./modules/Admin/pages/b2b-vendors/JobCategories"),
-);
-const AdminJobListings = lazyWithRetry(
-  () => import("./modules/Admin/pages/b2b-vendors/JobListings"),
 );
 const RouteWrapper = lazyWithRetry(
   () => import("./shared/components/RouteWrapper"),
@@ -147,7 +123,6 @@ const PrivacyPolicy = lazyWithRetry(
   () => import("./shared/pages/PrivacyPolicy"),
 );
 // Mobile App Routes
-
 // B2B Vendor Routes
 const B2BVendorLogin = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/Login"),
@@ -179,29 +154,6 @@ const B2BVendorAddProduct = lazyWithRetry(
 const B2BVendorEditProduct = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/products/EditProduct"),
 );
-
-const B2BVendorProperties = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/Properties"),
-);
-const B2BVendorManageProperties = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/properties/ManageProperties"),
-);
-const B2BVendorAddProperty = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/properties/AddProperty"),
-);
-const B2BVendorAddFlat = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/properties/AddFlat"),
-);
-const B2BVendorAddVilla = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/properties/AddVilla"),
-);
-const B2BVendorAddPlot = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/properties/AddPlot"),
-);
-const B2BVendorEditProperty = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/properties/EditProperty"),
-);
-
 const B2BVendorSettings = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/Settings"),
 );
@@ -226,21 +178,11 @@ const B2BVendorPaymentPage = lazyWithRetry(
 const B2BVendorForgotPassword = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/ForgotPassword"),
 );
-
-const B2BVendorManageLots = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/lotslot/ManageLotSlot"),
-);
 const B2BVendorReels = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/Reels"),
 );
 const B2BVendorUploadReel = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/UploadReel"),
-);
-const B2BVendorAddLot = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/lotslot/AddLotSlot"),
-);
-const B2BVendorEditLot = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/lotslot/EditLotSlot"),
 );
 const B2BVendorNotifications = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/VendorNotifications"),
@@ -263,10 +205,6 @@ const B2BVendorWallet = lazyWithRetry(
 const B2BVendorSupport = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/VendorSupport"),
 );
-const VendorJobs = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/VendorJobs"),
-);
-
 // B2B User App Routes
 const B2BUserLogin = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/Login"),
@@ -280,11 +218,9 @@ const B2BUserVerification = lazyWithRetry(
 const B2BUserForgotPassword = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/ForgotPassword"),
 );
-
 const B2BProductCatalog = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/ProductCatalog"),
 );
-
 const B2BUserProfile = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/Profile"),
 );
@@ -300,7 +236,6 @@ const B2BNotifications = lazyWithRetry(
 const B2BHowToUse = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/HowToUse"),
 );
-
 const B2BPayments = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/Payments"),
 );
@@ -309,9 +244,6 @@ const B2BSupport = lazyWithRetry(
 );
 const B2BProductDetail = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/ProductDetail"),
-);
-const JobsPage = lazyWithRetry(
-  () => import("./modules/B2BUserApp/pages/JobsPage"),
 );
 const B2BVendorStore = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/B2BVendorStore"),
@@ -325,28 +257,15 @@ const B2BLanding = lazyWithRetry(
 const ReelFeed = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/ReelFeed"),
 );
-const RealEstate = lazyWithRetry(
-  () => import("./modules/B2BUserApp/pages/RealEstate"),
-);
-const PropertyDetail = lazyWithRetry(
-  () => import("./modules/B2BUserApp/pages/PropertyDetail"),
-);
-const RealEstatePropertyUpload = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/PropertyUpload"),
-);
-
 // Inner component that has access to useLocation
 const RegisterRedirect = () => {
   const location = useLocation();
   return <Navigate to={`/b2b/register${location.search || ""}`} replace />;
 };
-
 const ForegroundNotificationHandler = () => {
   const navigate = useNavigate();
-
   useEffect(() => {
     if (!ENABLE_FCM) return;
-
     return setupForegroundNotificationHandler((payload) => {
       if (payload?.data?.link && payload?.data?.type !== "test") {
         let link = payload.data.link;
@@ -363,16 +282,13 @@ const ForegroundNotificationHandler = () => {
       }
     });
   }, [navigate]);
-
   return null;
 };
-
 const AppRoutes = () => {
   // Test System Toast
   useEffect(() => {
     // toast.success("System Connected");
   }, []);
-
   return (
     <Suspense
       fallback={
@@ -406,7 +322,6 @@ const AppRoutes = () => {
           path="/wholesalers"
           element={<Navigate to="/admin/b2b-vendors" replace />}
         />
-
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route
@@ -419,7 +334,6 @@ const AppRoutes = () => {
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="users" element={<AdminUserManagement />} />
-
           {/* Admin B2B Vendor Routes */}
           <Route path="b2b-vendors">
             <Route index element={<AdminB2BVendors />} />
@@ -433,16 +347,6 @@ const AppRoutes = () => {
               element={<AdminB2BVendorProductListings />}
             />
             <Route path="products/:id" element={<AdminB2BProductDetail />} />
-            <Route path="lot-slots" element={<AdminB2BVendorLotSlots />} />
-            <Route
-              path="lot-slots/:id"
-              element={<AdminB2BVendorLotSlotDetail />}
-            />
-            <Route path="properties" element={<AdminB2BVendorProperties />} />
-            <Route
-              path="properties/:id"
-              element={<AdminB2BVendorPropertyDetail />}
-            />
             <Route path="analytics" element={<AdminB2BVendorAnalyticsPage />} />
             <Route path="wallet" element={<B2BWallet />} />
             <Route
@@ -450,10 +354,7 @@ const AppRoutes = () => {
               element={<AdminB2BSubscriptionWallet />}
             />
             <Route path="subscriptions" element={<AdminB2BSubscriptions />} />
-            <Route path="addon-plans" element={<AdminB2BAddonPlans />} />
             <Route path="categories" element={<AdminB2BCategories />} />
-            <Route path="job-categories" element={<AdminJobCategories />} />
-            <Route path="job-listings" element={<AdminJobListings />} />
             <Route
               path="banner-bookings"
               element={<AdminB2BBannerManagement />}
@@ -479,7 +380,6 @@ const AppRoutes = () => {
               element={<B2BVendorContactAnalytics mode="admin" />}
             />
           </Route>
-
           <Route path="notifications" element={<Notifications />} />
           <Route path="reels" element={<AdminReelModeration />} />
           <Route path="reel-reports" element={<AdminReelReports />} />
@@ -488,7 +388,6 @@ const AppRoutes = () => {
           <Route path="transactions" element={<AdminTransactions />} />
           <Route path="feedbacks" element={<AdminFeedbacks />} />
         </Route>
-
         {/* B2B User App Routes */}
         <Route path="/register" element={<RegisterRedirect />} />
         <Route path="/b2b/login" element={<B2BUserLogin />} />
@@ -498,7 +397,6 @@ const AppRoutes = () => {
           path="/b2b/forgot-password"
           element={<B2BUserForgotPassword />}
         />
-
         <Route path="/b2b" element={<Navigate to="/b2b/landing" replace />} />
         <Route path="/b2b/landing" element={<B2BLanding />} />
         <Route
@@ -513,37 +411,6 @@ const AppRoutes = () => {
           path="/b2b/catalog"
           element={<B2BProductCatalog />}
         />
-        <Route
-          path="/b2b/jobs"
-          element={<JobsPage />}
-        />
-        <Route path="/b2b/real-estate">
-          <Route
-            index
-            element={<RealEstate />}
-          />
-          <Route
-            path="developers"
-            element={<Navigate to="/b2b/real-estate" replace />}
-          />
-          <Route
-            path="brokers"
-            element={<Navigate to="/b2b/real-estate" replace />}
-          />
-          <Route
-            path="property/:id"
-            element={
-              <ProtectedRoute>
-                <PropertyDetail />
-              </ProtectedRoute>
-            }
-          />
-        </Route>
-        <Route
-          path="/b2b/vendor/property-upload"
-          element={<RealEstatePropertyUpload />}
-        />
-
         <Route
           path="/b2b/profile"
           element={
@@ -584,7 +451,6 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/b2b/payments"
           element={
@@ -609,7 +475,6 @@ const AppRoutes = () => {
           path="/b2b/vendor/:id"
           element={<B2BVendorStore />}
         />
-
         {/* B2B Vendor Routes */}
         <Route path="/b2b-vendor/login" element={<B2BVendorLogin />} />
         <Route path="/b2b-vendor/register" element={<B2BVendorRegister />} />
@@ -634,7 +499,6 @@ const AppRoutes = () => {
             element={<Navigate to="/b2b-vendor/dashboard" replace />}
           />
           <Route path="dashboard" element={<B2BVendorDashboard />} />
-
           <Route path="products">
             <Route index element={<B2BVendorProducts />} />
             <Route
@@ -644,43 +508,17 @@ const AppRoutes = () => {
             <Route path="add-product" element={<B2BVendorAddProduct />} />
             <Route path="edit/:id" element={<B2BVendorEditProduct />} />
           </Route>
-
           <Route path="shop-listing" element={<B2BVendorShopListing />} />
-          <Route path="jobs" element={<VendorJobs />} />
-
-          <Route path="properties">
-            <Route index element={<B2BVendorProperties />} />
-            <Route path="manage-properties" element={<B2BVendorManageProperties />} />
-            <Route path="add-property" element={<B2BVendorAddProperty />} />
-            <Route path="add-commercial" element={<B2BVendorAddProperty />} />
-            <Route path="add-flat" element={<B2BVendorAddFlat />} />
-            <Route path="add-villa" element={<B2BVendorAddVilla />} />
-            <Route path="add-plot" element={<B2BVendorAddPlot />} />
-            <Route path="edit/:id" element={<B2BVendorEditProperty />} />
-          </Route>
-
           <Route path="settings" element={<B2BVendorSettings />} />
           <Route path="settings/profile" element={<B2BVendorSettings />} />
           <Route
             path="settings/business"
             element={<Navigate to="/b2b-vendor/settings/profile" replace />}
           />
-
           <Route path="subscription" element={<B2BVendorSubscription />} />
           <Route path="billing" element={<B2BVendorBilling />} />
           <Route path="wallet" element={<B2BVendorWallet />} />
           <Route path="banner-booking" element={<B2BVendorBannerBooking />} />
-          <Route path="lotslot">
-            <Route
-              index
-              element={
-                <Navigate to="/b2b-vendor/lotslot/manage-lots" replace />
-              }
-            />
-            <Route path="manage-lots" element={<B2BVendorManageLots />} />
-            <Route path="add-lotslot" element={<B2BVendorAddLot />} />
-            <Route path="edit/:id" element={<B2BVendorEditLot />} />
-          </Route>
           <Route
             path="analytics/clicks"
             element={<B2BVendorContactAnalytics mode="vendor" />}
@@ -699,7 +537,6 @@ const AppRoutes = () => {
     </Suspense>
   );
 };
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -709,15 +546,12 @@ const queryClient = new QueryClient({
     },
   },
 });
-
 function App() {
   useEffect(() => {
     if (!ENABLE_FCM) {
       return;
     }
-
     initializePushNotifications();
-    
     try {
       const hasAuth =
         localStorage.getItem("token") ||
@@ -787,5 +621,4 @@ function App() {
     </QueryClientProvider>
   );
 }
-
 export default App;

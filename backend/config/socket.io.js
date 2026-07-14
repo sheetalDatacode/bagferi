@@ -26,7 +26,7 @@ export const setupSocketIO = (httpServer, allowedOrigins = []) => {
   const defaultOrigins = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'https://dealing-india.vercel.app',
+    'https://bagferi.vercel.app',
     'https://www.dealingindia.com',
     'https://dealingindia.com',
     'https://www.dealingindia.in',

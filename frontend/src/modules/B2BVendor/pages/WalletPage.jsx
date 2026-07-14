@@ -59,7 +59,7 @@ const WalletPage = () => {
                 key: order.razorpayKeyId,
                 amount: order.amount,
                 currency: 'INR',
-                name: 'Dealing India',
+                name: 'Bagferi',
                 description: 'Wallet Recharge',
                 order_id: order.id,
                 handler: async (response) => {

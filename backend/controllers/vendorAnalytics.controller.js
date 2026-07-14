@@ -1,7 +1,7 @@
 import Vendor from '../models/Vendor.model.js';
 import notificationService from '../services/notification.service.js';
 import VendorContactClick from '../models/VendorContactClick.model.js';
-import vendorAddonService from '../services/vendorAddon.service.js';
+const vendorAddonService = { getTotalAvailableAddonUnits: async () => 0, deductAddonUsage: async () => {} };
 import vendorWalletService from '../services/vendorWallet.service.js';
 import mongoose from 'mongoose';
 

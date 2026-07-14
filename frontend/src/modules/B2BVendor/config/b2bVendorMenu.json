@@ -18,30 +18,6 @@
         "children": []
     },
     {
-        "title": "Property Management",
-        "route": "/b2b-vendor/properties",
-        "children": [
-            "Manage Properties",
-            "Add Commercial",
-            "Add Flat",
-            "Add Villa / Row House",
-            "Add Plot"
-        ]
-    },
-    {
-        "title": "Lot/Slot Listings",
-        "route": "/b2b-vendor/lotslot",
-        "children": [
-            "Manage Lots",
-            "Add Lot/Slot"
-        ]
-    },
-    {
-        "title": "Jobs",
-        "route": "/b2b-vendor/jobs",
-        "children": []
-    },
-    {
         "title": "Subscription",
         "route": "/b2b-vendor/subscription",
         "children": []
@@ -78,7 +54,6 @@
     },
     {
         "title": "Notifications",
-
         "route": "/b2b-vendor/notifications",
         "children": []
     },
