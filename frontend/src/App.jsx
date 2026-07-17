@@ -104,6 +104,9 @@ const AdminReelReports = lazyWithRetry(
 const AdminFeedbacks = lazyWithRetry(
   () => import("./modules/Admin/pages/Feedbacks"),
 );
+const AdminZones = lazyWithRetry(
+  () => import("./modules/Admin/pages/Zones"),
+);
 const RouteWrapper = lazyWithRetry(
   () => import("./shared/components/RouteWrapper"),
 );
@@ -229,6 +232,9 @@ const B2BPersonalProfile = lazyWithRetry(
 );
 const B2BCompanyProfile = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/CompanyProfile"),
+);
+const B2BCategories = lazyWithRetry(
+  () => import("./modules/B2BUserApp/pages/B2BCategories"),
 );
 const B2BNotifications = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/Notifications"),
@@ -387,6 +393,7 @@ const AppRoutes = () => {
           <Route path="support-settings" element={<SupportSettings />} />
           <Route path="transactions" element={<AdminTransactions />} />
           <Route path="feedbacks" element={<AdminFeedbacks />} />
+          <Route path="zones" element={<AdminZones />} />
         </Route>
         {/* B2B User App Routes */}
         <Route path="/register" element={<RegisterRedirect />} />
@@ -399,6 +406,7 @@ const AppRoutes = () => {
         />
         <Route path="/b2b" element={<Navigate to="/b2b/landing" replace />} />
         <Route path="/b2b/landing" element={<B2BLanding />} />
+        <Route path="/b2b/categories" element={<B2BCategories />} />
         <Route
           path="/b2b/reels"
           element={<ReelFeed />}

@@ -777,12 +777,7 @@ const B2BVendorSubscription = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
                             whileHover={!hasActiveSubscription || isCurrentPlan || isUpgrade ? { y: -8, scale: 1.02 } : {}}
-                            className={`relative bg-white rounded-3xl p-8 shadow-lg border-2 flex flex-col transition-all ${isCurrentPlan
-                                ? 'border-green-500 ring-4 ring-green-50'
-                                : isRecommended
-                                    ? 'border-primary-500 ring-4 ring-primary-50'
-                                    : 'border-gray-100 hover:border-gray-200'
-                                } ${isDowngrade ? 'opacity-60' : ''}`}
+                            className={`relative rounded-3xl p-8 shadow-lg border-2 flex flex-col transition-all bg-primary-50 border-primary-500 ${isDowngrade ? 'opacity-60' : ''}`}
                         >
                             {/* Badges */}
                             {isCurrentPlan && (

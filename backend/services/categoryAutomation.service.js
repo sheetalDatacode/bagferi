@@ -1,42 +1,87 @@
 import B2BCategory from '../models/B2BCategory.model.js';
 
 /**
- * Ensures a category exists, and optionally a subcategory and field options.
- * @param {Object} data - { category, subcategory, fieldUpdates }
+ * Ensures a category exists, and optionally a subcategory and subSubcategory, and field options.
+ * @param {Object} data - { category, subcategory, subSubcategory, fieldUpdates }
  * @param {Array} data.fieldUpdates - Array of { label, value } to ensure value is in options if field is select/multi-select
+ * @returns {Promise<Object>} { categoryId, subcategoryId, subSubcategoryId }
  */
-export const ensureCategoryStructure = async ({ category, subcategory, fieldUpdates = [] }) => {
+export const ensureCategoryStructure = async ({ category, subcategory, subSubcategory, fieldUpdates = [] }) => {
   try {
-    if (!category) return;
+    if (!category) return { categoryId: null, subcategoryId: null, subSubcategoryId: null };
 
-    let catDoc = await B2BCategory.findOne({ name: { $regex: new RegExp(`^${category}$`, 'i') } });
+    // Find or create level 1
+    let catDoc = await B2BCategory.findOne({ 
+        name: { $regex: new RegExp(`^${category}$`, 'i') }, 
+        parent: null 
+    });
 
     if (!catDoc) {
-      // Create new category
       catDoc = await B2BCategory.create({
         name: category.trim(),
-        subcategories: subcategory ? [{ name: subcategory.trim(), fields: [] }] : []
+        level: 1,
+        parent: null
       });
-    } else if (subcategory) {
-      // Check if subcategory exists
-      const subIndex = catDoc.subcategories.findIndex(
-        s => s.name.toLowerCase() === subcategory.toLowerCase()
-      );
+    }
 
-      if (subIndex === -1) {
-        catDoc.subcategories.push({ name: subcategory.trim(), fields: [] });
-        await catDoc.save();
-      } else if (fieldUpdates && fieldUpdates.length > 0) {
-        // Check field options
+    let subDoc = null;
+    let subSubDoc = null;
+
+    if (subcategory) {
+        // Find or create level 2
+        subDoc = await B2BCategory.findOne({
+            name: { $regex: new RegExp(`^${subcategory}$`, 'i') },
+            parent: catDoc._id
+        });
+
+        if (!subDoc) {
+            subDoc = await B2BCategory.create({
+                name: subcategory.trim(),
+                level: 2,
+                parent: catDoc._id
+            });
+        }
+    }
+
+    if (subDoc && subSubcategory) {
+        // Find or create level 3
+        subSubDoc = await B2BCategory.findOne({
+            name: { $regex: new RegExp(`^${subSubcategory}$`, 'i') },
+            parent: subDoc._id
+        });
+
+        if (!subSubDoc) {
+            subSubDoc = await B2BCategory.create({
+                name: subSubcategory.trim(),
+                level: 3,
+                parent: subDoc._id
+            });
+        }
+    }
+
+    // Apply field updates to the deepest level provided
+    const targetDoc = subSubDoc || subDoc || catDoc;
+
+    if (fieldUpdates && fieldUpdates.length > 0 && targetDoc) {
         let modified = false;
-        const sub = catDoc.subcategories[subIndex];
+        
+        // Ensure targetDoc.fields is initialized
+        if (!targetDoc.fields) targetDoc.fields = [];
 
         for (const update of fieldUpdates) {
           const { label, value } = update;
           if (!label || !value) continue;
 
-          const field = sub.fields.find(f => f.label.toLowerCase() === label.toLowerCase());
-          if (field && (field.type === 'select' || field.type === 'multi-select')) {
+          let field = targetDoc.fields.find(f => f.label.toLowerCase() === label.toLowerCase());
+          
+          if (!field) {
+            // Auto-create field if it doesn't exist
+            field = { label: label.trim(), type: 'select', options: [] };
+            targetDoc.fields.push(field);
+            modified = true;
+          }
+
+          if (field.type === 'select' || field.type === 'multi-select') {
             const values = Array.isArray(value) ? value : [value];
             for (const val of values) {
               const valStr = String(val).trim();
@@ -49,15 +94,18 @@ export const ensureCategoryStructure = async ({ category, subcategory, fieldUpda
         }
 
         if (modified) {
-          catDoc.markModified('subcategories');
-          await catDoc.save();
+          targetDoc.markModified('fields');
+          await targetDoc.save();
         }
-      }
     }
 
-    return catDoc;
+    return {
+        categoryId: catDoc ? catDoc._id : null,
+        subcategoryId: subDoc ? subDoc._id : null,
+        subSubcategoryId: subSubDoc ? subSubDoc._id : null
+    };
   } catch (error) {
     console.error('Error in ensureCategoryStructure:', error);
-    // Don't throw, we don't want to block product creation if category auto-add fails
+    return { categoryId: null, subcategoryId: null, subSubcategoryId: null };
   }
 };

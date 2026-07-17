@@ -53,13 +53,18 @@ const productSchema = new mongoose.Schema(
       default: '',
     },
     category: {
-      type: String,
-      trim: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'B2BCategory',
       index: true,
     },
     subcategory: {
-      type: String,
-      trim: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'B2BCategory',
+      index: true,
+    },
+    subSubcategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'B2BCategory',
       index: true,
     },
     bulkPricing: {

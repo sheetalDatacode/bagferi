@@ -547,7 +547,7 @@ const Subscriptions = () => {
                                     <motion.div
                                         key={plan._id || plan.id}
                                         whileHover={{ y: -5 }}
-                                        className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border-2 border-gray-100 shadow-sm"
+                                        className="bg-white rounded-2xl p-6 border-2 border-gray-100 shadow-sm"
                                     >
                                         <div className="flex items-center justify-between mb-4">
                                             <div>

@@ -31,7 +31,6 @@ const referralCodeSchema = new mongoose.Schema(
 );
 
 referralCodeSchema.index({ userId: 1, userModel: 1 }, { unique: true });
-referralCodeSchema.index({ referralCode: 1 }, { unique: true });
 
 const ReferralCode = mongoose.model('ReferralCode', referralCodeSchema);
 

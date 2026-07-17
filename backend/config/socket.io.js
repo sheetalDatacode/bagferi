@@ -30,7 +30,11 @@ export const setupSocketIO = (httpServer, allowedOrigins = []) => {
     'https://www.dealingindia.com',
     'https://dealingindia.com',
     'https://www.dealingindia.in',
-    'https://dealingindia.in'
+    'https://dealingindia.in',
+    'https://bagferi.com',
+    'https://www.bagferi.com',
+    'https://bagferi.in',
+    'https://www.bagferi.in'
   ];
 
   // Merge and deduplicate origins (passed origins + defaults)

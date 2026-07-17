@@ -111,6 +111,9 @@ export const getB2BVendorProducts = async (vendorId, filters = {}) => {
     const [products, total] = await Promise.all([
       Product.find(query)
         .populate('vendorId', 'name storeName vendorType')
+        .populate('category', 'name')
+        .populate('subcategory', 'name')
+        .populate('subSubcategory', 'name')
         .sort(sortOptions)
         .skip(skip)
         .limit(parseInt(limit))
@@ -123,14 +126,16 @@ export const getB2BVendorProducts = async (vendorId, filters = {}) => {
     // Sanitize product images
     const sanitizedProducts = products.map(product => {
       // Normalize for frontend consistency if needed
-      const feCategory = product.category || product.attributes?.find(a => a.name === 'category')?.value;
-      const feSubcategory = product.subcategory || product.attributes?.find(a => a.name === 'subcategory')?.value;
+      const feCategory = product.category?.name || product.category || product.attributes?.find(a => a.name === 'category')?.value;
+      const feSubcategory = product.subcategory?.name || product.subcategory || product.attributes?.find(a => a.name === 'subcategory')?.value;
+      const feSubSubcategory = product.subSubcategory?.name || product.subSubcategory || '';
 
       const { items, minPrice, maxPrice, formType, shopUnitId, ...rest } = product;
       return {
         ...rest,
         category: feCategory,
         subcategory: feSubcategory,
+        subSubcategory: feSubSubcategory,
         image: sanitizeImageUrl(product.image),
         images: sanitizeImageUrls(product.images || []),
       };
@@ -165,6 +170,9 @@ export const getB2BVendorProductById = async (productId, vendorId) => {
       isActive: true,
     })
       .populate('vendorId', 'name storeName vendorType')
+      .populate('category', 'name')
+      .populate('subcategory', 'name')
+      .populate('subSubcategory', 'name')
       .lean();
 
     if (!product) {
@@ -177,7 +185,10 @@ export const getB2BVendorProductById = async (productId, vendorId) => {
 
     // Normalize category/subcategory/bulkPricing for consistency if they were in attributes
     if (!product.category) product.category = product.attributes?.find(a => a.name === 'category')?.value;
+    else product.category = product.category?.name || product.category;
     if (!product.subcategory) product.subcategory = product.attributes?.find(a => a.name === 'subcategory')?.value;
+    else product.subcategory = product.subcategory?.name || product.subcategory;
+    if (product.subSubcategory) product.subSubcategory = product.subSubcategory?.name || product.subSubcategory;
     if (!product.bulkPricing || product.bulkPricing.length === 0) {
       const bpAttr = product.attributes?.find(a => a.name === 'bulkPricing')?.value;
       if (bpAttr) product.bulkPricing = bpAttr;
@@ -230,6 +241,7 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
     const {
       category,
       subcategory,
+      subSubcategory,
       description,
       images = [],
       specifications = [],
@@ -325,12 +337,13 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
     }
 
     // Proactively ensure category/subcategory/options exist in DB
-    // We do this in a non-blocking background task to keep latency low
-    ensureCategoryStructure({
+    // We do this blocking now to get the ObjectIds for the new schema
+    const catIds = await ensureCategoryStructure({
       category: (category || '').trim(),
       subcategory: (subcategory || '').trim(),
+      subSubcategory: (subSubcategory || '').trim(),
       fieldUpdates,
-    }).catch(err => console.error('[B2B Product Create] Category auto-add failed:', err.message));
+    });
 
     // We no longer push category/subcategory/bulkPricing to attributes
     // Use the native schema fields instead
@@ -361,8 +374,9 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
       stock: stock,
       attributes: processedAttributes,
       brandName: brand || '',
-      category: category || '',
-      subcategory: subcategory || '',
+      category: catIds.categoryId || null,
+      subcategory: catIds.subcategoryId || null,
+      subSubcategory: catIds.subSubcategoryId || null,
       bulkPricing: bulkPricing || [],
       unit: unit || 'Pcs',
       vendorId,
@@ -407,6 +421,7 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
       name,
       category,
       subcategory,
+      subSubcategory,
       moq,
       price,
       description,
@@ -427,8 +442,6 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
     if (brand !== undefined) updateData.brandName = brand || '';
     if (moq !== undefined) updateData.minimumOrderQuantity = parseInt(moq) || 1;
     if (productData.unit !== undefined) updateData.unit = productData.unit;
-    if (category !== undefined) updateData.category = category;
-    if (subcategory !== undefined) updateData.subcategory = subcategory;
     if (bulkPricing !== undefined) updateData.bulkPricing = bulkPricing;
 
 
@@ -543,11 +556,19 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
     // Proactively ensure category/subcategory/options exist in DB
     const finalCategory = category !== undefined ? category : existingProduct.category;
     const finalSubcategory = subcategory !== undefined ? subcategory : existingProduct.subcategory;
-    ensureCategoryStructure({
-      category: (finalCategory || '').trim(),
-      subcategory: (finalSubcategory || '').trim(),
+    const finalSubSubcategory = subSubcategory !== undefined ? subSubcategory : existingProduct.subSubcategory;
+    
+    // We do this blocking to get the ObjectIds
+    const catIds = await ensureCategoryStructure({
+      category: (finalCategory || '').toString().trim(),
+      subcategory: (finalSubcategory || '').toString().trim(),
+      subSubcategory: (finalSubSubcategory || '').toString().trim(),
       fieldUpdates,
-    }).catch(err => console.error('[B2B Product Update] Category auto-add failed:', err.message));
+    });
+
+    if (category !== undefined) updateData.category = catIds.categoryId || null;
+    if (subcategory !== undefined) updateData.subcategory = catIds.subcategoryId || null;
+    if (subSubcategory !== undefined) updateData.subSubcategory = catIds.subSubcategoryId || null;
 
     // Update stock status if availability or explicit quantity changed
     if (availability !== undefined || payloadStockQuantity !== undefined) {

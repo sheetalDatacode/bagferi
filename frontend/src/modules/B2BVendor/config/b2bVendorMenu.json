@@ -40,7 +40,10 @@
     {
         "title": "Reels",
         "route": "/b2b-vendor/reels",
-        "children": []
+        "children": [
+            "Manage Reels",
+            "Add Reel"
+        ]
     },
     {
         "title": "Followers",

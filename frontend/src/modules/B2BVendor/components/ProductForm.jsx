@@ -30,10 +30,13 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
     const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
     const [isCategorySearchOpen, setIsCategorySearchOpen] = useState(false);
     const [isSubcategorySearchOpen, setIsSubcategorySearchOpen] = useState(false);
+    const [isSubSubcategorySearchOpen, setIsSubSubcategorySearchOpen] = useState(false);
     const [categorySearchQuery, setCategorySearchQuery] = useState("");
     const [subcategorySearchQuery, setSubcategorySearchQuery] = useState("");
+    const [subSubcategorySearchQuery, setSubSubcategorySearchQuery] = useState("");
     const categoryDropdownRef = useRef(null);
     const subcategoryDropdownRef = useRef(null);
+    const subSubcategoryDropdownRef = useRef(null);
 
     // Lock scroll when unit selection modal is open
     useScrollLock(isUnitDropdownOpen);
@@ -61,6 +64,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
         name: "",
         category: "",
         subcategory: "",
+        subSubcategory: "",
         moq: 1,
         price: "", 
         description: "",
@@ -74,6 +78,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
 
     const [categories, setCategories] = useState(categoriesCache || []);
     const [subcategories, setSubcategories] = useState([]);
+    const [subSubcategories, setSubSubcategories] = useState([]);
     const [categoriesLoading, setCategoriesLoading] = useState(!categoriesCache);
     const [dynamicFields, setDynamicFields] = useState([]);
     const [dynamicValues, setDynamicValues] = useState({});
@@ -122,6 +127,9 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
             }
             if (subcategoryDropdownRef.current && !subcategoryDropdownRef.current.contains(event.target)) {
                 setIsSubcategorySearchOpen(false);
+            }
+            if (subSubcategoryDropdownRef.current && !subSubcategoryDropdownRef.current.contains(event.target)) {
+                setIsSubSubcategorySearchOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -229,8 +237,10 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                     setFormData(prev => ({ ...prev, category: selectedCategory.name }));
                 }
                 setSubcategories(selectedCategory.subcategories || []);
+                setSubSubcategories([]);
             } else {
                 setSubcategories([]);
+                setSubSubcategories([]);
             }
         }
     }, [formData.category, categories]);
@@ -245,7 +255,16 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 setFormData(prev => ({ ...prev, subcategory: sub.name }));
             }
 
-            const fields = sub?.fields || [];
+            setSubSubcategories(sub?.subcategories || []);
+
+            let fields = [];
+            if (formData.subSubcategory && sub?.subcategories?.length > 0) {
+                const subSub = sub.subcategories.find(s => s.name.toLowerCase() === formData.subSubcategory.toLowerCase());
+                fields = subSub?.fields || sub?.fields || [];
+            } else {
+                fields = sub?.fields || [];
+            }
+
             setDynamicFields(fields);
 
             // Populate dynamicValues from formData.specifications (including custom values for select/multi-select)
@@ -298,7 +317,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
             setDynamicValues({});
             setCustomMultiInputs({});
         }
-    }, [formData.category, formData.subcategory, categories]);
+    }, [formData.category, formData.subcategory, formData.subSubcategory, categories]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -598,6 +617,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 name: formData.name,
                 category: formData.category,
                 subcategory: formData.subcategory || "",
+                subSubcategory: formData.subSubcategory || "",
                 moq: parseInt(formData.moq) || 1,
                 price: parseFloat(formData.price),
                 description: formData.description || "",
@@ -714,7 +734,8 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                                 setFormData(prev => ({
                                                                     ...prev,
                                                                     category: cat.name,
-                                                                    subcategory: "" // Reset subcategory
+                                                                    subcategory: "",
+                                                                    subSubcategory: ""
                                                                 }));
                                                                 setIsCategorySearchOpen(false);
                                                                 setCategorySearchQuery("");
@@ -784,7 +805,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                             key={index}
                                                             type="button"
                                                             onClick={() => {
-                                                                setFormData(prev => ({ ...prev, subcategory: sub.name }));
+                                                                setFormData(prev => ({ ...prev, subcategory: sub.name, subSubcategory: "" }));
                                                                 setIsSubcategorySearchOpen(false);
                                                                 setSubcategorySearchQuery("");
                                                             }}
@@ -807,6 +828,71 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                     )}
                                 </AnimatePresence>
                             </div>
+
+                            {/* SubSubcategory Dropdown */}
+                            {subSubcategories.length > 0 && (
+                            <div className="md:col-span-1 relative" ref={subSubcategoryDropdownRef}>
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Sub-Subcategory</label>
+                                
+                                <div 
+                                    onClick={() => formData.subcategory && subSubcategories.length > 0 && setIsSubSubcategorySearchOpen(!isSubSubcategorySearchOpen)}
+                                    className={`w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus-within:border-primary-500 focus-within:bg-white rounded-xl transition-all flex justify-between items-center ${(!formData.subcategory || subSubcategories.length === 0) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                >
+                                    <span className={`truncate ${!formData.subSubcategory ? 'text-gray-400' : 'text-gray-800'}`}>
+                                        {formData.subSubcategory || "Select Sub-Subcategory"}
+                                    </span>
+                                    <FiChevronDown className={`text-gray-400 transition-transform ${isSubSubcategorySearchOpen ? 'rotate-180' : ''}`} />
+                                </div>
+
+                                <AnimatePresence>
+                                    {isSubSubcategorySearchOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className="absolute z-[100] w-full mt-2 bg-white border border-gray-100 shadow-xl rounded-2xl overflow-hidden"
+                                        >
+                                            <div className="p-3 border-b border-gray-50">
+                                                <div className="relative">
+                                                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                    <input 
+                                                        autoFocus
+                                                        type="text"
+                                                        placeholder="Search..."
+                                                        value={subSubcategorySearchQuery}
+                                                        onChange={(e) => setSubSubcategorySearchQuery(e.target.value)}
+                                                        className="w-full pl-9 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 outline-none"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="max-h-60 overflow-y-auto p-2 custom-scrollbar">
+                                                {subSubcategories
+                                                    .filter(sub => sub.name.toLowerCase().includes(subSubcategorySearchQuery.toLowerCase()))
+                                                    .map((sub, index) => (
+                                                        <button
+                                                            key={index}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setFormData(prev => ({ ...prev, subSubcategory: sub.name }));
+                                                                setIsSubSubcategorySearchOpen(false);
+                                                                setSubSubcategorySearchQuery("");
+                                                            }}
+                                                            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-colors ${
+                                                                formData.subSubcategory === sub.name 
+                                                                ? 'bg-primary-50 text-primary-700 font-bold' 
+                                                                : 'text-gray-600 hover:bg-gray-50'
+                                                            }`}
+                                                        >
+                                                            {sub.name}
+                                                        </button>
+                                                    ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                            )}
 
                             {/* Dynamic Fields Rendering Section */}
                             {dynamicFields.map((f, i) => (

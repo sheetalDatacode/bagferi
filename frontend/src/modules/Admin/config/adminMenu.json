@@ -93,5 +93,10 @@
     "title": "Feedbacks",
     "route": "/admin/feedbacks",
     "children": []
+  },
+  {
+    "title": "Zones",
+    "route": "/admin/zones",
+    "children": []
   }
 ]

@@ -4,25 +4,7 @@
 import api from './api';
 
 // Default plans if none exist
-const DEFAULT_PLANS = [
-    {
-        id: 'plan_12_months',
-        name: 'Yearly Plan',
-        duration: 12,
-        price: 9999,
-        features: [
-            'Unlimited Product Listings',
-            'Priority Inquiry Display',
-            'Advanced Analytics',
-            'Featured Store Badge',
-            '24/7 Dedicated Support',
-            'Bulk Order Management',
-            'Custom API Integration',
-            'Personal Account Manager'
-        ],
-        isActive: true
-    }
-];
+const DEFAULT_PLANS = [];
 
 // Cache for plans (keyed by 'all' or businessType slug)
 let plansCache = {};

@@ -492,33 +492,16 @@ const PropertyDetail = () => {
                                 </div>
 
                                  <div className="mt-8 md:mt-10 space-y-3 md:space-y-4">
-                                    {/* Quota warning - Only show for the vendor themselves */}
-                                    {!enquiryStatus.canAcceptEnquiries && user?.id === (property.vendorId?._id || property.vendorId) && (
-                                        <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
-                                            <p className="text-[10px] md:text-sm font-black text-red-600 uppercase tracking-wide">
-                                                Enquiry Gated: Recharge wallet or purchase plan to enable contact icons
-                                            </p>
-                                        </div>
-                                    )}
+                                    {/* Quota warning removed */}
                                     <button
                                         onClick={handleWhatsAppClick}
-                                        disabled={!enquiryStatus.canAcceptEnquiries}
-                                        className={`w-full py-4 md:py-6 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3 ${
-                                            !enquiryStatus.canAcceptEnquiries
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed grayscale shadow-none'
-                                                : 'bg-[#25D366] text-white hover:bg-[#128C7E]'
-                                        }`}
+                                        className="w-full py-4 md:py-6 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3 bg-[#25D366] text-white hover:bg-[#128C7E]"
                                     >
                                         <FaWhatsapp size={20} /> Negotiate Offer
                                     </button>
                                     <button
                                         onClick={handleCallClick}
-                                        disabled={!enquiryStatus.canAcceptEnquiries}
-                                        className={`w-full py-4 md:py-6 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3 ${
-                                            !enquiryStatus.canAcceptEnquiries
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed grayscale shadow-none'
-                                                : 'bg-gray-900 text-white hover:bg-black'
-                                        }`}
+                                        className="w-full py-4 md:py-6 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-3 bg-gray-900 text-white hover:bg-black"
                                     >
                                         <FiPhone size={20} /> Connect Instant
                                     </button>

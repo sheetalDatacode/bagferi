@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     FiArrowLeft, FiMessageSquare, FiTruck, FiShield,
     FiCheckCircle, FiShare2, FiInfo, FiSend, FiX,
-    FiPlus, FiMinus, FiShoppingBag, FiStar, FiPaperclip, FiFile, FiPhone, FiMapPin
+    FiPlus, FiMinus, FiShoppingBag, FiStar, FiPaperclip, FiFile, FiPhone, FiMapPin, FiShoppingCart, FiHeart
+    , FiChevronUp, FiChevronDown, FiRefreshCw, FiClock, FiStar as FiStarIcon
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import B2BHeader from '../components/Layout/B2BHeader';
@@ -36,6 +37,43 @@ const B2BProductDetail = () => {
     const [draftRating, setDraftRating] = useState(0);
     const [draftComment, setDraftComment] = useState('');
     const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+
+    const [relatedProducts, setRelatedProducts] = useState([]);
+    const [loadingRelated, setLoadingRelated] = useState(false);
+
+    useEffect(() => {
+        const fetchRelated = async () => {
+            if (product) {
+                setLoadingRelated(true);
+                try {
+                    const category = getCategoryName();
+                    const response = await api.get('/products', { params: { category, limit: 5 } });
+                    if (response.success && response.data) {
+                        const items = response.data.products || response.data.data || response.data;
+                        const filtered = (Array.isArray(items) ? items : []).filter(p => p._id !== product._id).slice(0, 4);
+                        setRelatedProducts(filtered);
+                    }
+                } catch (e) {
+                    console.error('Error fetching related products:', e);
+                } finally {
+                    setLoadingRelated(false);
+                }
+            }
+        };
+        fetchRelated();
+    }, [product]);
+
+    const [openSections, setOpenSections] = useState({
+        specifications: true,
+        material: false,
+        vendor: false,
+        reviews: false
+    });
+
+    const toggleSection = (section) => {
+        setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+    };
+
 
     useEffect(() => {
         fetchProductDetails();
@@ -131,8 +169,8 @@ const B2BProductDetail = () => {
     // Track vendor contact clicks (call or whatsapp)
 
 
- 
-     const handleWhatsAppClick = () => {
+
+    const handleWhatsAppClick = () => {
         if (!enquiryStatus.canAcceptEnquiries) return;
         trackContactClick('whatsapp');
         const cleanedPhone = (product.vendorId?.phone || '').replace(/\D/g, '');
@@ -289,325 +327,346 @@ const B2BProductDetail = () => {
     })();
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
+        <div className="min-h-screen bg-white pb-24 font-sans text-gray-800">
             <B2BHeader />
-            <main className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-12">
-                <div className="flex items-center justify-between mb-8 md:mb-12">
-                    <button onClick={() => navigate(-1)} className="p-2.5 md:p-3 bg-white shadow-sm border border-gray-100 rounded-full transition-all text-gray-700 hover:text-primary-600 flex items-center gap-2 text-[10px] md:text-xs font-black uppercase tracking-widest active:scale-95">
-                        <FiArrowLeft className="text-sm md:text-lg" /> Back to Catalog
-                    </button>
-                    <button 
-                        onClick={handleShareClick}
-                        className="p-2.5 md:p-3 bg-white shadow-sm border border-gray-100 rounded-full text-gray-400 hover:text-primary-600 transition-all active:scale-90"
-                    >
-                        <FiShare2 className="text-sm md:text-lg" />
-                    </button>
-                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-16">
+            {/* Breadcrumbs */}
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 text-[10px] md:text-xs text-gray-400 font-medium">
+                Home <span className="mx-1"></span> Products <span className="mx-1"></span> <span className="text-gray-800">{product.name}</span>
+            </div>
+
+            <main className="max-w-7xl mx-auto px-4 md:px-8 pb-12">
+
+                {/* Top Split Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 bg-white rounded-xl md:border border-gray-100 md:p-6 mb-8 shadow-sm">
+
                     {/* Media Section */}
-                    <div className="lg:col-span-7 space-y-4 md:space-y-6">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="relative aspect-square md:aspect-[1.1/1] rounded-3xl md:rounded-[3rem] overflow-hidden bg-white shadow-2xl border border-gray-100 group flex items-center justify-center p-4"
-                        >
-                            {/* Blurred background for a premium look that fills gaps */}
-                            <div 
-                                className="absolute inset-0 bg-cover bg-center blur-3xl opacity-30 scale-110 pointer-events-none"
-                                style={{ backgroundImage: `url(${productImages[safeSelectedImage]})` }}
+                    <div className="space-y-4">
+                        <div className="relative aspect-square md:aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 flex items-center justify-center p-4">
+                            <img
+                                src={productImages[safeSelectedImage]}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
                             />
-                            
-                            <img 
-                                src={productImages[safeSelectedImage]} 
-                                alt={product.name} 
-                                className="relative z-10 w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 drop-shadow-2xl" 
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent pointer-events-none z-20" />
-                        </motion.div>
+                            {/* Overlay Icons */}
+                            <div className="absolute top-4 right-4 flex gap-2">
+                                <button onClick={handleShareClick} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow hover:bg-gray-50 transition-colors">
+                                    <FiShare2 className="text-gray-600 text-lg" />
+                                </button>
+                                <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow hover:bg-gray-50 transition-colors">
+                                    <FiHeart className="text-gray-600 text-lg" />
+                                </button>
+                            </div>
+                        </div>
 
                         {productImages.length > 1 && (
-                            <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
+                            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
                                 {productImages.map((img, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => setSelectedImage(idx)}
-                                        className={`relative flex-shrink-0 w-20 h-20 md:w-28 md:h-28 rounded-2xl md:rounded-[1.5rem] overflow-hidden border-2 md:border-4 transition-all duration-300 bg-white flex items-center justify-center p-1.5 ${safeSelectedImage === idx ? 'border-primary-500 shadow-xl scale-105' : 'border-white hover:border-primary-100 shadow-sm'}`}
+                                        className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-white ${safeSelectedImage === idx ? 'border-teal-500' : 'border-gray-100 hover:border-gray-200'}`}
                                     >
-                                        <div 
-                                            className="absolute inset-0 bg-cover bg-center blur-2xl opacity-20 scale-110 pointer-events-none"
-                                            style={{ backgroundImage: `url(${img})` }}
-                                        />
-                                        <img src={img} alt="" className="relative z-10 w-full h-full object-contain" />
+                                        <img src={img} alt="" className="w-full h-full object-cover" />
                                     </button>
                                 ))}
                             </div>
                         )}
                     </div>
 
-                    {/* Basic Info Section */}
-                    <div className="lg:col-span-5 space-y-6 md:space-y-10">
-                        <div className="space-y-4">
-                            <span className="text-[10px] md:text-xs font-black text-primary-600 uppercase tracking-[0.2em] px-4 py-2 bg-primary-50 rounded-xl inline-block shadow-sm">
-                                {getCategoryName()}
+                    {/* Product Info Section */}
+                    <div className="flex flex-col pt-2 md:pt-4">
+                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                            {product.formType === 'shop-listing' && product.items?.[0]
+                                ? (product.items[0].itemName || product.name)
+                                : product.name}
+                        </h1>
+
+                        <div className="flex items-center gap-3 mt-3">
+                            <div className="flex items-center text-[#fbbf24]">
+                                {[...Array(5)].map((_, i) => (
+                                    <FiStarIcon key={i} className={`fill-current w-4 h-4 ${i < Math.round(ratingSummary.averageRating) ? 'text-[#fbbf24]' : 'text-gray-200'}`} />
+                                ))}
+                            </div>
+                            <span className="text-sm font-medium text-slate-500">
+                                ({ratingSummary.ratingCount} reviews)
                             </span>
-                            <h1 className="text-2xl md:text-5xl font-black text-gray-900 leading-[1.1] uppercase tracking-tighter">
-                                {product.formType === 'shop-listing' && product.items?.[0]
-                                    ? (product.items[0].itemName || product.name)
-                                    : product.name}
-                            </h1>
-                            {product.formType === 'shop-listing' && (product.unitDetails?.name || product.name) && (
-                                <p className="text-sm font-bold text-gray-400 mt-2 uppercase tracking-widest">
-                                    Shop: {product.unitDetails?.name || product.name}
-                                </p>
-                            )}
-
-                            {ratingSummary.ratingCount > 0 ? (
-                                <div className="flex items-center gap-2 mt-3">
-                                    <StarRating rating={ratingSummary.averageRating} size={16} />
-                                    <span className="text-sm font-black text-gray-700">{ratingSummary.averageRating.toFixed(1)}</span>
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">({ratingSummary.ratingCount} Reviews)</span>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2 mt-3">
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">0 Reviews</span>
-                                </div>
-                            )}
-
-                            <div className="h-1 w-20 bg-primary-600 rounded-full mt-4"></div>
+                            <span className="bg-[#e11d48] text-white text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                                Bestseller
+                            </span>
                         </div>
 
-                        <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[3.5rem] shadow-xl border border-gray-100 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-600/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
+                        <div className="mt-6 flex items-baseline gap-2">
+                            <span className="text-3xl md:text-4xl font-black text-slate-900">
+                                ₹{currentPrice}
+                            </span>
+                            <span className="text-sm font-medium text-slate-400">
+                                / {product.formType === 'shop-listing' && product.items?.[0] ? product.items[0].unit : (product.unit || 'piece')}
+                            </span>
+                        </div>
 
-                            <div className="flex items-start justify-between gap-6 mb-8 md:mb-10 relative z-10">
-                                <div>
-                                    <span className="text-[10px] md:text-[11px] text-gray-400 font-black uppercase tracking-[0.2em] mb-3 block">
-                                        {product.formType === 'shop-listing' ? 'Item Rate' : 'Market Value'}
-                                    </span>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl md:text-5xl font-black text-primary-600 tracking-tighter">
-                                            ₹{product.formType === 'shop-listing' && product.items?.length > 0
-                                                ? product.items[0].price
-                                                : product.price}
-                                        </span>
-                                        <span className="text-gray-400 font-bold text-xs md:text-sm uppercase tracking-widest">
-                                            / {product.formType === 'shop-listing' && product.items?.[0]
-                                                ? product.items[0].unit
-                                                : (product.unit || 'pc')}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="text-right shrink-0">
-                                    <span className="text-[10px] md:text-[11px] text-gray-400 font-black uppercase tracking-[0.2em] mb-3 block">Minimum Order</span>
-                                    <span className="text-lg md:text-2xl font-black text-gray-900 tracking-tight">
-                                        {product.formType === 'shop-listing' && product.items?.[0]
-                                            ? (product.items[0].minOrder ?? product.moq ?? 1)
-                                            : (product.moq || 1)}
-                                        <span className="text-[10px] md:text-xs text-gray-400 uppercase ml-1">
-                                            {product.formType === 'shop-listing' && product.items?.[0]?.unit
-                                                ? product.items[0].unit
-                                                : (product.unit || 'Units')}
-                                        </span>
-                                    </span>
-                                </div>
-                            </div>
+                        <div className="text-[11px] font-medium text-slate-400 mt-1 uppercase tracking-widest">
+                            SKU: {product.sku || 'N/A'}
+                        </div>
 
-                            <div className="space-y-6 relative z-10">
-                                {bulkPricing && bulkPricing.length > 0 && (
-                                    <div className="space-y-4">
-                                        <h4 className="text-[10px] md:text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Tiered Pricing Model</h4>
-                                        <div className="space-y-2">
-                                            {bulkPricing.map((tier, idx) => (
-                                                <div key={idx} className="flex justify-between items-center p-4 bg-gray-50/50 hover:bg-white rounded-2xl border border-transparent hover:border-primary-100 transition-all group/tier">
-                                                    <span className="text-[11px] md:text-xs font-black text-gray-600 uppercase tracking-wider">{tier.minQty}+ {product.unit || 'units'}</span>
-                                                    <span className="text-[11px] md:text-xs font-black text-primary-600 group-hover/tier:scale-110 transition-transform">₹{tier.price} <span className="text-[9px] text-gray-400">/ UNIT</span></span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                        <p className="text-sm text-slate-500 mt-6 leading-relaxed">
+                            {product.unitDetails?.description || product.description || (product.formType === 'shop-listing' && product.items?.[0]?.description) || 'No description provided.'}
+                        </p>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-6 md:pt-8 border-t border-gray-50">
-                                    {/* Quota warning - Only show for the vendor themselves */}
-                                    {!enquiryStatus.canAcceptEnquiries && user?.id === (product.vendorId?._id || product.vendorId) && (
-                                        <div className="col-span-full mb-4 p-4 bg-red-50 rounded-2xl border border-red-100">
-                                            <p className="text-[10px] md:text-xs font-black text-red-600 uppercase tracking-wide">
-                                                Enquiry Gated: Recharge wallet or purchase plan to enable contact icons
-                                            </p>
-                                        </div>
-                                    )}
-                                    {product.vendorId?.phone && (
-                                        <>
-                                            <button
-                                                onClick={handleWhatsAppClick}
-                                                disabled={!enquiryStatus.canAcceptEnquiries}
-                                                className={`py-3 md:py-4 px-3 md:px-4 rounded-xl md:rounded-xl font-black text-[10px] md:text-xs uppercase tracking-wide shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 md:gap-2 ${
-                                                    !enquiryStatus.canAcceptEnquiries 
-                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed grayscale shadow-none' 
-                                                        : 'bg-[#25D366] text-white shadow-green-100/50 hover:bg-[#128C7E]'
-                                                }`}
-                                            >
-                                                <FaWhatsapp className="text-base md:text-lg shrink-0" /> WhatsApp
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    if (!enquiryStatus.canAcceptEnquiries) {
-                                                        toast.error("Contact Disabled (Insufficient Quota)");
-                                                        return;
-                                                    }
-                                                    handleCallClick();
-                                                }}
-                                                disabled={!enquiryStatus.canAcceptEnquiries}
-                                                className={`py-3 md:py-4 px-3 md:px-4 rounded-xl md:rounded-xl font-black text-[10px] md:text-xs uppercase tracking-wide shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 md:gap-2 ${
-                                                    !enquiryStatus.canAcceptEnquiries 
-                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed grayscale shadow-none' 
-                                                        : 'bg-gray-900 text-white shadow-gray-200/50 hover:bg-black'
-                                                }`}
-                                            >
-                                                <FiPhone className="text-base md:text-lg shrink-0" /> Call
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    if (!enquiryStatus.canAcceptEnquiries) {
-                                                        toast.error("Contact Disabled (Insufficient Quota)");
-                                                        return;
-                                                    }
-                                                    const mapsUrl = getGoogleMapsUrl(product.vendorId);
-                                                    if (mapsUrl) {
-                                                        trackContactClick('map');
-                                                        window.open(mapsUrl, '_blank');
-                                                    } else {
-                                                        toast.error('Location details not provided');
-                                                    }
-                                                }}
-                                                className={`py-3 md:py-4 px-3 md:px-4 rounded-xl md:rounded-xl font-black text-[10px] md:text-xs uppercase tracking-wide shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 md:gap-2 ${
-                                                    !enquiryStatus.canAcceptEnquiries
-                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed grayscale shadow-none'
-                                                        : 'bg-orange-600 text-white shadow-orange-100/50 hover:bg-orange-700'
-                                                }`}
-                                                title={!enquiryStatus.canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "Map"}
-                                            >
-                                                <FiMapPin className="text-base md:text-lg shrink-0" /> Map
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
+                        {/* Summary Grid */}
+                        <div className="mt-8 border-t border-b border-gray-100 py-4 grid grid-cols-[1fr_2fr] gap-y-3 text-sm">
+                            <span className="text-slate-400 font-medium">Material</span>
+                            <span className="text-slate-700 font-bold">{specifications.find(s => s.name.toLowerCase().includes('material'))?.value || 'N/A'}</span>
+
+                            <span className="text-slate-400 font-medium">Finish</span>
+                            <span className="text-slate-700 font-bold">{specifications.find(s => s.name.toLowerCase().includes('finish'))?.value || 'Matte'}</span>
+
+                            <span className="text-slate-400 font-medium">Thickness</span>
+                            <span className="text-slate-700 font-bold">{specifications.find(s => s.name.toLowerCase().includes('thickness'))?.value || 'N/A'}</span>
+
+                            <span className="text-slate-400 font-medium">SKU</span>
+                            <span className="text-slate-700 font-bold">{product.sku || 'N/A'}</span>
+
+                            <span className="text-slate-400 font-medium">Stock</span>
+                            <div>
+                                <span className="text-[#10b981] bg-[#10b981]/10 px-2 py-1 rounded text-xs font-bold">
+                                    In Stock
+                                </span>
                             </div>
                         </div>
 
-                        {/* Vendor Card */}
-                        <div
-                            onClick={() => product.vendorId?._id && navigate(`/b2b/vendor/${product.vendorId._id}?itemType=${product.itemType}`)}
-                            className="bg-primary-600 p-6 md:p-10 rounded-3xl md:rounded-[3.5rem] text-white shadow-2xl relative group cursor-pointer overflow-hidden border-2 md:border-4 border-primary-500/50"
+                        <div className="flex items-center gap-2 mt-6 text-sm">
+                            <FiTruck className="text-teal-600 text-lg" />
+                            <span className="text-slate-500">Deliver in</span>
+                            <span className="text-teal-600 font-bold">4 hours</span>
+                            <span className="text-slate-400">to default</span>
+                        </div>
+
+                        {/* Sticky Action Buttons */}
+                        <div className="mt-8 grid grid-cols-2 gap-4 sticky bottom-0 bg-white py-4 border-t border-gray-100 md:border-none md:py-0 md:static z-40">
+                            <button
+                                onClick={() => {
+                                    if (!isAuthenticated) return navigate('/login');
+                                    toast.success('Added to Cart!');
+                                }}
+                                className="bg-[#14b8a6] hover:bg-[#0d9488] text-white py-3.5 px-4 rounded font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <FiShoppingCart className="text-lg" /> Add to Cart
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (!isAuthenticated) return navigate('/login');
+                                    toast.success('Proceed to Checkout');
+                                }}
+                                className="bg-[#0f172a] hover:bg-black text-white py-3.5 px-4 rounded font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12.9868 6.94103C13.2519 6.64332 13.0405 6.16669 12.6416 6.16669H7.66667V0.833354C7.66667 0.395167 7.15174 0.158102 6.8188 0.443903L0.342611 6.00223C0.0336631 6.26732 0.222378 6.77259 0.635852 6.77259H5.5303V12.1667C5.5303 12.6049 6.04523 12.8419 6.37817 12.5561L12.9868 6.94103Z" fill="currentColor" />
+                                </svg>
+                                Buy Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Trust Badges */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+                    <div className="flex items-center gap-4 bg-gray-50/50 p-6 rounded-lg border border-gray-100">
+                        <FiShield className="text-teal-600 text-2xl shrink-0" />
+                        <div>
+                            <div className="font-bold text-slate-800 text-sm">Secure Payment</div>
+                            <div className="text-slate-400 text-xs mt-1">100% Protected</div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4 bg-gray-50/50 p-6 rounded-lg border border-gray-100">
+                        <FiRefreshCw className="text-teal-600 text-2xl shrink-0" />
+                        <div>
+                            <div className="font-bold text-slate-800 text-sm">Easy return on manufacturing defect</div>
+                            <div className="text-slate-400 text-xs mt-1">7-Day Returns</div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4 bg-gray-50/50 p-6 rounded-lg border border-gray-100">
+                        <FiStar className="text-teal-600 text-2xl shrink-0" />
+                        <div>
+                            <div className="font-bold text-slate-800 text-sm">Expert Support</div>
+                            <div className="text-slate-400 text-xs mt-1">24/7 Available</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Accordion Sections */}
+                <div className="border border-gray-100 rounded-lg overflow-hidden bg-white shadow-sm mb-16">
+                    {/* Specifications Accordion */}
+                    <div>
+                        <button
+                            onClick={() => toggleSection('specifications')}
+                            className="w-full flex items-center justify-between p-6 bg-white hover:bg-gray-50 transition-colors"
                         >
-                            <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 group-hover:scale-150 transition-transform duration-1000"></div>
-                            <div className="relative z-10">
-                                <span className="text-[9px] md:text-[10px] font-black text-primary-200 uppercase tracking-[0.3em] mb-4 md:mb-6 block">Authorised Vendor</span>
-                                <div className="flex items-center gap-4 md:gap-6">
-                                    <div className="w-12 h-12 md:w-16 md:h-16 bg-white/20 backdrop-blur-md rounded-2xl md:rounded-3xl flex items-center justify-center text-xl md:text-2xl font-black border border-white/30 shadow-2xl uppercase">
+                            <span className="font-bold text-slate-900 tracking-wide">SPECIFICATIONS</span>
+                            {openSections.specifications ? <FiChevronUp className="text-slate-400" /> : <FiChevronDown className="text-slate-400" />}
+                        </button>
+                        {openSections.specifications && (
+                            <div className="px-6 pb-6 pt-2 border-t border-gray-100 bg-gray-50/30">
+                                <div className="space-y-4 text-sm mt-4">
+                                    <div className="grid grid-cols-[1fr_2fr] pb-4 border-b border-gray-100">
+                                        <span className="text-slate-400 font-medium uppercase text-xs tracking-wider">Brand</span>
+                                        <span className="text-slate-800 font-bold">{product.brand || 'Local'}</span>
+                                    </div>
+                                    <div className="grid grid-cols-[1fr_2fr] pb-4 border-b border-gray-100">
+                                        <span className="text-slate-400 font-medium uppercase text-xs tracking-wider">Category</span>
+                                        <span className="text-slate-800 font-bold">{getCategoryName()}</span>
+                                    </div>
+                                    {specifications.map((s, idx) => (
+                                        <div key={idx} className="grid grid-cols-[1fr_2fr] pb-4 border-b border-gray-100 last:border-0 last:pb-0">
+                                            <span className="text-slate-400 font-medium uppercase text-xs tracking-wider">{s.name}</span>
+                                            <span className="text-slate-800 font-bold">{Array.isArray(s.value) ? s.value.join(', ') : s.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Material & Build Accordion */}
+                    <div className="border-t border-gray-100">
+                        <button
+                            onClick={() => toggleSection('material')}
+                            className="w-full flex items-center justify-between p-6 bg-white hover:bg-gray-50 transition-colors"
+                        >
+                            <span className="font-bold text-slate-900 tracking-wide">MATERIAL & BUILD</span>
+                            {openSections.material ? <FiChevronUp className="text-slate-400" /> : <FiChevronDown className="text-slate-400" />}
+                        </button>
+                        {openSections.material && (
+                            <div className="px-6 py-4 border-t border-gray-100 text-sm text-slate-600 bg-gray-50/30">
+                                Detailed material composition and build quality information would be displayed here.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Vendor Information Accordion */}
+                    <div className="border-t border-gray-100">
+                        <button
+                            onClick={() => toggleSection('vendor')}
+                            className="w-full flex items-center justify-between p-6 bg-white hover:bg-gray-50 transition-colors"
+                        >
+                            <span className="font-bold text-slate-900 tracking-wide">VENDOR INFORMATION</span>
+                            {openSections.vendor ? <FiChevronUp className="text-slate-400" /> : <FiChevronDown className="text-slate-400" />}
+                        </button>
+                        {openSections.vendor && (
+                            <div className="px-6 py-6 border-t border-gray-100 bg-gray-50/30">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 bg-slate-900 text-white rounded-xl flex items-center justify-center text-2xl font-black uppercase">
                                         {(product.shopName || product.shopUnitId?.name || product.vendorId?.storeName)?.charAt(0) || 'V'}
                                     </div>
                                     <div>
-                                        <h3 className="text-base md:text-2xl font-black tracking-tight uppercase leading-none">{product.shopName || product.shopUnitId?.name || product.vendorId?.storeName || 'Verified Store'}</h3>
-                                        <div className="flex items-center gap-2 text-primary-100 text-[9px] md:text-[11px] font-black uppercase tracking-widest mt-2 md:mt-3">
-                                            <FiCheckCircle className="text-white" /> Platinum Verified
+                                        <h3 className="text-lg font-bold text-slate-900 uppercase">{product.shopName || product.shopUnitId?.name || product.vendorId?.storeName || 'Verified Store'}</h3>
+                                        <div className="flex items-center gap-1.5 mt-1 text-[#10b981] text-xs font-bold uppercase tracking-wider">
+                                            <FiCheckCircle /> Platinum Verified
                                         </div>
-                                        {shopRatingSummary.ratingCount > 0 && (
-                                            <div className="flex items-center gap-1.5 mt-2 text-white">
-                                                <StarRating rating={shopRatingSummary.averageRating} size={14} />
-                                                <span className="text-xs font-bold ml-1">{shopRatingSummary.averageRating.toFixed(1)}</span>
-                                                <span className="text-[10px] opacity-75 ml-1">({shopRatingSummary.ratingCount} Ratings)</span>
-                                            </div>
-                                        )}
                                     </div>
+                                    <button
+                                        onClick={() => product.vendorId?._id && navigate(`/b2b/vendor/${product.vendorId._id}?itemType=${product.itemType}`)}
+                                        className="ml-auto text-teal-600 font-bold text-sm hover:underline"
+                                    >
+                                        Visit Store
+                                    </button>
                                 </div>
                             </div>
-                        </div>
+                        )}
+                    </div>
 
-                        {/* Rating Submission Card */}
-                        <div className="bg-white p-6 md:p-10 rounded-3xl md:rounded-[3.5rem] shadow-xl border border-gray-100 relative overflow-hidden">
-                            <h3 className="text-xs md:text-sm font-black text-gray-800 uppercase tracking-widest mb-4">
-                                {userRating ? 'Your Rating' : 'Rate this Product'}
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-4">
-                                    <StarRating 
-                                        rating={draftRating} 
-                                        interactive={true} 
-                                        onRate={setDraftRating}
-                                        size={24}
-                                    />
-                                    {isSubmittingRating && <span className="text-[10px] md:text-xs text-primary-600 font-black uppercase animate-pulse">Saving...</span>}
-                                </div>
-                                
-                                {draftRating > 0 && (
-                                    <div className="space-y-3 mt-4">
+                    {/* Reviews & Ratings Accordion */}
+                    <div className="border-t border-gray-100">
+                        <button
+                            onClick={() => toggleSection('reviews')}
+                            className="w-full flex items-center justify-between p-6 bg-white hover:bg-gray-50 transition-colors"
+                        >
+                            <span className="font-bold text-slate-900 tracking-wide">REVIEWS & RATINGS</span>
+                            {openSections.reviews ? <FiChevronUp className="text-slate-400" /> : <FiChevronDown className="text-slate-400" />}
+                        </button>
+                        {openSections.reviews && (
+                            <div className="px-6 py-6 border-t border-gray-100 bg-gray-50/30">
+                                <div className="max-w-md">
+                                    <h4 className="text-sm font-bold text-slate-800 mb-4">{userRating ? 'Your Rating' : 'Rate this Product'}</h4>
+                                    <div className="flex items-center gap-4">
+                                        <StarRating
+                                            rating={draftRating}
+                                            interactive={true}
+                                            onRate={setDraftRating}
+                                            size={24}
+                                        />
+                                    </div>
+                                    {draftRating > 0 && (
                                         <button
                                             onClick={handleRatingSubmit}
                                             disabled={isSubmittingRating || !isAuthenticated}
-                                            className={`w-full py-3 px-4 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-wide shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
-                                                isSubmittingRating || !isAuthenticated
-                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
-                                                    : 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-200/50'
-                                            }`}
+                                            className="mt-4 w-full py-2.5 bg-slate-900 text-white rounded font-bold text-xs uppercase tracking-wide hover:bg-black transition-colors disabled:opacity-50"
                                         >
-                                            <FiSend className="text-sm" /> 
                                             {isSubmittingRating ? 'Submitting...' : 'Submit Review'}
                                         </button>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
-                            {!isAuthenticated && (
-                                <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest mt-4">
-                                    Please login to rate this product
-                                </p>
-                            )}
-                        </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Description & Specifications Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-20 mt-12 md:mt-24 border-t border-gray-100 pt-12 md:pt-20">
-                    <div className="space-y-6 md:space-y-10">
-                        <div className="flex items-center gap-4">
-                            <span className="h-[2px] w-8 md:w-12 bg-primary-600" />
-                            <h2 className="text-xl md:text-3xl font-black text-gray-900 uppercase tracking-tighter">Strategic Overview</h2>
-                        </div>
-                        <div className="bg-white p-6 md:p-12 rounded-3xl md:rounded-[3rem] border border-gray-50 shadow-sm">
-                            <p className="text-gray-500 text-base md:text-xl font-medium leading-[1.8] whitespace-pre-line">
-                                {product.unitDetails?.description || product.description || (product.formType === 'shop-listing' && product.items?.[0]?.description) || 'No description provided.'}
-                            </p>
-                        </div>
+                {/* You May Also Like Section */}
+                <div className="mb-12">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-black text-slate-900">You May Also Like</h2>
+                        <a href="#" className="text-teal-600 font-bold text-sm hover:underline">See All &rarr;</a>
                     </div>
 
-                    <div className="space-y-6 md:space-y-10">
-                        <div className="flex items-center gap-4">
-                            <span className="h-[2px] w-8 md:w-12 bg-primary-600" />
-                            <h2 className="text-xl md:text-3xl font-black text-gray-900 uppercase tracking-tighter">Specifications</h2>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {specifications.map((s, i) => (
-                                <div key={i} className="flex flex-col justify-center p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
-                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 group-hover:text-primary-600 transition-colors">{s.name}</span>
-                                    <span className="text-sm font-black text-gray-800 uppercase tracking-tight">
-                                        {Array.isArray(s.value) ? s.value.join(', ') : s.value}
-                                    </span>
-                                </div>
-                            ))}
-                            {specifications.length === 0 && (
-                                <div className="col-span-full p-12 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 text-center text-gray-400 font-bold uppercase text-[10px] tracking-widest">
-                                    No Technical Specs Provided
-                                </div>
-                            )}
-                        </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {loadingRelated ? (
+                            <div className="col-span-2 md:col-span-4 text-center py-8 text-gray-400 text-sm">Loading related products...</div>
+                        ) : relatedProducts.length > 0 ? (
+                            relatedProducts.map((rp, idx) => {
+                                const pImages = rp.media?.map(m => m.url) || rp.images || [rp.image];
+                                const pImg = pImages.find(i => i) || 'https://via.placeholder.com/300';
+                                const pPrice = rp.pricing?.b2b?.price || rp.price || 0;
+                                const formCat = rp.formType === 'shop-listing' ? rp.items?.[0]?.category : rp.category;
+                                const pCat = typeof formCat === 'object' ? formCat?.name : formCat;
+                                const pName = rp.formType === 'shop-listing' && rp.items?.[0] ? (rp.items[0].itemName || rp.name) : rp.name;
+
+                                return (
+                                    <Link to={`/b2b/product/${rp._id}`} key={idx} onClick={() => window.scrollTo(0, 0)} className="border border-gray-100 rounded-xl p-3 flex flex-col relative group hover:shadow-lg transition-shadow bg-white text-left">
+                                        {idx === 0 && <span className="absolute top-3 left-3 bg-teal-50 text-teal-600 text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider z-10 border border-teal-100">Top Choice</span>}
+                                        <button className="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-red-500 z-10 transition-colors" onClick={(e) => { e.preventDefault(); /* handle wish */ }}>
+                                            <FiHeart className="text-sm" />
+                                        </button>
+                                        <div className="bg-gray-50 h-32 md:h-48 rounded-lg mb-3 flex items-center justify-center text-gray-400 text-xs overflow-hidden">
+                                            <img src={pImg} className="w-full h-full object-cover rounded-lg" alt={pName} />
+                                        </div>
+                                        <h3 className="font-bold text-slate-900 text-sm truncate">{pName}</h3>
+                                        <span className="text-xs text-gray-400 mb-2 truncate">{pCat || 'Product'}</span>
+                                        <div className="flex items-end justify-between mt-auto">
+                                            <div>
+                                                <div className="font-black text-slate-900 text-lg">₹{formatPrice(pPrice)}</div>
+                                                <div className="text-[9px] text-gray-400">Incl. GST</div>
+                                            </div>
+                                            <button className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded flex items-center gap-1.5 text-xs font-bold transition-colors" onClick={(e) => { e.preventDefault(); toast.success('Added to Cart!'); }}>
+                                                <FiShoppingCart /> Add
+                                            </button>
+                                        </div>
+                                        <div className="mt-3 text-[10px] text-teal-600 font-bold flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 bg-teal-500 rounded-full"></span> In Stock • Fast Delivery
+                                        </div>
+                                    </Link>
+                                );
+                            })
+                        ) : (
+                            <div className="col-span-2 md:col-span-4 text-center py-8 text-gray-400 text-sm">No related products found.</div>
+                        )}
                     </div>
                 </div>
+
             </main>
             <B2BBottomNav />
-
         </div>
     );
+
 };
 
 export default B2BProductDetail;

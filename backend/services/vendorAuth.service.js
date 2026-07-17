@@ -149,8 +149,8 @@ export const registerVendor = async (vendorData) => {
       if (documents.panCard?.data) {
         docArray.push({ name: documents.panCard.name || 'PAN Card', data: documents.panCard.data, type: documents.panCard.type || 'application/pdf', folder: 'vendor-documents/b2b' });
       }
-      if (documents.businessLicense?.data) {
-        docArray.push({ name: documents.businessLicense.name || 'Business License', data: documents.businessLicense.data, type: documents.businessLicense.type || 'application/pdf', folder: 'vendor-documents/b2b' });
+      if (documents.aadharCard?.data) {
+        docArray.push({ name: documents.aadharCard.name || 'Aadhar Card', data: documents.aadharCard.data, type: documents.aadharCard.type || 'application/pdf', folder: 'vendor-documents/b2b' });
       }
     } else if (documents && Array.isArray(documents)) {
       docArray = documents.filter(doc => doc.data && doc.name).map(doc => ({ ...doc, folder: 'vendor-documents' }));

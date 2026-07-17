@@ -111,7 +111,6 @@ userSchema.methods.toJSON = function () {
 
 // Add indexes for faster lookups
 
-userSchema.index({ phone: 1 });
 userSchema.index({ role: 1 });
 
 const User = mongoose.model('User', userSchema);

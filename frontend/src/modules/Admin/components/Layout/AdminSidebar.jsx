@@ -29,7 +29,8 @@ import {
   FiAlertTriangle,
   FiDollarSign,
   FiMessageSquare,
-  FiBriefcase
+  FiBriefcase,
+  FiMapPin
 } from "react-icons/fi";
 import { useAdminAuthStore } from "../../store/adminStore";
 import adminMenu from "../../config/adminMenu.json";
@@ -64,6 +65,7 @@ const iconMap = {
   "Music Library": FiMusic,
   Firebase: FiDatabase,
   Feedbacks: FiMessageSquare,
+  Zones: FiMapPin,
 };
 
 // Helper function to convert child name to route path

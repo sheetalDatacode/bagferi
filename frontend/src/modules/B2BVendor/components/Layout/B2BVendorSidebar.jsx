@@ -53,6 +53,8 @@ const iconMap = {
     Profile: FiUser,
     Security: FiLock,
     Reels: FiVideo,
+    "Manage Reels": FiVideo,
+    "Add Reel": FiPlus,
     Jobs: FiBriefcase,
     Followers: FiUsers,
     Referral: FiGift,
@@ -78,6 +80,10 @@ const getChildRoute = (parentRoute, childName) => {
         "/b2b-vendor/lotslot": {
             "Manage Lots": "/b2b-vendor/lotslot/manage-lots",
             "Add Lot/Slot": "/b2b-vendor/lotslot/add-lotslot",
+        },
+        "/b2b-vendor/reels": {
+            "Manage Reels": "/b2b-vendor/reels",
+            "Add Reel": "/b2b-vendor/reels/upload",
         },
         "/b2b-vendor/settings": {
             "Profile": "/b2b-vendor/settings/profile",
@@ -126,18 +132,19 @@ const B2BVendorSidebar = ({ isOpen, onClose }) => {
     }, [fetchUnreadCount]);
 
     const filteredMenu = b2bVendorMenu.filter(item => {
+        // Remove Subscription entirely
+        if (item.title === "Subscription") return false;
+
         if (item.title === "Dashboard") return true;
 
-        const alwaysVisible = ["Subscription", "Billing & Invoices", "My Wallet", "Banner Booking", "Notifications", "Account Settings"];
+        const alwaysVisible = ["Billing & Invoices", "My Wallet", "Banner Booking", "Notifications", "Account Settings", "Product Listings", "Shop Listing", "Reels"];
         if (alwaysVisible.includes(item.title)) return true;
 
         if (!settings || !settings.enabledModules) return false;
 
         const moduleMap = {
-            "Product Listings": "product",
             "Property Management": "property",
             "Lot/Slot Listings": "lotslot",
-            "Shop Listing": "shop-listing",
             "Jobs": "jobs",
         };
         const moduleKey = moduleMap[item.title];

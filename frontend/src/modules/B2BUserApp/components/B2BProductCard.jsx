@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiTruck, FiShield, FiPhone, FiMapPin, FiChevronDown, FiCheck, FiMail } from 'react-icons/fi';
+import { FiTruck, FiShield, FiPhone, FiMapPin, FiChevronDown, FiCheck, FiMail, FiShoppingCart, FiHeart, FiShoppingBag } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { getGoogleMapsUrl, getWhatsAppUserDetailsSuffix } from '../../../shared/utils/helpers';
 import toast from '../../../shared/utils/toast';
@@ -343,103 +343,43 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
                     </div>
                 </div>
                 
-                {/* Quota warning - Only show for the vendor themselves */}
-                {!canAcceptEnquiries && isOwner && (
-                    <div className="mx-1 mt-1 p-2 bg-red-50 rounded-lg border border-red-100">
-                        <p className="text-[8px] font-black text-red-600 uppercase tracking-tight">
-                            Enquiry Gated: Recharge wallet or purchase plan to enable contact icons
-                        </p>
-                    </div>
-                )}
+                {/* Quota warning removed */}
 
                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
                     {vendor?.phone ? (
                         <>
-                            <a
-                                href={!canAcceptEnquiries ? "#" : (() => {
-                                    const cleanedPhone = (vendor?.phone || '').replace(/\D/g, '');
-                                    const formattedPhone = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
-                                    const baseMsg = `🛒 *I'm interested in this product!*\n\n` +
-                                        `📦 *Product:* ${product.name || 'Product'}\n` +
-                                        `💰 *Price:* ${product.price ? `₹${product.price}/${unitDisplay}` : 'Price on Request'}\n` +
-                                        `📦 *Min Order:* ${moqValue || '1'} ${unitDisplay}\n` +
-                                        `🏢 *Shop:* ${shopDisplayName}\n` +
-                                        `📍 *City:* ${vendor?.address?.city || 'N/A'}\n\n` +
-                                        `🔗 *View Item:* ${window.location.origin}/b2b/product/${product._id}` +
-                                        getWhatsAppUserDetailsSuffix(user);
-                                    const message = encodeURIComponent(baseMsg);
-                                    return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${message}`;
-                                })()}
-                                target={!canAcceptEnquiries ? "_self" : "_blank"}
-                                rel="noopener noreferrer"
-                                onClick={(e) => {
-                                    if (!canAcceptEnquiries) {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        return;
-                                    }
-                                    if (redirectToLoginIfRequired(e)) return;
-                                    e.stopPropagation();
-                                    if (trackContactClick && vendorIdStr) trackContactClick(vendorIdStr, 'whatsapp', getTrackingContext());
-                                }}
-                                className={`flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm ${
-                                    !canAcceptEnquiries 
-                                        ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed grayscale' 
-                                        : 'bg-green-50 text-[#25D366] hover:bg-[#25D366] hover:text-white border-green-100'
-                                }`}
-                                title={!canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "WhatsApp"}
-                            >
-                                <FaWhatsapp size={16} />
-                            </a>
-                            <a
-                                href={!canAcceptEnquiries ? "#" : `tel:${vendor.phone}`}
-                                onClick={(e) => {
-                                    if (!canAcceptEnquiries) {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        return;
-                                    }
-                                    if (redirectToLoginIfRequired(e)) return;
-                                    e.stopPropagation();
-                                    if (trackContactClick && vendorIdStr) trackContactClick(vendorIdStr, 'call', getTrackingContext());
-                                }}
-                                className={`flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm ${
-                                    !canAcceptEnquiries 
-                                        ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed grayscale' 
-                                        : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100'
-                                }`}
-                                title={!canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "Call Vendor"}
-                            >
-                                <FiPhone size={16} />
-                            </a>
                             <button
                                 onClick={(e) => {
-                                    if (!canAcceptEnquiries) {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        return;
-                                    }
-                                    if (redirectToLoginIfRequired(e)) return;
                                     e.stopPropagation();
-                                    const mapTarget = product.shopUnit?.mapUrl
-                                        ? { mapUrl: product.shopUnit.mapUrl }
-                                        : (product.shopUnit || vendor);
-                                    const mapsUrl = getGoogleMapsUrl(mapTarget);
-                                    if (mapsUrl) {
-                                        if (trackContactClick && vendorIdStr) trackContactClick(vendorIdStr, 'map', getTrackingContext());
-                                        window.open(mapsUrl, '_blank');
-                                    } else {
-                                        toast.error('Location details not provided');
-                                    }
+                                    if (redirectToLoginIfRequired(e)) return;
+                                    toast.success('Added to Cart!');
                                 }}
-                                className={`flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm ${
-                                    !canAcceptEnquiries 
-                                        ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed grayscale' 
-                                        : 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white border-orange-100'
-                                }`}
-                                title={!canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "Shop Location"}
+                                className="flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200"
+                                title="Add to Cart"
                             >
-                                <FiMapPin size={16} />
+                                <FiShoppingCart size={16} />
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (redirectToLoginIfRequired(e)) return;
+                                    toast.success('Added to Favorites!');
+                                }}
+                                className="flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border-red-100"
+                                title="Favorite"
+                            >
+                                <FiHeart size={16} />
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (redirectToLoginIfRequired(e)) return;
+                                    toast.success('Proceed to Checkout');
+                                }}
+                                className="flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100"
+                                title="Buy Now"
+                            >
+                                <FiShoppingBag size={16} />
                             </button>
                         </>
                     ) : (

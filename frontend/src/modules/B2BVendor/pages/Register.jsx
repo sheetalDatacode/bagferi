@@ -41,8 +41,8 @@ const B2BVendorRegister = () => {
     const [businessTypes, setBusinessTypes] = useState([]);
     const [selectedBusinessType, setSelectedBusinessType] = useState(null);
 
-    const [businessLicense, setBusinessLicense] = useState(() => {
-        const saved = sessionStorage.getItem('b2b_registration_license');
+    const [aadharCard, setAadharCard] = useState(() => {
+        const saved = sessionStorage.getItem('b2b_registration_aadhar');
         return saved ? JSON.parse(saved) : null;
     });
     const [panCard, setPanCard] = useState(() => {
@@ -99,12 +99,12 @@ const B2BVendorRegister = () => {
     }, [formData]);
 
     useEffect(() => {
-        if (businessLicense) {
-            sessionStorage.setItem('b2b_registration_license', JSON.stringify(businessLicense));
+        if (aadharCard) {
+            sessionStorage.setItem('b2b_registration_aadhar', JSON.stringify(aadharCard));
         } else {
-            sessionStorage.removeItem('b2b_registration_license');
+            sessionStorage.removeItem('b2b_registration_aadhar');
         }
-    }, [businessLicense]);
+    }, [aadharCard]);
 
     useEffect(() => {
         if (panCard) {
@@ -213,7 +213,7 @@ const B2BVendorRegister = () => {
             return;
         }
 
-        const toastId = toast.loading(`Processing ${type === 'license' ? 'License' : docLabel}...`);
+        const toastId = toast.loading(`Processing ${type === 'aadhar' ? 'Aadhar' : docLabel}...`);
 
         try {
             let data = null;
@@ -242,15 +242,15 @@ const B2BVendorRegister = () => {
                 });
             }
 
-            if (type === 'license') {
-                setBusinessLicense({ name: file.name, data, type: file.type });
+            if (type === 'aadhar') {
+                setAadharCard({ name: file.name, data, type: file.type });
             } else {
                 setPanCard({ name: file.name, data, type: file.type });
             }
 
             // Clear input value
             e.target.value = '';
-            toast.success(`${type === 'license' ? 'Business License' : docLabel} added`, { id: toastId });
+            toast.success(`${type === 'aadhar' ? 'Aadhar Card' : docLabel} added`, { id: toastId });
         } catch (error) {
             console.error('[KYCUpload] Error:', error);
             e.target.value = '';
@@ -265,18 +265,18 @@ const B2BVendorRegister = () => {
             const result = await openFlutterCamera();
             if (result) {
                 const docData = { name: result.fileName, data: result.data, type: result.mimeType };
-                if (type === 'license') {
-                    setBusinessLicense(docData);
+                if (type === 'aadhar') {
+                    setAadharCard(docData);
                 } else {
                     setPanCard(docData);
                 }
-                toast.success(`${type === 'license' ? 'Business License' : docLabel} captured`);
+                toast.success(`${type === 'aadhar' ? 'Aadhar Card' : docLabel} captured`);
                 return;
             }
         }
         
         // Synchronous fallback
-        document.getElementById(type === 'license' ? 'license-camera' : 'pan-camera')?.click();
+        document.getElementById(type === 'aadhar' ? 'aadhar-camera' : 'pan-camera')?.click();
     };
 
     const handleGalleryClick = (type) => {
@@ -286,19 +286,19 @@ const B2BVendorRegister = () => {
                 const result = await openFlutterGallery();
                 if (result) {
                     const docData = { name: result.fileName, data: result.data, type: result.mimeType };
-                    if (type === 'license') {
-                        setBusinessLicense(docData);
+                    if (type === 'aadhar') {
+                        setAadharCard(docData);
                     } else {
                         setPanCard(docData);
                     }
-                    toast.success(`${type === 'license' ? 'Business License' : docLabel} added`);
+                    toast.success(`${type === 'aadhar' ? 'Aadhar Card' : docLabel} added`);
                 }
             })();
             return;
         }
         
         // Synchronous fallback (critical for mobile browsers)
-        document.getElementById(type === 'license' ? 'license-upload' : 'pan-upload')?.click();
+        document.getElementById(type === 'aadhar' ? 'aadhar-upload' : 'pan-upload')?.click();
     };
 
     const handleChange = (e) => {
@@ -400,9 +400,7 @@ const B2BVendorRegister = () => {
             newErrors.confirmPassword = 'Passwords do not match';
         }
 
-        if (!formData.businessTypeRef) {
-            newErrors.businessTypeRef = 'Business Type is required';
-        }
+        // Business Type validation removed since it's hidden
 
         if (!formData.companyName.trim()) {
             newErrors.companyName = 'Company Name is required';
@@ -437,15 +435,6 @@ const B2BVendorRegister = () => {
         }
 
         const isBrokerType = BROKER_BUSINESS_TYPES.includes(businessTypeName);
-
-        if (!isBrokerType) {
-            if (!businessLicense) newErrors.businessLicense = 'Business License is required';
-            if (!panCard) newErrors.panCard = `${docLabel} is required`;
-
-            if (!formData.gstNumber || !formData.gstNumber.trim()) {
-                newErrors.gstNumber = 'GST Number is required';
-            }
-        }
 
         // GST Validation (when provided)
         if (formData.gstNumber && formData.gstNumber.trim()) {
@@ -483,12 +472,12 @@ const B2BVendorRegister = () => {
                 address: formData.address,
                 gstNumber: (formData.gstNumber && formData.gstNumber.trim()) ? formData.gstNumber.trim() : undefined,
                 mfgOfWork: formData.mfgOfWork,
-                businessType: formData.businessType,
-                businessTypeRef: formData.businessTypeRef,
+                businessType: formData.businessType || (businessTypes.length > 0 ? businessTypes[0].name : 'Textile'),
+                businessTypeRef: formData.businessTypeRef || (businessTypes.length > 0 ? businessTypes[0]._id : null),
                 vendorType: 'b2b',
                 documents: {
                     panCard: panCard ? { data: panCard.data, name: panCard.name, type: panCard.type } : {},
-                    businessLicense: businessLicense ? { data: businessLicense.data, name: businessLicense.name, type: businessLicense.type } : {}
+                    aadharCard: aadharCard ? { data: aadharCard.data, name: aadharCard.name, type: aadharCard.type } : {}
                 },
                 agreedToTerms: formData.agreedToTerms,
                 referralCode: formData.referralCode
@@ -613,29 +602,9 @@ const B2BVendorRegister = () => {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="md:col-span-2">
-                                <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Business Type <span className="text-red-500">*</span></label>
-                                <select
-                                    name="businessTypeRef"
-                                    value={formData.businessTypeRef}
-                                    onChange={(e) => {
-                                        const typeId = e.target.value;
-                                        const type = businessTypes.find(t => t._id === typeId);
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            businessTypeRef: typeId,
-                                            businessType: type?.name || '',
-                                        }));
-                                        setSelectedBusinessType(type);
-                                        if (errors.businessTypeRef) setErrors(prev => ({ ...prev, businessTypeRef: '' }));
-                                    }}
-                                    className={`w-full px-3 py-2 bg-white border ${errors.businessTypeRef ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:border-primary-500 outline-none appearance-none text-sm`}
-                                >
-                                    <option value="">Select Business Type</option>
-                                    {businessTypes.map(type => (
-                                        <option key={type._id} value={type._id}>{type.name}</option>
-                                    ))}
-                                </select>
-                                {errors.businessTypeRef && <p className="text-red-500 text-[10px] mt-1 ml-1">{errors.businessTypeRef}</p>}
+                                <div className="hidden">
+                                    <input type="hidden" name="businessTypeRef" value={formData.businessTypeRef} />
+                                </div>
                             </div>
 
                             {/* Sub-Types removed */}
@@ -646,9 +615,9 @@ const B2BVendorRegister = () => {
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">
-                                    GST Number {BROKER_BUSINESS_TYPES.includes((formData.businessType || '').toString().trim().toLowerCase()) ? '(Optional)' : <span className="text-red-500">*</span>}
+                                    GST Number (Optional)
                                 </label>
-                                <input type="text" name="gstNumber" value={formData.gstNumber} onChange={handleChange} className={`w-full px-3 py-2 bg-white border ${errors.gstNumber ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:border-primary-500 outline-none text-sm`} placeholder={BROKER_BUSINESS_TYPES.includes((formData.businessType || '').toString().trim().toLowerCase()) ? 'Enter GST Number (Optional)' : 'Enter GST Number'} />
+                                <input type="text" name="gstNumber" value={formData.gstNumber} onChange={handleChange} className={`w-full px-3 py-2 bg-white border ${errors.gstNumber ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:border-primary-500 outline-none text-sm`} placeholder="Enter GST Number" />
                                 {errors.gstNumber && <p className="text-red-500 text-[10px] mt-1 ml-1">{errors.gstNumber}</p>}
                             </div>
                             <div className="md:col-span-2">
@@ -668,19 +637,19 @@ const B2BVendorRegister = () => {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase">Business License / GST {BROKER_BUSINESS_TYPES.includes((formData.businessType || '').toString().trim().toLowerCase()) ? '(Optional)' : <span className="text-red-500">*</span>}</label>
-                                {!businessLicense ? (
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase">Aadhar Card (Optional)</label>
+                                {!aadharCard ? (
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="relative">
                                                 <input type="file" accept="image/png, image/jpeg, image/webp, video/*, application/pdf" onChange={(e) => {
-                                                    handleDocumentUpload(e, 'license', false);
-                                                    if (errors.businessLicense) setErrors(prev => ({ ...prev, businessLicense: '' }));
-                                                }} className="hidden" id="license-upload" disabled={isUploadingDocs} />
+                                                    handleDocumentUpload(e, 'aadhar', false);
+                                                    if (errors.aadharCard) setErrors(prev => ({ ...prev, aadharCard: '' }));
+                                                }} className="hidden" id="aadhar-upload" disabled={isUploadingDocs} />
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleGalleryClick('license')}
-                                                    className={`w-full flex flex-col items-center justify-center py-8 px-5 border-2 border-dashed ${errors.businessLicense ? 'border-red-500' : 'border-gray-200'} rounded-2xl hover:bg-slate-50 cursor-pointer transition-all group`}
+                                                    onClick={() => handleGalleryClick('aadhar')}
+                                                    className={`w-full flex flex-col items-center justify-center py-8 px-5 border-2 border-dashed ${errors.aadharCard ? 'border-red-500' : 'border-gray-200'} rounded-2xl hover:bg-slate-50 cursor-pointer transition-all group`}
                                                 >
                                                     <FiPlus className="text-xl text-gray-400 mb-3 group-hover:text-primary-600" />
                                                     <span className="text-xs font-black text-gray-500 group-hover:text-primary-600 uppercase tracking-widest">GALLERY</span>
@@ -688,20 +657,20 @@ const B2BVendorRegister = () => {
                                             </div>
                                             <div className="relative">
                                                 <input type="file" capture="environment" accept="image/png, image/jpeg, image/webp, video/*, application/pdf" onChange={(e) => {
-                                                    handleDocumentUpload(e, 'license', true);
-                                                    if (errors.businessLicense) setErrors(prev => ({ ...prev, businessLicense: '' }));
-                                                }} style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }} id="license-camera" disabled={isUploadingDocs} />
+                                                    handleDocumentUpload(e, 'aadhar', true);
+                                                    if (errors.aadharCard) setErrors(prev => ({ ...prev, aadharCard: '' }));
+                                                }} style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }} id="aadhar-camera" disabled={isUploadingDocs} />
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleCameraClick('license')}
-                                                    className={`w-full flex flex-col items-center justify-center py-8 px-5 border-2 border-dashed ${errors.businessLicense ? 'border-red-500' : 'border-gray-200'} rounded-2xl hover:bg-slate-50 cursor-pointer transition-all group`}
+                                                    onClick={() => handleCameraClick('aadhar')}
+                                                    className={`w-full flex flex-col items-center justify-center py-8 px-5 border-2 border-dashed ${errors.aadharCard ? 'border-red-500' : 'border-gray-200'} rounded-2xl hover:bg-slate-50 cursor-pointer transition-all group`}
                                                 >
                                                     <FiCamera className="text-xl text-gray-400 mb-3 group-hover:text-primary-600" />
                                                     <span className="text-xs font-black text-gray-500 group-hover:text-primary-600 uppercase tracking-widest">CAMERA</span>
                                                 </button>
                                             </div>
                                         </div>
-                                        {errors.businessLicense && <p className="text-red-500 text-[10px] mt-1 ml-1">{errors.businessLicense}</p>}
+                                        {errors.aadharCard && <p className="text-red-500 text-[10px] mt-1 ml-1">{errors.aadharCard}</p>}
                                     </div>
                                 ) : (
                                     <div className="flex items-center justify-between p-2.5 bg-green-50 rounded-xl border border-green-100">
@@ -710,11 +679,11 @@ const B2BVendorRegister = () => {
                                                 <FiCheck className="text-white text-xs" />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold text-green-700 uppercase">License</span>
-                                                <span className="text-[9px] text-green-600 truncate max-w-[100px]">{businessLicense.name}</span>
+                                                <span className="text-[10px] font-bold text-green-700 uppercase">Aadhar Card</span>
+                                                <span className="text-[9px] text-green-600 truncate max-w-[100px]">{aadharCard.name}</span>
                                             </div>
                                         </div>
-                                        <button type="button" onClick={() => setBusinessLicense(null)} className="p-1 hover:bg-green-100 rounded-lg text-green-600 transition-colors">
+                                        <button type="button" onClick={() => setAadharCard(null)} className="p-1 hover:bg-green-100 rounded-lg text-green-600 transition-colors">
                                             <FiX size={14} />
                                         </button>
                                     </div>
@@ -722,7 +691,7 @@ const B2BVendorRegister = () => {
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase">{docLabel} {BROKER_BUSINESS_TYPES.includes(businessTypeName) ? '(Optional)' : <span className="text-red-500">*</span>}</label>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase">PAN Card (Optional)</label>
                                 {!panCard ? (
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-2 gap-3">
@@ -795,10 +764,7 @@ const B2BVendorRegister = () => {
                                 <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Market</label>
                                 <input type="text" name="address.market" value={formData.address.market} onChange={handleChange} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:border-primary-500 outline-none text-sm" placeholder="Enter Market Name" />
                             </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Landmark</label>
-                                <input type="text" name="address.landmark" value={formData.address.landmark} onChange={handleChange} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:border-primary-500 outline-none text-sm" placeholder="Near Railway Station" />
-                            </div>
+
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Area / Locality</label>
                                 <input type="text" name="address.area" value={formData.address.area} onChange={handleChange} className={`w-full px-3 py-2 bg-white border ${errors['address.area'] ? 'border-red-500' : 'border-gray-200'} rounded-xl focus:border-primary-500 outline-none text-sm`} placeholder="Textile Market" />
@@ -910,10 +876,11 @@ const B2BVendorRegister = () => {
 
                     {/* Terms and Conditions Checkbox */}
                     <div className="flex flex-col gap-1 px-1">
-                        <label className="flex items-start gap-3 cursor-pointer group">
+                        <label htmlFor="agreedToTerms" className="flex items-start gap-3 cursor-pointer group">
                             <div className="relative flex items-center mt-1">
                                 <input
                                     type="checkbox"
+                                    id="agreedToTerms"
                                     name="agreedToTerms"
                                     checked={formData.agreedToTerms}
                                     onChange={handleChange}

@@ -79,6 +79,8 @@ import musicRoutes from "./routes/music.routes.js";
 import vendorFollowRoutes from "./routes/vendorFollow.routes.js";
 import adminTransactionsRoutes from "./routes/adminTransactions.routes.js";
 import vendorWalletRoutes from "./routes/vendorWallet.routes.js";
+import zoneRoutes from "./routes/zone.routes.js";
+import staffAuthRoutes from "./routes/staffAuth.routes.js";
 
 // Initialize Express app
 const app = express();
@@ -106,6 +108,10 @@ const defaultOrigins = [
   "https://www.dealingindia.in",
   "https://dealingindia.in",
   "https://bagferi.onrender.com",
+  "https://bagferi.com",
+  "https://www.bagferi.com",
+  "https://bagferi.in",
+  "https://www.bagferi.in",
 ];
 
 const envOrigins = process.env.SOCKET_CORS_ORIGIN
@@ -119,6 +125,8 @@ const normalizeOrigin = (o) => (o ? o.toLowerCase().replace(/\/+$/, "") : "");
 const allowedBaseDomains = [
   "dealingindia.com",
   "dealingindia.in",
+  "bagferi.com",
+  "bagferi.in",
   "vercel.app",
   "onrender.com",
 ];
@@ -259,6 +267,7 @@ app.use("/api/auth/admin", adminAuthRoutes);
 app.use("/api/auth/user", userAuthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userAuthRoutes);
+app.use("/api/staff/auth", staffAuthRoutes);
 
 app.use("/api/vendors", publicVendorRoutes);
 app.use("/api/public/b2b-categories", publicB2BCategoryRoutes);
@@ -298,6 +307,7 @@ app.use("/api/follow", vendorFollowRoutes);
 app.use("/api/vendor/wallet", vendorWalletRoutes);
 
 app.use("/api/music", musicRoutes);
+app.use("/api/zones", zoneRoutes);
 app.use("/api/business-types", businessTypeRoutes);
 app.use("/api/admin/business-settings", adminBusinessSettingsRoutes);
 app.use("/api/vendor/business-settings", adminBusinessSettingsRoutes);
@@ -385,9 +395,32 @@ const startServer = async () => {
     startYouTubeLinkValidationCron(io);
     console.log("✅ Background Cron Jobs initialized");
 
-    httpServer.listen(PORT, () => {
-      console.log(`🚀 Server is running on port ${PORT}`);
-    });
+    const startListening = (initialPort) => {
+      let currentPort = initialPort;
+      
+      const tryListen = () => {
+        httpServer.listen(currentPort, () => {
+          console.log(`🚀 Server is running on port ${currentPort}`);
+        });
+      };
+
+      httpServer.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          console.log(`⚠️ Port ${currentPort} is busy. Trying port ${currentPort + 1}...`);
+          currentPort++;
+          // Close the server before listening again to avoid issues
+          httpServer.close();
+          tryListen();
+        } else {
+          console.error("❌ Failed to start server:", err);
+          process.exit(1);
+        }
+      });
+
+      tryListen();
+    };
+
+    startListening(PORT);
   } catch (error) {
     console.error("❌ Failed to start server:", error);
     process.exit(1);

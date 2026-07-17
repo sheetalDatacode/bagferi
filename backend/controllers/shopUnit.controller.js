@@ -13,7 +13,7 @@ export const getMyUnit = async (req, res, next) => {
 
 export const createOrUpdateUnit = async (req, res, next) => {
     try {
-        const { name, description, images, minPrice, maxPrice, details, businessCategory, mapUrl } = req.body;
+        const { name, description, images, minPrice, maxPrice, details, mapUrl, zoneId, companyName, accountDetails, deliveryZones } = req.body;
         const vendorId = req.user.vendorId;
 
         // 1. Basic input validation
@@ -36,8 +36,9 @@ export const createOrUpdateUnit = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Description must be 1000 characters or less' });
         }
 
-        if (!businessCategory || !businessCategory.trim()) {
-            return res.status(400).json({ success: false, message: 'Business Category is required' });
+
+        if (!zoneId) {
+            return res.status(400).json({ success: false, message: 'Zone is required' });
         }
 
         const parsedMin = minPrice ? parseFloat(minPrice) : 0;
@@ -132,16 +133,31 @@ export const createOrUpdateUnit = async (req, res, next) => {
             }
         }
 
+        // Process staff ID documents
+        const processedDetails = [];
+        for (const detail of validDetails) {
+            const processedDetail = { ...detail };
+            if (detail.identityDocumentUrl && detail.identityDocumentUrl.startsWith('data:image')) {
+                const result = await uploadBase64ToCloudinary(detail.identityDocumentUrl, 'shops/staff-ids');
+                processedDetail.identityDocumentUrl = result.secure_url;
+                processedDetail.identityDocumentPublicId = result.public_id;
+            }
+            processedDetails.push(processedDetail);
+        }
+
         const shopData = {
             name: trimmedName,
             description: trimmedDesc,
-            details: validDetails,
+            details: processedDetails,
             images: imageUrls,
             imagesPublicIds: imagePublicIds,
             minPrice: parsedMin,
             maxPrice: parsedMax,
             vendorId,
-            businessCategory: businessCategory.trim(),
+            zoneId,
+            companyName: companyName ? companyName.trim() : "",
+            accountDetails: accountDetails || {},
+            deliveryZones: Array.isArray(deliveryZones) ? deliveryZones : [],
             mapUrl: mapUrl && mapUrl.trim() ? mapUrl.trim() : null,
         };
 

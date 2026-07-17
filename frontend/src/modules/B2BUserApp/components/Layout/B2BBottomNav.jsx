@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { FiHome, FiGrid, FiBriefcase, FiVideo, FiUser } from 'react-icons/fi';
+import { FiHome, FiGrid, FiBriefcase, FiVideo, FiUser, FiShoppingBag } from 'react-icons/fi';
 import { useAuthStore } from '../../../../shared/store/authStore';
 
 const B2BBottomNav = () => {
@@ -11,8 +11,8 @@ const B2BBottomNav = () => {
     const navItems = [
         { icon: FiHome, label: 'Home', path: '/b2b/landing', requireAuth: false },
         { icon: FiVideo, label: 'Reels', path: '/b2b/reels', requireAuth: false },
-        { icon: FiGrid, label: 'Browse', path: '/b2b/catalog?open=categories', requireAuth: false },
-        { icon: FiBriefcase, label: 'Business', path: '/b2b/catalog?open=business', requireAuth: false },
+        { icon: FiGrid, label: 'Categories', path: '/b2b/categories', requireAuth: false },
+        { icon: FiShoppingBag, label: 'Products', path: '/b2b/catalog', requireAuth: false },
         { icon: FiUser, label: 'Profile', path: '/b2b/profile', requireAuth: true },
     ];
 

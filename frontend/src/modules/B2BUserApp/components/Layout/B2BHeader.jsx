@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { FiSearch, FiMessageSquare, FiUser, FiArrowLeft, FiGrid, FiLayout, FiHome, FiVideo, FiImage, FiBriefcase } from 'react-icons/fi';
+import { FiSearch, FiMessageSquare, FiUser, FiArrowLeft, FiGrid, FiLayout, FiHome, FiVideo, FiImage, FiBriefcase, FiShoppingCart, FiHeart } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { appLogo } from '../../../../data/logos';
 import lotSlotIcon from '../../../../assets/icon/WhatsApp Image 2026-02-28 at 2.14.53 PM.jpeg';
@@ -205,59 +205,7 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                             )}
                         </div>
                         
-                        {/* Desktop (lg+) Navigation links next to logo - more prominent */}
-                        <div className="hidden lg:flex items-center gap-1 xl:gap-2 ml-2">
-                            {customNav}
-                                <Link
-                                    to="/b2b/reels"
-                                    onClick={(e) => handleNavClick(e, '/b2b/reels')}
-                                    className={`px-3 xl:px-4 py-2 rounded-xl flex items-center gap-2 xl:gap-3 transition-all group border shrink-0 whitespace-nowrap ${location.pathname.includes('/reels') ? 'border-primary-200 bg-primary-50/50' : 'border-gray-100 bg-gray-50/50 hover:bg-gray-100'}`}
-                                >
-                                    <div className="flex items-center justify-center text-primary-600">
-                                        <FiVideo size={18} />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className={`text-[9px] xl:text-[10px] font-black uppercase tracking-[0.1em] ${location.pathname.includes('/reels') ? 'text-primary-700' : 'text-gray-800'}`}>All Reels</span>
-                                        <span className="text-[7px] xl:text-[8px] font-bold text-gray-400 uppercase tracking-tighter group-hover:text-primary-500 hidden xl:block">Short Videos</span>
-                                    </div>
-                                </Link>
-                                <Link
-                                    to="/b2b/jobs"
-                                    onClick={(e) => handleNavClick(e, '/b2b/jobs')}
-                                    className={`px-3 xl:px-4 py-2 rounded-xl flex items-center gap-2 xl:gap-3 transition-all group border shrink-0 whitespace-nowrap ${location.pathname.includes('/jobs') ? 'border-primary-200 bg-primary-50/50' : 'border-gray-100 bg-gray-50/50 hover:bg-gray-100'}`}
-                                >
-                                    <div className="flex items-center justify-center text-primary-600">
-                                        <FiBriefcase size={18} />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className={`text-[9px] xl:text-[10px] font-black uppercase tracking-[0.1em] ${location.pathname.includes('/jobs') ? 'text-primary-700' : 'text-gray-800'}`}>Jobs</span>
-                                        <span className="text-[7px] xl:text-[8px] font-bold text-gray-400 uppercase tracking-tighter group-hover:text-primary-500 hidden xl:block">Find Work</span>
-                                    </div>
-                                </Link>
-                                <div className="w-px h-8 bg-gray-100 mx-1 hidden lg:block"></div>
-                                <Link
-                                    to="/b2b/real-estate"
-                                    onClick={(e) => handleNavClick(e, '/b2b/real-estate')}
-                                    className={`px-3 xl:px-4 py-2 rounded-xl flex items-center gap-2 xl:gap-3 transition-all group border shrink-0 whitespace-nowrap ${location.pathname.includes('/real-estate') ? 'border-primary-200 bg-primary-50/50' : 'border-gray-100 bg-gray-50/50 hover:bg-gray-100'}`}
-                                >
-                                    <img src={realEstateIcon} alt="Rent" className="h-6 xl:h-8 w-auto object-contain" />
-                                    <div className="flex flex-col">
-                                        <span className={`text-[9px] xl:text-[10px] font-black uppercase tracking-[0.1em] ${location.pathname.includes('/real-estate') ? 'text-primary-700' : 'text-gray-800'}`}>Real Estate</span>
-                                        <span className="text-[7px] xl:text-[8px] font-bold text-gray-400 uppercase tracking-tighter group-hover:text-primary-500 hidden xl:block">Rent / Sell / Buy</span>
-                                    </div>
-                                </Link>
-                                <Link
-                                    to="/b2b/catalog?itemType=lotslot"
-                                    onClick={(e) => handleNavClick(e, '/b2b/catalog?itemType=lotslot')}
-                                    className={`px-3 xl:px-4 py-2 rounded-xl flex items-center gap-2 xl:gap-3 transition-all group border shrink-0 whitespace-nowrap ${currentItemType === 'lotslot' ? 'border-primary-200 bg-primary-50/50' : 'border-gray-100 bg-gray-50/50 hover:bg-gray-100'}`}
-                                >
-                                    <img src={lotSlotIcon} alt="Lot" className="h-6 xl:h-8 w-auto object-contain" />
-                                    <div className="flex flex-col">
-                                        <span className={`text-[9px] xl:text-[10px] font-black uppercase tracking-[0.1em] ${currentItemType === 'lotslot' ? 'text-primary-700' : 'text-gray-800'}`}>Lot / Slot</span>
-                                        <span className="text-[7px] xl:text-[8px] font-bold text-gray-400 uppercase tracking-tighter group-hover:text-primary-500 hidden xl:block">Bulk Clearance</span>
-                                    </div>
-                                </Link>
-                        </div>
+                        {/* Desktop Navigation Links Removed */}
                     </div>
 
                     {/* Search - Growing to fill middle space */}
@@ -338,28 +286,26 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                     {/* Right Side Actions: Profile, Seller, Mobile Burger */}
                     <div className="flex items-center gap-2 lg:gap-4 shrink-0">
                         {/* Mobile view quick links (condensed) */}
-                        <div className="flex lg:hidden items-center gap-1 sm:gap-2">
-                            {!minimal && (
-                                <div className="flex items-center gap-1 sm:gap-1.5">
-                                    <Link
-                                        to="/b2b/catalog?itemType=lotslot"
-                                        onClick={(e) => handleNavClick(e, '/b2b/catalog?itemType=lotslot')}
-                                        className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 border transition-all text-center leading-tight ${currentItemType === 'lotslot' ? 'bg-primary-600 text-white border-primary-600 shadow-md' : 'bg-gray-50 text-gray-700 border-gray-100'}`}
-                                    >
-                                        <img src={lotSlotIcon} alt="Lot" className="h-4 sm:h-5 w-auto object-contain" />
-                                        <span>Lot / Slot</span>
-                                    </Link>
-                                    <Link
-                                        to="/b2b/real-estate"
-                                        onClick={(e) => handleNavClick(e, '/b2b/real-estate')}
-                                        className={`px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 border transition-all text-center leading-tight ${location.pathname.includes('/real-estate') ? 'bg-primary-600 text-white border-primary-600 shadow-md' : 'bg-gray-50 text-gray-700 border-gray-100'}`}
-                                    >
-                                        <img src={realEstateIcon} alt="Real Estate" className="h-4 sm:h-5 w-auto object-contain" />
-                                        <span>Real Estate</span>
-                                    </Link>
-
-                                </div>
-                            )}
+                        <div className="flex lg:hidden items-center gap-2">
+                            {/* Mobile Cart and Heart */}
+                            <button 
+                                onClick={() => {
+                                    if (!isAuthenticated) return navigate('/b2b/login');
+                                    navigate('/b2b/cart');
+                                }}
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                            >
+                                <FiShoppingCart className="text-xl" />
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    if (!isAuthenticated) return navigate('/b2b/login');
+                                    navigate('/b2b/favorites');
+                                }}
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                            >
+                                <FiHeart className="text-xl" />
+                            </button>
                             
                             {/* Become Seller (Prominent on small screens too) */}
                             <Link
@@ -369,29 +315,6 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                             >
                                 Seller
                             </Link>
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-                            
-
-
-
-
-
-
-
-
-
-
                         </div>
 
                         {/* Desktop (lg+) Profile & Extended Actions */}
@@ -404,7 +327,28 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                                 <span>{isVendorAuthenticated ? "Seller" : "Become a Seller"}</span>
                             </Link>
 
-
+                            <div className="flex items-center gap-2 mr-2">
+                                <button 
+                                    onClick={() => {
+                                        if (!isAuthenticated) return navigate('/b2b/login');
+                                        navigate('/b2b/favorites');
+                                    }}
+                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                                    title="Favorites"
+                                >
+                                    <FiHeart size={22} />
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        if (!isAuthenticated) return navigate('/b2b/login');
+                                        navigate('/b2b/cart');
+                                    }}
+                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                                    title="Cart"
+                                >
+                                    <FiShoppingCart size={22} />
+                                </button>
+                            </div>
 
                             <div className="h-8 xl:h-10 w-px bg-gray-100 hidden lg:block"></div>
 

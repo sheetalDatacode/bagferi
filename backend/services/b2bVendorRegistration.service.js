@@ -86,11 +86,11 @@ export const registerB2BVendor = async (vendorData) => {
           docArray.push({ name: 'PAN Card', data: documents.panCard, type: 'application/pdf' });
         }
       }
-      if (documents.businessLicense) {
-        if (typeof documents.businessLicense === 'object' && documents.businessLicense.data) {
-          docArray.push({ name: documents.businessLicense.name || 'Business License', data: documents.businessLicense.data, type: documents.businessLicense.type || 'application/pdf' });
-        } else if (typeof documents.businessLicense === 'string') {
-          docArray.push({ name: 'Business License', data: documents.businessLicense, type: 'application/pdf' });
+      if (documents.aadharCard) {
+        if (typeof documents.aadharCard === 'object' && documents.aadharCard.data) {
+          docArray.push({ name: documents.aadharCard.name || 'Aadhar Card', data: documents.aadharCard.data, type: documents.aadharCard.type || 'application/pdf' });
+        } else if (typeof documents.aadharCard === 'string') {
+          docArray.push({ name: 'Aadhar Card', data: documents.aadharCard, type: 'application/pdf' });
         }
       }
 

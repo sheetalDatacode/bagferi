@@ -49,16 +49,11 @@ const SubscriptionGate = ({ action, children, showLimitInfo = true, fullPage = f
 
 
     const fetchAttempted = useRef(false);
-    // Hide base plans only if the user ALREADY HAS an active subscription that ALLOWS this feature
-    const hideBasePlans = useMemo(() => {
-        if (!status?.isActive) return false;
-        
-        // Check if the current plan even allows this feature type
-        const limits = status?.limits?.[action === 'lotslot' ? 'lotSlot' : (action === 'product' ? 'products' : (action === 'property' ? 'properties' : action))];
-        if (!limits?.allowed) return false; 
-        
-        return ['product', 'property', 'lotslot', 'reels', 'jobs'].includes(action);
-    }, [action, status]);
+    
+    // SUBSCRIPTION CHECK REMOVED GLOBALLY AS PER REQUEST
+    // Always render children to bypass all limits
+    return <>{children}</>;
+
 
     const loading = settingsLoading || subscriptionLoading;
 
@@ -305,15 +300,9 @@ const SubscriptionGate = ({ action, children, showLimitInfo = true, fullPage = f
     };
 
     const permission = useMemo(() => {
-        switch (action) {
-            case 'product': return canCreateProduct();
-            case 'lotslot': return canCreateLotSlot();
-            case 'property': return canCreateProperty();
-            case 'reels': return canUploadReel();
-            case 'jobs': return canCreateJob();
-            default: return { allowed: true };
-        }
-    }, [action, canCreateProduct, canCreateLotSlot, canCreateProperty, canUploadReel, canCreateJob, status]);
+        // ALWAYS ALLOW ALL FEATURES as per user request to remove subscription locks
+        return { allowed: true, limit: -1, current: 0, isAddon: false };
+    }, [action, status]);
 
     useEffect(() => {
         if (fullPage && (!status?.isActive || !permission.allowed) && !fetchAttempted.current && !loadingAddons) {

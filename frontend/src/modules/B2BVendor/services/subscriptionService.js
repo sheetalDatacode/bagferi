@@ -11,11 +11,7 @@ import api from '../../../shared/utils/api';
  */
 export const getPlans = async () => {
     try {
-        const response = await api.get('/public/b2b-subscription-plans/active');
-        if (response.success && response.data) {
-            return response.data;
-        }
-        throw new Error(response.message || 'Failed to fetch plans');
+        return [];
     } catch (error) {
         console.error('Error fetching B2B plans:', error);
         throw error;
@@ -177,11 +173,6 @@ export const verifyUpgradePayment = async (verifyData) => {
  */
 export const getAddonPlans = async (featureType) => {
     try {
-        const params = featureType ? { featureType } : {};
-        const response = await api.get('/vendor/addons/available', { params });
-        if (response.success) {
-            return response.data;
-        }
         return [];
     } catch (error) {
         console.error('Error fetching addon plans:', error);

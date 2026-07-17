@@ -199,22 +199,7 @@ const RealEstateCard = ({ property, selectedPriceUnit = 'All', requireAuthForAct
     // Quota warning - Only show for the vendor themselves
     const isVendorOwner = user?.id === (property.vendorId?._id || property.vendorId) || user?.vendorId === (property.vendorId?._id || property.vendorId);
     
-    if (!canAcceptEnquiries && isVendorOwner) {
-        return (
-            <div className="group bg-white rounded-xl overflow-hidden border border-red-100 shadow-sm p-4 h-[480px] md:h-[450px] flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-                    <FiPhone className="text-red-500 text-2xl" />
-                </div>
-                <h3 className="text-sm font-black text-gray-800 uppercase mb-2">Enquiry Gated</h3>
-                <p className="text-[10px] font-bold text-gray-500 uppercase leading-relaxed max-w-[200px]">
-                    Recharge wallet or purchase plan to enable contact icons for this property.
-                </p>
-                <div className="mt-6 flex flex-col gap-2 w-full">
-                    <button onClick={() => navigate('/b2b/real-estate/property/' + property._id)} className="w-full py-2 bg-gray-50 text-gray-600 rounded-lg text-[10px] font-black uppercase tracking-wider">View Details</button>
-                </div>
-            </div>
-        );
-    }
+
 
     return (
         <motion.div
@@ -412,7 +397,7 @@ const RealEstateCard = ({ property, selectedPriceUnit = 'All', requireAuthForAct
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 mt-auto">
                     <a
-                        href={!canAcceptEnquiries ? "#" : (() => {
+                        href={(() => {
                             const cleanedPhone = (property.vendorId?.phone || '').replace(/\D/g, '');
                             const formattedPhone = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
                             const baseMsg = `🏠 *I'm interested in this property!*\n\n` +
@@ -425,55 +410,32 @@ const RealEstateCard = ({ property, selectedPriceUnit = 'All', requireAuthForAct
                             const message = encodeURIComponent(baseMsg);
                             return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${message}`;
                         })()}
-                        target={!canAcceptEnquiries ? "_self" : "_blank"}
+                        target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => {
-                            if (!canAcceptEnquiries) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                return;
-                            }
                             if (redirectToLoginIfRequired(e)) return;
                             e.stopPropagation();
                             trackContactClick(property.vendorId?._id, 'whatsapp', getTrackingContext());
                         }}
-                        className={`flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm ${
-                            !canAcceptEnquiries
-                                ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed grayscale'
-                                : 'bg-green-50 text-[#25D366] hover:bg-[#25D366] hover:text-white border-green-100'
-                        }`}
-                        title={!canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "WhatsApp"}
+                        className="flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm bg-green-50 text-[#25D366] hover:bg-[#25D366] hover:text-white border-green-100"
+                        title="WhatsApp"
                     >
                         <FaWhatsapp size={16} />
                     </a>
                     <a
-                        href={!canAcceptEnquiries ? "#" : `tel:+91${sellerPhone}`}
+                        href={`tel:+91${sellerPhone}`}
                         onClick={(e) => {
-                            if (!canAcceptEnquiries) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                return;
-                            }
                             if (redirectToLoginIfRequired(e)) return;
                             e.stopPropagation();
                             trackContactClick(property.vendorId?._id, 'call', getTrackingContext());
                         }}
-                        className={`flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm ${
-                            !canAcceptEnquiries
-                                ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed grayscale'
-                                : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100'
-                        }`}
-                        title={!canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "Call"}
+                        className="flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100"
+                        title="Call"
                     >
                         <FiPhone size={16} />
                     </a>
                     <button
                         onClick={(e) => {
-                            if (!canAcceptEnquiries) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                return;
-                            }
                             if (redirectToLoginIfRequired(e)) return;
                             e.stopPropagation();
                             const mapsUrl = getGoogleMapsUrl(property);
@@ -482,12 +444,8 @@ const RealEstateCard = ({ property, selectedPriceUnit = 'All', requireAuthForAct
                                 window.open(mapsUrl, '_blank');
                             }
                         }}
-                        className={`flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm ${
-                            !canAcceptEnquiries
-                                ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed grayscale'
-                                : 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white border-orange-100'
-                        }`}
-                        title={!canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "Map"}
+                        className="flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white border-orange-100"
+                        title="Map"
                     >
                         <FiMapPin size={16} />
                     </button>

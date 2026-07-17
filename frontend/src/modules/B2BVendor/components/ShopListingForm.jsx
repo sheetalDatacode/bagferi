@@ -8,8 +8,6 @@ import api from "../../../shared/utils/api";
 import { useSubscriptionStore } from "../store/subscriptionStore";
 import { openFlutterCamera, openFlutterGallery, isFlutterApp } from "../../../shared/utils/flutterBridge";
 
-const ALL_BUSINESS_CATEGORIES = ['Manufacturing', 'Exporter', 'Wholesaler', 'Semi wholesaler', 'Retailers', 'Trading', 'Traders', 'Agency', 'Supplier', 'Developer', 'Property'];
-const DEVELOPER_BUSINESS_CATEGORIES = ['Developer', 'Property'];
 
 const ShopListingForm = ({ onSubmit, isLoading = false }) => {
     const { vendor } = useB2BVendorAuthStore();
@@ -27,10 +25,13 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                 return {
                     shopName: parsed.shopName || "",
                     description: parsed.description || "",
-                    businessCategory: parsed.businessCategory || "",
+                    companyName: parsed.companyName || "",
+                    accountDetails: parsed.accountDetails || { accountNumber: "", ifscCode: "", bankName: "", accountHolderName: "" },
+                    deliveryZones: parsed.deliveryZones || [],
                     mapUrl: parsed.mapUrl || "",
                     minPrice: parsed.minPrice || "",
                     maxPrice: parsed.maxPrice || "",
+                    zoneId: parsed.zoneId || "",
                     images: parsed.images || [],
                     details: parsed.details?.length > 0 ? parsed.details : [{ name: "", post: "", mobile: "" }],
                     shopUnitId: null,
@@ -42,29 +43,40 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
         return {
             shopName: "",
             description: "",
-            businessCategory: "",
+            companyName: "",
+            accountDetails: { accountNumber: "", ifscCode: "", bankName: "", accountHolderName: "" },
+            deliveryZones: [],
             mapUrl: "",
             minPrice: "",
             maxPrice: "",
+            zoneId: "",
             images: [],
             details: [{ name: "", post: "", mobile: "" }],
             shopUnitId: null,
         };
     });
 
-    const businessCategories = useMemo(() => {
-        const vendorType = (vendor?.businessType || "").toString().trim().toLowerCase().replace(/\s+/g, " ");
-        const restrictedTypes = ["developer", "property broker"];
-        if (restrictedTypes.includes(vendorType)) {
-            return DEVELOPER_BUSINESS_CATEGORIES;
-        }
-        return ALL_BUSINESS_CATEGORIES;
-    }, [vendor?.businessType]);
+
     const [hasExistingUnit, setHasExistingUnit] = useState(false);
     const [isShopLocked, setIsShopLocked] = useState(false);
     const [isShopModified, setIsShopModified] = useState(false);
     const [originalShopData, setOriginalShopData] = useState(null);
     const [loadingInitial, setLoadingInitial] = useState(true);
+    const [zones, setZones] = useState([]);
+
+    useEffect(() => {
+        const fetchZones = async () => {
+            try {
+                const response = await api.get('/zones/public/active');
+                if (response.success && response.data) {
+                    setZones(response.data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch zones:", err);
+            }
+        };
+        fetchZones();
+    }, []);
 
     useEffect(() => {
         const fetchUnit = async () => {
@@ -75,11 +87,14 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                     const shopData = {
                         shopName: unit.name || "",
                         description: unit.description || "",
-                        businessCategory: unit.businessCategory || "",
+                        companyName: unit.companyName || "",
+                        accountDetails: unit.accountDetails || { accountNumber: "", ifscCode: "", bankName: "", accountHolderName: "" },
+                        deliveryZones: unit.deliveryZones || [],
                         mapUrl: unit.mapUrl || "",
                         images: unit.images || [],
                         minPrice: unit.minPrice || "",
                         maxPrice: unit.maxPrice || "",
+                        zoneId: unit.zoneId || "",
                         details: unit.details?.length > 0 ? unit.details : [{ name: "", post: "", mobile: "" }],
                         shopUnitId: unit._id
                     };
@@ -110,13 +125,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
         localStorage.setItem(USER_DRAFT_KEY, JSON.stringify(cleanDraft));
     }, [formData, USER_DRAFT_KEY, vendorId]);
 
-    // When vendor is Developer, ensure selected businessCategory is in allowed list
-    // When vendor is Developer, ensure selected businessCategory is in allowed list
-    useEffect(() => {
-        if (vendor && formData.businessCategory && !businessCategories.includes(formData.businessCategory)) {
-            setFormData(prev => ({ ...prev, businessCategory: "" }));
-        }
-    }, [businessCategories, vendor]);
+
 
     const { status } = useSubscriptionStore();
     const canUseSlideshow = status?.limits?.shopSlideshow !== false;
@@ -237,6 +246,41 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
         document.getElementById('gallery-upload')?.click();
     };
 
+    const handleStaffDocUpload = async (e, idx) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const toastId = toast.loading('Reading document...');
+        setIsShopModified(true);
+
+        try {
+            let blobToRead = file;
+            try {
+                const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280, useWebWorker: true };
+                blobToRead = await imageCompression(file, options);
+            } catch (compErr) {
+                console.warn('[StaffDocUpload] Compression error, using original:', compErr);
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const newDetails = [...formData.details];
+                newDetails[idx].identityDocumentUrl = reader.result;
+                setFormData(prev => ({ ...prev, details: newDetails }));
+                toast.success('Document attached', { id: toastId });
+            };
+            reader.onerror = () => {
+                toast.error('Failed to read document', { id: toastId });
+            };
+            reader.readAsDataURL(blobToRead);
+        } catch (error) {
+            console.error('[StaffDocUpload] failed:', error);
+            toast.error('Failed to process document', { id: toastId });
+        } finally {
+            if (e.target) e.target.value = '';
+        }
+    };
+
     const removeImage = (index) => {
         setFormData(prev => ({
             ...prev,
@@ -268,8 +312,9 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             return toast.error("Description must be 1000 characters or less");
         }
 
-        if (!formData.businessCategory) {
-            return toast.error("Please select a Business Category");
+
+        if (!formData.zoneId) {
+            return toast.error("Please select a Zone");
         }
 
         if (formData.minPrice === "" || formData.maxPrice === "") {
@@ -336,7 +381,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
         const payload = {
             name: trimmedShopName,
             description: trimmedDescription,
-            businessCategory: formData.businessCategory,
+            zoneId: formData.zoneId,
             mapUrl: formData.mapUrl?.trim() || undefined,
             minPrice: String(formData.minPrice),
             maxPrice: String(formData.maxPrice),
@@ -434,9 +479,10 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Shop Name</h4>
                                 <p className="text-lg font-bold text-slate-800 mt-1 break-words">{formData.shopName}</p>
                             </div>
+
                             <div>
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Business Category</h4>
-                                <p className="text-base font-semibold text-slate-700 mt-1">{formData.businessCategory || "Not Selected"}</p>
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zone</h4>
+                                <p className="text-base font-semibold text-slate-700 mt-1">{zones.find(z => z._id === formData.zoneId)?.name || "Not Selected"}</p>
                             </div>
                             <div>
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Price Range</h4>
@@ -565,24 +611,63 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     className={inputStyle}
                                 />
                             </div>
-
                             <div className="space-y-2">
-                                <label className={labelStyle}>Business Category <span className="text-red-500">*</span></label>
-                                <select
-                                    value={formData.businessCategory}
+                                <label className={labelStyle}>Company Name</label>
+                                <input
+                                    type="text"
+                                    value={formData.companyName}
                                     onChange={(e) => {
-                                        setFormData({ ...formData, businessCategory: e.target.value });
+                                        setFormData({ ...formData, companyName: e.target.value });
                                         setIsShopModified(true);
                                     }}
-                                    className={selectStyle}
+                                    placeholder="Enter Company Name"
+                                    className={inputStyle}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className={labelStyle}>Shop Zone <span className="text-red-500">*</span></label>
+                                <select
+                                    required
+                                    value={formData.zoneId}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, zoneId: e.target.value });
+                                        setIsShopModified(true);
+                                    }}
+                                    className={inputStyle}
                                 >
-                                    <option value="" disabled>Select Business Category</option>
-                                    {businessCategories.map((cat) => (
-                                        <option key={cat} value={cat}>{cat}</option>
+                                    <option value="" disabled>Select Shop Zone (City: Surat)</option>
+                                    {zones.map((z) => (
+                                        <option key={z._id} value={z._id}>
+                                            {z.name} - {z.area} ({z.pincode})
+                                        </option>
                                     ))}
                                 </select>
                             </div>
-
+                            <div className="space-y-2">
+                                <label className={labelStyle}>Delivery Areas (Multi-select) <span className="text-red-500">*</span></label>
+                                <div className={`${inputStyle} h-32 overflow-y-auto p-2 space-y-1`}>
+                                    {zones.map((z) => (
+                                        <label key={`delivery-${z._id}`} className="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-50 rounded">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.deliveryZones.includes(z._id)}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        deliveryZones: checked 
+                                                            ? [...prev.deliveryZones, z._id]
+                                                            : prev.deliveryZones.filter(id => id !== z._id)
+                                                    }));
+                                                    setIsShopModified(true);
+                                                }}
+                                                className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                                            />
+                                            <span className="text-sm font-medium text-gray-700">{z.name} - {z.area} ({z.pincode})</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
                             <div className="space-y-2">
                                 <label className={labelStyle}>Location URL (Google Maps)</label>
                                 <div className="flex items-center gap-2">
@@ -594,6 +679,61 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                             setIsShopModified(true);
                                         }}
                                         placeholder="https://maps.google.com/..."
+                                        className={inputStyle}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
+                                <div className="space-y-2">
+                                    <label className={labelStyle}>Bank Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.accountDetails.bankName}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, accountDetails: { ...formData.accountDetails, bankName: e.target.value } });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="Enter Bank Name"
+                                        className={inputStyle}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className={labelStyle}>Account Holder Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.accountDetails.accountHolderName}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, accountDetails: { ...formData.accountDetails, accountHolderName: e.target.value } });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="Enter Account Holder Name"
+                                        className={inputStyle}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className={labelStyle}>Account Number</label>
+                                    <input
+                                        type="text"
+                                        value={formData.accountDetails.accountNumber}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, accountDetails: { ...formData.accountDetails, accountNumber: e.target.value } });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="Enter Account Number"
+                                        className={inputStyle}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className={labelStyle}>IFSC Code</label>
+                                    <input
+                                        type="text"
+                                        value={formData.accountDetails.ifscCode}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, accountDetails: { ...formData.accountDetails, ifscCode: e.target.value } });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="Enter IFSC Code"
                                         className={inputStyle}
                                     />
                                 </div>
@@ -675,7 +815,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                         key={idx}
                                         className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end group/row bg-slate-50/50 p-4 rounded-xl border border-transparent hover:border-slate-200 transition-all"
                                     >
-                                        <div className="sm:col-span-4 space-y-1.5">
+                                        <div className="sm:col-span-3 space-y-1.5">
                                             <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Name</label>
                                             <input
                                                 type="text"
@@ -691,7 +831,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                                 className={inputStyle.replace("py-3", "py-2.5 text-sm")}
                                             />
                                         </div>
-                                        <div className="sm:col-span-4 space-y-1.5">
+                                        <div className="sm:col-span-2 space-y-1.5">
                                             <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Post / Role</label>
                                             <input
                                                 type="text"
@@ -724,12 +864,45 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                                 className={inputStyle.replace("py-3", "py-2.5 text-sm")}
                                             />
                                         </div>
+                                        <div className="sm:col-span-3 space-y-1.5">
+                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">ID Document</label>
+                                            <div className="flex gap-2 items-center">
+                                                {detail.identityDocumentUrl ? (
+                                                    <div className="relative w-10 h-10 border rounded overflow-hidden group">
+                                                        <img src={detail.identityDocumentUrl} alt="ID" className="w-full h-full object-cover" />
+                                                        <button
+                                                            type="button"
+                                                            className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white"
+                                                            onClick={() => {
+                                                                const newDetails = [...formData.details];
+                                                                newDetails[idx].identityDocumentUrl = "";
+                                                                setFormData({ ...formData, details: newDetails });
+                                                                setIsShopModified(true);
+                                                            }}
+                                                        >
+                                                            <FiX size={14} />
+                                                        </button>
+                                                    </div>
+                                                ) : null}
+                                                <div className="relative flex-1">
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={(e) => handleStaffDocUpload(e, idx)}
+                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                    />
+                                                    <div className={`h-10 flex items-center justify-center text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-lg whitespace-nowrap px-2 ${detail.identityDocumentUrl ? 'opacity-0 absolute -z-10' : ''}`}>
+                                                        <FiUpload className="mr-1" /> Upload ID
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div className="sm:col-span-1 pb-1">
                                             <button
                                                 type="button"
                                                 onClick={() => {
                                                     if (formData.details.length === 1) {
-                                                        setFormData({ ...formData, details: [{ name: "", post: "", mobile: "" }] });
+                                                        setFormData({ ...formData, details: [{ name: "", post: "", mobile: "", identityDocumentUrl: "" }] });
                                                     } else {
                                                         setFormData({ ...formData, details: formData.details.filter((_, i) => i !== idx) });
                                                     }
@@ -754,9 +927,9 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                 <button
                     disabled={isLoading || (hasExistingUnit && isShopLocked && !isShopModified)}
                     type="submit"
-                    className={`w-full md:w-auto px-16 py-4 bg-primary-600 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-primary-500/20 flex items-center justify-center gap-3 active:scale-95 ${(isLoading || (hasExistingUnit && isShopLocked && !isShopModified))
+                    className={`w-full md:w-auto px-16 py-4 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3 active:scale-95 ${(isLoading || (hasExistingUnit && isShopLocked && !isShopModified))
                         ? "opacity-30 cursor-not-allowed pointer-events-none grayscale"
-                        : "hover:bg-primary-700 hover:shadow-primary-500/40"
+                        : "hover:bg-blue-700 hover:shadow-blue-500/40"
                         }`}
                 >
                     {isLoading ? (

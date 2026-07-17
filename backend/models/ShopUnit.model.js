@@ -16,12 +16,26 @@ const shopUnitSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
-        businessCategory: {
+
+        companyName: {
             type: String,
             trim: true,
-            enum: ['Manufacturing', 'Exporter', 'Wholesaler', 'Semi wholesaler', 'Retailers', 'Trading', 'Traders', 'Agency', 'Supplier', 'Developer', 'Property'],
-            default: null,
         },
+        accountDetails: {
+            accountNumber: { type: String, trim: true },
+            ifscCode: { type: String, trim: true },
+            bankName: { type: String, trim: true },
+            accountHolderName: { type: String, trim: true }
+        },
+        zoneId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Zone',
+            default: null
+        },
+        deliveryZones: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Zone'
+        }],
         mapUrl: {
             type: String,
             trim: true,
@@ -42,6 +56,8 @@ const shopUnitSchema = new mongoose.Schema(
                 name: String,
                 post: String,
                 mobile: String,
+                identityDocumentUrl: String,
+                identityDocumentPublicId: String,
             }
         ],
         isActive: {

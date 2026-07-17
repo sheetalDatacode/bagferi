@@ -26,7 +26,7 @@ export const useSubscriptionStore = create((set, get) => ({
     error: null,
     lastFetched: null,
 
-    // Fetch subscription status from API
+    // Fetch subscription status from API (mocked since subscriptions are removed)
     fetchStatus: async (force = false) => {
         const state = get();
 
@@ -42,27 +42,38 @@ export const useSubscriptionStore = create((set, get) => ({
         set({ loading: true, error: null });
 
         try {
-            const [subResponse, addonResponse] = await Promise.all([
-                api.get('/vendor/subscriptions/status'),
-                api.get('/vendor/addons/status')
-            ]);
+            // Since subscriptions are removed, we only check if the user has a shop
+            const shopResponse = await api.get('/b2b-vendor/shop-units');
+            
+            const hasShop = shopResponse.success && shopResponse.data !== null;
 
-            if (subResponse.success && subResponse.data) {
-                set({
-                    status: subResponse.data,
-                    addons: addonResponse?.success ? addonResponse.data : [],
-                    loading: false,
-                    lastFetched: Date.now()
-                });
-                return subResponse.data;
-            } else {
-                throw new Error(subResponse.message || 'Failed to fetch subscription status');
-            }
+            const mockedStatus = {
+                hasSubscription: true,
+                hasShop: hasShop,
+                plan: {
+                    name: 'Unlimited',
+                },
+                limits: {
+                    products: { allowed: true, limit: -1, remaining: 9999, current: 0 },
+                    lotSlot: { allowed: true, limit: -1, remaining: 9999, current: 0 },
+                    properties: { allowed: true, limit: -1, remaining: 9999, current: 0, maxImages: 50 },
+                    reels: { allowed: true, limit: -1, remaining: 9999, current: 0 },
+                    jobs: { allowed: true, limit: -1, remaining: 9999, current: 0 }
+                }
+            };
+
+            set({
+                status: mockedStatus,
+                addons: [],
+                loading: false,
+                lastFetched: Date.now()
+            });
+            return mockedStatus;
         } catch (error) {
-            console.error('Error fetching subscription status:', error);
+            console.error('Error fetching shop status:', error);
             set({
                 loading: false,
-                error: error.message || 'Failed to fetch subscription status'
+                error: error.message || 'Failed to fetch status'
             });
             return null;
         }
@@ -197,69 +208,20 @@ export const useSubscriptionStore = create((set, get) => ({
     },
 
     canUploadReel: () => {
-        const state = get();
-        if (!state.status?.hasSubscription) return { allowed: false, message: 'Please purchase a subscription plan to upload reels.' };
-
-        const limits = state.status?.limits?.reels;
-        if (!limits?.allowed) return { allowed: false, message: 'Reel uploads not allowed.' };
-
-        // Check limits
-        const remaining = limits.remaining;
-        
-        if (limits.limit !== -1 && remaining !== undefined && remaining <= 0) {
-            return {
-                allowed: false,
-                requiresAddon: true,
-                featureType: 'reels',
-                message: `Reel limit reached (${limits.current}/${limits.limit}). Please buy an add-on pack.`,
-                current: limits.current,
-                limit: limits.limit,
-                remaining: limits.remaining
-            };
-        }
-
         return {
             allowed: true,
-            remaining: limits.remaining ?? 0,
-            current: limits.current ?? 0,
-            limit: limits.limit ?? 0
+            remaining: -1,
+            current: 0,
+            limit: -1
         };
     },
 
     canCreateJob: () => {
-        const state = get();
-        if (!state.status?.hasSubscription && !state.status?.limits?.jobs?.hasAddon) return { allowed: false, message: 'Please purchase a subscription plan or job add-on to post jobs.' };
-
-        const limits = state.status?.limits?.jobs;
-        if (!limits?.allowed && !limits?.hasAddon) {
-            return {
-                allowed: false,
-                requiresAddon: true,
-                featureType: 'jobs',
-                message: 'Job posting requires an active plan or a Job Add-on pack.'
-            };
-        }
-
-        // Check limits
-        const remaining = limits.remaining;
-        
-        if (limits.limit !== -1 && remaining !== undefined && remaining <= 0) {
-            return {
-                allowed: false,
-                requiresAddon: true,
-                featureType: 'jobs',
-                message: `Job limit reached (${limits.current}/${limits.limit}). Please buy a Job Add-on.`,
-                current: limits.current,
-                limit: limits.limit,
-                remaining: limits.remaining
-            };
-        }
-
         return {
             allowed: true,
-            remaining: limits.remaining ?? 0,
-            current: limits.current ?? 0,
-            limit: limits.limit ?? 0
+            remaining: -1,
+            current: 0,
+            limit: -1
         };
     },
 

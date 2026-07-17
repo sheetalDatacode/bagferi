@@ -12,7 +12,7 @@ const QuotaBanner = ({ action, className = "" }) => {
     const navigate = useNavigate();
     const { status, canCreateProduct, canCreateLotSlot, canCreateProperty, canUploadReel } = useSubscriptionStore();
 
-    if (!status) return null;
+    return null;
 
     let permission = null;
     let title = "";

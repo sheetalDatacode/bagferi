@@ -3,12 +3,10 @@ import {
   getB2BCategoryById,
   createB2BCategory,
   updateB2BCategory,
-  deleteB2BCategory,
-  addB2BSubcategory,
-  deleteB2BSubcategory,
-  updateB2BSubcategory,
+  deleteB2BCategory
 } from '../services/b2bCategoryManagement.service.js';
 import redisService from '../services/redis.service.js';
+import { uploadToCloudinary } from '../utils/cloudinary.util.js';
 
 /**
  * Helper to clear B2B category-related cache
@@ -64,12 +62,48 @@ export const getB2BCategory = async (req, res, next) => {
  */
 export const create = async (req, res, next) => {
   try {
-    const { name, subcategoryName, fields } = req.body;
+    const { name, parent, level, fields } = req.body;
+    let image = null;
+    let imagePublicId = null;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category name is required',
+      });
+    }
+
+    // Handle image upload if a file is present
+    if (req.file) {
+      try {
+        const result = await uploadToCloudinary(req.file.buffer, 'b2b_categories');
+        image = result.secure_url;
+        imagePublicId = result.public_id;
+      } catch (uploadError) {
+        console.error('Image upload failed:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Image upload failed',
+        });
+      }
+    }
+
+    let parsedFields = [];
+    if (fields) {
+      try {
+        parsedFields = typeof fields === 'string' ? JSON.parse(fields) : fields;
+      } catch(e) {
+        // ignore
+      }
+    }
 
     const category = await createB2BCategory({
       name,
-      subcategoryName,
-      fields
+      parent: parent || null,
+      level: level ? parseInt(level) : 1,
+      image,
+      imagePublicId,
+      fields: parsedFields
     });
 
     // Clear cache
@@ -86,22 +120,49 @@ export const create = async (req, res, next) => {
 };
 
 /**
- * Update B2B category name
+ * Update B2B category
  * PUT /api/admin/b2b-categories/:id
  */
 export const update = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
-
-    if (!name || !name.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Category name is required',
-      });
+    const { name, parent, level, fields } = req.body;
+    
+    let updateData = {};
+    if (name) updateData.name = name;
+    if (parent !== undefined) updateData.parent = parent || null;
+    if (level) updateData.level = parseInt(level);
+    
+    if (fields) {
+      try {
+        updateData.fields = typeof fields === 'string' ? JSON.parse(fields) : fields;
+      } catch(e) {
+        // ignore
+      }
     }
 
-    const category = await updateB2BCategory(id, name);
+    // Handle image upload if a file is present
+    if (req.file) {
+      try {
+        const result = await uploadToCloudinary(req.file.buffer, 'b2b_categories');
+        updateData.image = result.secure_url;
+        updateData.imagePublicId = result.public_id;
+        
+        // delete old image
+        const oldCat = await getB2BCategoryById(id);
+        if (oldCat && oldCat.imagePublicId) {
+          cloudinary.uploader.destroy(oldCat.imagePublicId).catch(err => console.error(err));
+        }
+      } catch (uploadError) {
+        console.error('Image upload failed:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Image upload failed',
+        });
+      }
+    }
+
+    const category = await updateB2BCategory(id, updateData);
 
     // Clear cache
     await clearB2BCategoryCache();
@@ -131,102 +192,6 @@ export const remove = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'B2B category deleted successfully',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Add subcategory to B2B category
- * POST /api/admin/b2b-categories/:id/subcategories
- */
-export const addSubcategory = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { subcategoryName, fields } = req.body;
-
-    if (!subcategoryName || !subcategoryName.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subcategory name is required',
-      });
-    }
-
-    const category = await addB2BSubcategory(id, subcategoryName, fields);
-
-    // Clear cache
-    await clearB2BCategoryCache();
-
-    res.status(200).json({
-      success: true,
-      message: 'Subcategory added successfully',
-      data: category,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Delete subcategory from B2B category
- * DELETE /api/admin/b2b-categories/:id/subcategories
- */
-export const removeSubcategory = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { subcategoryName } = req.body;
-
-    if (!subcategoryName || !subcategoryName.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subcategory name is required',
-      });
-    }
-
-    const category = await deleteB2BSubcategory(id, subcategoryName);
-
-    // Clear cache
-    await clearB2BCategoryCache();
-
-    res.status(200).json({
-      success: true,
-      message: 'Subcategory deleted successfully',
-      data: category,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Update subcategory name
- * PUT /api/admin/b2b-categories/:id/subcategories
- */
-export const updateSubcategory = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { index, newName, fields } = req.body;
-
-    if (index === undefined || index === null) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subcategory index is required',
-      });
-    }
-
-    const category = await updateB2BSubcategory(id, parseInt(index), {
-      name: newName,
-      fields
-    });
-
-    // Clear cache
-    await clearB2BCategoryCache();
-
-    res.status(200).json({
-      success: true,
-      message: 'Subcategory updated successfully',
-      data: category,
     });
   } catch (error) {
     next(error);

@@ -189,86 +189,60 @@ const B2BVendorCard = ({ vendor, viewMode = 'grid', trackContactClick, itemType,
                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
                     {vendor.phone ? (
                         <>
-                            <a
-                                href={!canAcceptEnquiries ? "#" : (() => {
-                                    const cleanedPhone = (vendor.phone || '').replace(/\D/g, '');
-                                    const formattedPhone = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
-                                    const baseMsg = `👋 *I'm interested in your business services!*\n\n` +
-                                        `🏢 *Business:* ${displayStoreName || 'Verified Vendor'}\n` +
-                                        `📍 *City:* ${vendor?.address?.city || 'N/A'}\n\n` +
-                                        `🔗 *View Store:* ${window.location.origin}/b2b/vendor/${vendorIdStr}` +
-                                        getWhatsAppUserDetailsSuffix(user);
-                                    const message = encodeURIComponent(baseMsg);
-                                    return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${message}`;
-                                })()}
-                                target={!canAcceptEnquiries ? "_self" : "_blank"}
-                                rel="noopener noreferrer"
-                                onClick={(e) => {
-                                    if (!canAcceptEnquiries) {
-                                        e.preventDefault();
+                                <a
+                                    href={(() => {
+                                        const cleanedPhone = (vendor.phone || '').replace(/\D/g, '');
+                                        const formattedPhone = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+                                        const baseMsg = `👋 *I'm interested in your business services!*\n\n` +
+                                            `🏢 *Business:* ${displayStoreName || 'Verified Vendor'}\n` +
+                                            `📍 *City:* ${vendor?.address?.city || 'N/A'}\n\n` +
+                                            `🔗 *View Store:* ${window.location.origin}/b2b/vendor/${vendorIdStr}` +
+                                            getWhatsAppUserDetailsSuffix(user);
+                                        const message = encodeURIComponent(baseMsg);
+                                        return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${message}`;
+                                    })()}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => {
+                                        if (redirectToLoginIfRequired(e)) return;
                                         e.stopPropagation();
-                                        return;
-                                    }
-                                    if (redirectToLoginIfRequired(e)) return;
-                                    e.stopPropagation();
-                                    if (trackContactClick) trackContactClick(vendorIdStr, 'whatsapp', getTrackingContext());
-                                }}
-                                className={`flex-1 min-w-[30%] py-1.5 rounded-lg transition-all border flex items-center justify-center gap-1.5 font-black text-[9px] uppercase tracking-wider ${
-                                    !canAcceptEnquiries
-                                        ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed grayscale'
-                                        : 'bg-green-50 text-[#25D366] hover:bg-[#25D366] hover:text-white border-green-100'
-                                    }`}
-                                title={!canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "WhatsApp"}
-                            >
+                                        if (trackContactClick) trackContactClick(vendorIdStr, 'whatsapp', getTrackingContext());
+                                    }}
+                                    className="flex-1 min-w-[30%] py-1.5 rounded-lg transition-all border flex items-center justify-center gap-1.5 font-black text-[9px] uppercase tracking-wider bg-green-50 text-[#25D366] hover:bg-[#25D366] hover:text-white border-green-100"
+                                    title="WhatsApp"
+                                >
                                 <FaWhatsapp size={12} />
                                 {!compact && <span className="hidden md:inline">WhatsApp</span>}
                             </a>
-                             <a
-                                href={!canAcceptEnquiries ? "#" : `tel:${vendor.phone}`}
-                                onClick={(e) => {
-                                    if (!canAcceptEnquiries) {
-                                        e.preventDefault();
+                                <a
+                                    href={`tel:${vendor.phone}`}
+                                    onClick={(e) => {
+                                        if (redirectToLoginIfRequired(e)) return;
                                         e.stopPropagation();
-                                        return;
-                                    }
-                                    if (redirectToLoginIfRequired(e)) return;
-                                    e.stopPropagation();
-                                    if (trackContactClick) trackContactClick(vendorIdStr, 'call', getTrackingContext());
-                                }}
-                                className={`flex-1 min-w-[30%] py-1.5 rounded-lg transition-all border flex items-center justify-center gap-1.5 font-black text-[9px] uppercase tracking-wider ${
-                                    !canAcceptEnquiries
-                                        ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed grayscale'
-                                        : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100'
-                                }`}
-                                title={!canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "Call"}
-                            >
+                                        if (trackContactClick) trackContactClick(vendorIdStr, 'call', getTrackingContext());
+                                    }}
+                                    className="flex-1 min-w-[30%] py-1.5 rounded-lg transition-all border flex items-center justify-center gap-1.5 font-black text-[9px] uppercase tracking-wider bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100"
+                                    title="Call"
+                                >
                                 <FiPhone size={12} />
                                 {!compact && <span className="hidden md:inline">Call</span>}
                             </a>
-                            <button
-                                onClick={(e) => {
-                                    if (!canAcceptEnquiries) {
-                                        e.preventDefault();
+                                <button
+                                    onClick={(e) => {
+                                        if (redirectToLoginIfRequired(e)) return;
                                         e.stopPropagation();
-                                        return;
-                                    }
-                                    if (redirectToLoginIfRequired(e)) return;
-                                    e.stopPropagation();
-                                    const mapsUrl = getGoogleMapsUrl(vendor);
-                                    if (mapsUrl) {
-                                        if (trackContactClick) trackContactClick(vendorIdStr, 'map', getTrackingContext());
-                                        window.open(mapsUrl, '_blank');
-                                    } else {
-                                        toast.error('Location details not provided');
-                                    }
-                                }}
-                                className={`flex-1 min-w-[30%] py-1.5 rounded-lg transition-all border flex items-center justify-center gap-1.5 font-black text-[9px] uppercase tracking-wider ${
-                                    !canAcceptEnquiries
-                                        ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed grayscale'
-                                        : 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white border-orange-100'
-                                }`}
-                                title={!canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "Map"}
-                            >
+                                        const mapTarget = vendor;
+                                        const mapsUrl = getGoogleMapsUrl(mapTarget);
+                                        if (mapsUrl) {
+                                            if (trackContactClick) trackContactClick(vendorIdStr, 'map', getTrackingContext());
+                                            window.open(mapsUrl, '_blank');
+                                        } else {
+                                            toast.error('Location details not provided');
+                                        }
+                                    }}
+                                    className="flex-1 min-w-[30%] py-1.5 rounded-lg transition-all border flex items-center justify-center gap-1.5 font-black text-[9px] uppercase tracking-wider bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white border-orange-100"
+                                    title="Map"
+                                >
                                 <FiMapPin size={12} />
                                 {!compact && <span className="hidden md:inline">Map</span>}
                             </button>
