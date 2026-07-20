@@ -33,7 +33,7 @@ const ShopListing = () => {
     }
 
     // Removed subscription gate for Shop Listing to allow vendors to set up their shop profile first.
-    // Gating for products/properties will remain handled by SubscriptionGate components.
+
 
     const handleShopSubmit = async (payload) => {
         setSubmitting(true);

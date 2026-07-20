@@ -91,3 +91,23 @@ export const getUserRating = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * GET /api/rating/list?targetType=product&targetId=...
+ * Public
+ */
+export const getTargetRatings = async (req, res, next) => {
+  try {
+    const { targetType, targetId, limit } = req.query;
+    if (!targetType || !targetId) {
+      return res.status(400).json({
+        success: false,
+        message: 'targetType and targetId are required.',
+      });
+    }
+    const ratings = await ratingService.getTargetRatings(targetType, targetId, limit ? parseInt(limit) : 50);
+    res.status(200).json({ success: true, data: ratings });
+  } catch (error) {
+    next(error);
+  }
+};

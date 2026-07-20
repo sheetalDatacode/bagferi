@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiSearch, FiHeart, FiShoppingCart, FiArrowLeft } from 'react-icons/fi';
 import { useB2BCategoryStore } from '../../../shared/store/b2bCategoryStore';
+import B2BBottomNav from '../components/Layout/B2BBottomNav';
 
 const B2BCategories = () => {
     const navigate = useNavigate();
@@ -28,7 +29,7 @@ const B2BCategories = () => {
     return (
         <div className="flex flex-col h-screen bg-gray-50 overflow-hidden font-sans">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 shrink-0 shadow-sm z-10 pt-safe">
+            <div className="flex items-center justify-between px-4 pt-8 pb-3 md:py-4 bg-white border-b border-gray-100 shrink-0 shadow-sm z-10">
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate(-1)} className="p-1">
                         <FiArrowLeft className="text-xl text-gray-700" />
@@ -189,6 +190,8 @@ const B2BCategories = () => {
                     )}
                 </div>
             </div>
+            
+            <B2BBottomNav />
             
             <style>{`
                 .no-scrollbar::-webkit-scrollbar {

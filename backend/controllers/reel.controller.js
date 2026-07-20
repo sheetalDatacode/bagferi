@@ -14,7 +14,7 @@ import { uploadToCloudinary, deleteFromCloudinary, uploadUrlToCloudinary } from 
 import { publishReelToYouTube, fetchPlaylistItems, fetchVideoById, deleteVideoFromYouTube } from '../services/youtubeReel.service.js';
 import notificationService from '../services/notification.service.js';
 import { ensureCategoryStructure } from '../services/categoryAutomation.service.js';
-import subscriptionRulesService from '../services/subscriptionRules.service.js';
+
 
 const REEL_ACTIVE_HOURS = 24; // kept for backwards compatibility only
 
@@ -1003,24 +1003,14 @@ export const getFeed = asyncHandler(async (req, res) => {
     .map((r) => r.uploaderId);
   let vendorMap = new Map();
   if (vendorIds.length) {
-    const [vendors, b2bSettings] = await Promise.all([
-      Vendor.find({
+    const vendors = await Vendor.find({
         _id: { $in: vendorIds },
         status: 'approved',
         isActive: true
       })
         .select('phone storeName currentSubscription businessType businessTypeRef')
-        .lean(),
-    ]);
-
-    // Enrich with enquiry status in a more optimized way
-    // We pass the pre-fetched settings to avoid N+1 queries for settings
-    const vendorStatusPromises = vendors.map(async (v) => {
-      const status = await subscriptionRulesService.getVendorEnquiryStatus(v._id, b2bSettings);
-      return { ...v, enquiryStatus: status };
-    });
-    const enrichedVendors = await Promise.all(vendorStatusPromises);
-    vendorMap = new Map(enrichedVendors.map((v) => [v._id.toString(), v]));
+        .lean();
+    vendorMap = new Map(vendors.map((v) => [v._id.toString(), { ...v, enquiryStatus: { allowed: true } }]));
   }
 
   const reelIds = reels.map((r) => r._id);
@@ -1152,7 +1142,7 @@ export const getReelById = asyncHandler(async (req, res) => {
     vendorStoreName: vendorInfo?.storeName || reel.uploaderName || null,
     viewCount: typeof reel.viewCount === 'number' ? reel.viewCount : 0,
     vendorId: reel.uploaderType === 'vendor' ? (vendorInfo?._id || null) : null,
-    enquiryStatus: vendorInfo ? (await subscriptionRulesService.getVendorEnquiryStatus(vendorInfo._id)) : null,
+    enquiryStatus: vendorInfo ? { allowed: true } : null,
     price: reel.price || 0,
   };
 

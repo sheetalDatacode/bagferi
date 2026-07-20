@@ -6,6 +6,7 @@ import * as ratingController from '../controllers/rating.controller.js';
 const router = express.Router();
 
 router.get('/summary', asyncHandler(ratingController.getSummary));
+router.get('/list', asyncHandler(ratingController.getTargetRatings));
 router.get('/user', authenticate, authorize('user', 'vendor'), asyncHandler(ratingController.getUserRating));
 router.post('/', authenticate, authorize('user', 'vendor'), asyncHandler(ratingController.submitRating));
 

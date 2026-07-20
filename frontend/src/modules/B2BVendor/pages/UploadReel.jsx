@@ -5,7 +5,7 @@ import { FiVideo, FiArrowLeft, FiUpload, FiSearch, FiChevronDown, FiCheck, FiX, 
 import toast from 'react-hot-toast';
 import api from '../../../shared/utils/api';
 import { useB2BCategoryStore } from '../../../shared/store/b2bCategoryStore';
-import SubscriptionGate from '../components/SubscriptionGate';
+
 import QuotaBanner from '../components/QuotaBanner';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import { useB2BVendorAuthStore } from '../store/b2bVendorAuthStore';
@@ -330,7 +330,7 @@ export default function UploadReel() {
         </div>
       )}
 
-      <SubscriptionGate action="reels" showLimitInfo={false} fullPage={true}>
+
         <form onSubmit={handleSubmit} className="space-y-6">
         
         {submissionType === 'file' ? (
@@ -567,7 +567,7 @@ export default function UploadReel() {
           </button>
         </div>
       </form>
-      </SubscriptionGate>
+
     </motion.div>
   );
 }

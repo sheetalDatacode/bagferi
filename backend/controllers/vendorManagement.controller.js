@@ -17,7 +17,7 @@ import redisService from '../services/redis.service.js';
 import { getSignedUrl } from '../utils/cloudinary.util.js';
 import Product from '../models/Product.model.js';
 import BannerBooking from '../models/BannerBooking.model.js';
-import VendorSubscription from '../models/VendorSubscription.model.js';
+
 import Notification from '../models/Notification.model.js';
 import Vendor from '../models/Vendor.model.js';
 import ShopUnit from '../models/ShopUnit.model.js';
@@ -486,7 +486,7 @@ export const getVendorDashboardForAdmin = async (req, res, next) => {
       0,
       0,
       BannerBooking.find({ vendorId, status: 'active' }).populate('slotId').lean(),
-      VendorSubscription.find({ vendorId, status: 'active' }).populate('planId').lean(),
+      [],
       Notification.find({ recipient: vendorId, recipientType: 'vendor' }).sort({ createdAt: -1 }).limit(5).lean(),
       ShopUnit.findOne({ vendorId }).lean(),
       Reel.countDocuments({ uploaderId: new mongoose.Types.ObjectId(vendorId), uploaderType: 'vendor' }),

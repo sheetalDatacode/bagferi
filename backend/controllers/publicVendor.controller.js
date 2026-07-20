@@ -2,7 +2,7 @@ import { getApprovedVendors, getVendorById } from '../services/vendorManagement.
 import Product from '../models/Product.model.js';
 import redisService from '../services/redis.service.js';
 import { getRatingSummaries, getRatingSummary } from '../services/rating.service.js';
-import subscriptionRulesService from '../services/subscriptionRules.service.js';
+
 
 /**
  * Get all approved B2B vendors (public endpoint)
@@ -65,12 +65,8 @@ export const getPublicVendors = async (req, res, next) => {
         { $group: { _id: '$vendorId', count: { $sum: 1 } } }
       ]),
       ShopUnit.find({ vendorId: { $in: vendorIds } }).lean(),
-      (await import('../models/VendorSubscription.model.js')).default.find({
-        vendorId: { $in: vendorIds },
-        status: 'active',
-        endDate: { $gt: new Date() }
-      }).populate('planId').lean(),
-      Promise.all(vendorIds.map(id => subscriptionRulesService.getVendorEnquiryStatus(id.toString())))
+      [],
+      Promise.all(vendorIds.map(id => ({ allowed: true })))
     ]);
 
     // Create maps for O(1) lookup
@@ -180,7 +176,7 @@ export const getPublicVendor = async (req, res, next) => {
     
     const [vendor, enquiryStatus] = await Promise.all([
       getVendorById(id),
-      subscriptionRulesService.getVendorEnquiryStatus(id)
+      { allowed: true }
     ]);
 
     // STRICT CHECK: Ensure it is a B2B vendor

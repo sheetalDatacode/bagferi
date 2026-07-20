@@ -75,112 +75,120 @@ const B2BUserLogin = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex items-center justify-center p-4">
-            <div
-                className="bg-white/95 backdrop-blur-xl rounded-[2rem] p-6 sm:p-8 w-full max-w-sm shadow-2xl relative overflow-hidden"
-            >
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-400 to-primary-600"></div>
+        <div className="flex min-h-screen w-full bg-white">
+            {/* Left side Image (Hidden on small screens) */}
+            <div className="hidden lg:flex flex-col justify-end w-1/2 bg-cover bg-center relative" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1618221195710-dd6b14666f27?q=80&w=2000&auto=format&fit=crop')" }}>
+            <div className="absolute inset-0 bg-primary-900/70 mix-blend-multiply"></div>
+                <div className="relative z-10 p-12 lg:p-20 text-white">
+                    <div className="inline-block px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold tracking-widest mb-6 uppercase">
+                        Premium B2B Marketplace
+                    </div>
+                    <h1 className="text-4xl xl:text-5xl font-extrabold mb-4 leading-tight">
+                        Sign in to your <br />
+                        <span className="text-primary-400">Bagferi account</span>
+                    </h1>
+                    <p className="text-lg text-gray-200 max-w-md">
+                        Access saved addresses, order tracking, wishlist items, and faster checkout.
+                    </p>
+                </div>
+            </div>
 
+            {/* Right side Form */}
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative bg-white">
                 <button
                     onClick={() => navigate(-1)}
-                    className="absolute top-4 left-4 p-2 text-gray-400 hover:text-primary-600 transition-colors z-10"
+                    className="absolute top-6 left-6 p-2 text-gray-400 hover:text-primary-600 bg-gray-50 rounded-full transition-colors z-10 hidden lg:block"
                 >
-                    <FiArrowLeft size={22} />
+                    <FiArrowLeft size={20} />
                 </button>
-
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-50">
-                        <FiBriefcase className="text-primary-600 text-2xl" />
+                <div className="w-full max-w-md">
+                    <div className="text-center mb-10">
+                        <div className="flex justify-center items-center gap-2 mb-4">
+                             <div className="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-200">
+                                 <FiShoppingBag className="text-white text-2xl" />
+                             </div>
+                             <span className="text-3xl font-extrabold text-primary-600 tracking-tight">Bagferi</span>
+                        </div>
                     </div>
-                    <h1 className="text-2xl font-extrabold text-gray-800 mb-1">B2B Login</h1>
-                    <p className="text-sm text-gray-500 font-medium tracking-tight">Access the Bulk Marketplace</p>
-                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-gray-700 ml-1 uppercase tracking-wider">Phone or Email</label>
-                        <div className="relative group">
-                            <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-gray-700 ml-1">Email or Phone</label>
                             <input
                                 type="text"
                                 name="identifier"
                                 required
                                 value={formData.identifier}
                                 onChange={handleChange}
-                                placeholder="Phone number or Email"
-                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-transparent rounded-xl focus:border-primary-500 focus:bg-white transition-all font-medium text-sm"
+                                placeholder="user1@gmail.com"
+                                className="w-full px-4 py-3 bg-blue-50/50 border border-blue-100 rounded-xl focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50 transition-all font-medium text-sm outline-none"
                             />
                         </div>
-                    </div>
 
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-gray-700 ml-1 uppercase tracking-wider">Password</label>
-                        <div className="relative group">
-                            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                name="password"
-                                required
-                                value={formData.password}
-                                onChange={handleChange}
-                                placeholder="••••••••"
-                                className="w-full pl-10 pr-12 py-3 bg-gray-50 border-2 border-transparent rounded-xl focus:border-primary-500 focus:bg-white transition-all font-medium text-sm"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                            >
-                                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-                            </button>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-gray-700 ml-1">Password</label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="password"
+                                    required
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    placeholder="••••••••"
+                                    className="w-full px-4 py-3 bg-blue-50/50 border border-blue-100 rounded-xl focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50 transition-all font-medium text-sm outline-none pr-12"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary-600 transition-colors"
+                                >
+                                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="flex items-center justify-between py-1">
-                        <label className="flex items-center gap-2 cursor-pointer group">
-                            <input
-                                type="checkbox"
-                                checked={rememberMe}
-                                onChange={(e) => setRememberMe(e.target.checked)}
-                                className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                            />
-                            <span className="text-xs text-gray-600 group-hover:text-gray-800 transition-colors font-bold">Remember me</span>
-                        </label>
-                        <Link to="/b2b/forgot-password" className="text-xs font-bold text-primary-600 hover:text-primary-700">
-                            Forgot Password?
-                        </Link>
-                    </div>
+                        <div className="flex items-center justify-between py-1">
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                                <input
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 bg-blue-50/50"
+                                />
+                                <span className="text-xs text-gray-500 group-hover:text-gray-800 transition-colors font-bold">Remember Me</span>
+                            </label>
+                            <Link to="/b2b/forgot-password" className="text-xs font-bold text-primary-600 hover:text-primary-700">
+                                Forgot?
+                            </Link>
+                        </div>
 
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="w-full bg-primary-600 text-white py-3.5 rounded-xl font-bold text-base hover:bg-primary-700 shadow-xl shadow-primary-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.98]"
-                    >
-                        {isLoading ? 'Signing in...' : 'Sign In'}
-                    </button>
-
-                    <div className="pt-6 border-t border-gray-100 text-center space-y-4">
-                        <p className="text-xs text-gray-600 font-medium">
-                            Don't have an account?{' '}
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full bg-primary-600 text-white py-3.5 rounded-2xl font-bold text-base hover:bg-primary-700 shadow-xl shadow-primary-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.98]"
+                        >
+                            {isLoading ? 'SIGNING IN...' : 'LOGIN'}
+                        </button>
+                        
+                        <div className="pt-4 text-left">
                             <Link
                                 to="/b2b/register"
-                                className="text-primary-600 hover:text-primary-700 font-black uppercase tracking-wider ml-1"
+                                className="text-primary-600 hover:text-primary-700 font-bold text-sm tracking-wide opacity-80 hover:opacity-100"
                             >
-                                Register Now
-                            </Link>
-                        </p>
-                        <div className="pt-2">
-                            <Link
-                                to="/b2b-vendor/login"
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg font-bold hover:bg-gray-100 transition-all text-xs border border-gray-100"
-                            >
-                                <FiBriefcase /> Login as Vendor
+                                Create Account
                             </Link>
                         </div>
-                    </div>
-                </form>
+                    </form>
+                    
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="mt-8 flex items-center gap-2 text-gray-400 hover:text-primary-600 transition-colors text-sm font-medium lg:hidden"
+                    >
+                        <FiArrowLeft /> Back
+                    </button>
+                </div>
             </div>
-        </div >
+        </div>
     );
 };
 

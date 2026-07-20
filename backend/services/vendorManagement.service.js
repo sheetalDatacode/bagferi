@@ -494,16 +494,7 @@ export const getB2BVendors = async (filters = {}) => {
     // Execute query with subscription population (including payment details)
     const [vendors, total] = await Promise.all([
       Vendor.find(query)
-        .populate({
-          path: 'currentSubscription',
-          select: 'status startDate endDate planId razorpayOrderId razorpayPaymentId razorpaySignature paymentMethod lastPaymentDate nextBillingDate',
-          populate: {
-            path: 'planId',
-            select: 'name duration price features',
-            model: 'B2BSubscriptionPlan', // Explicitly specify model
-          },
-          options: { strictPopulate: false }, // Allow null subscriptions
-        })
+
         .populate({
           path: 'businessTypeRef',
           select: 'name',

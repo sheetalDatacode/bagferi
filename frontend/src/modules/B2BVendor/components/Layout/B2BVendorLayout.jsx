@@ -19,7 +19,7 @@ const B2BVendorLayout = () => {
 
     // Check if current route is allowed based on enabled modules
     const isRouteAllowed = () => {
-        // We defer to SubscriptionGate or specific page logic to handle unauthorized access
+
         // instead of abruptly redirecting to the dashboard here.
         return true;
     };

@@ -1,5 +1,5 @@
 import { asyncHandler } from '../middleware/errorHandler.middleware.js';
-import VendorSubscription from '../models/VendorSubscription.model.js';
+
 import BannerBooking from '../models/BannerBooking.model.js';
 import Vendor from '../models/Vendor.model.js';
 import VendorWalletTransaction from '../models/VendorWalletTransaction.model.js';
@@ -27,15 +27,7 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
 
   // ── Revenue Totals ─────────────────────────────────────────
   const [subRev, bannerRev, addonRev, walletRev] = await Promise.all([
-    VendorSubscription.aggregate([
-      { $match: { 
-        status: { $in: ['active', 'expired'] }, 
-        totalAmount: { $gt: 0 },
-        paymentMethod: { $nin: ['wallet', 'free'] },
-        ...(vendorIds.length > 0 || businessType && businessType !== 'All Business Types' ? vendorMatch : {})
-      } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } }
-    ]),
+    [],
     BannerBooking.aggregate([
       { $match: { 
         paymentStatus: 'paid',
@@ -74,11 +66,7 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
     if (vendorIds.length > 0 || businessType && businessType !== 'All Business Types') {
       query.vendorId = { $in: vendorIds };
     }
-    const docs = await VendorSubscription.find(query)
-      .sort({ lastPaymentDate: -1, createdAt: -1 })
-      .populate('vendorId', 'name storeName email phone gstNumber')
-      .populate('planId', 'name duration price')
-      .lean();
+    const docs = [];
 
     return docs.map(s => ({
       _id: s._id,

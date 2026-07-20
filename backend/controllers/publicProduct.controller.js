@@ -27,6 +27,7 @@ export const getProducts = async (req, res, next) => {
       market,
       businessType,
       businessCategory,
+      gender,
       strict,
       dynamicFilters
     } = req.query;
@@ -52,6 +53,7 @@ export const getProducts = async (req, res, next) => {
       market,
       businessType,
       businessCategory,
+      gender,
       strict,
       dynamicFilters
     });
@@ -64,7 +66,7 @@ export const getProducts = async (req, res, next) => {
       }).filter(Boolean))];
 
       const enquiryStatuses = await Promise.all(
-          vendorIds.map(id => subscriptionRulesService.getVendorEnquiryStatus(id))
+          vendorIds.map(id => ({ allowed: true }))
       );
 
       const statusMap = new Map(vendorIds.map((id, index) => [id, enquiryStatuses[index]]));
@@ -88,7 +90,7 @@ export const getProducts = async (req, res, next) => {
   }
 };
 
-import subscriptionRulesService from '../services/subscriptionRules.service.js';
+
 
 /**
  * Get public product by ID
@@ -103,7 +105,7 @@ export const getProduct = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    const enquiryStatus = await subscriptionRulesService.getVendorEnquiryStatus(product.vendorId._id || product.vendorId);
+    const enquiryStatus = { allowed: true };
 
     res.status(200).json({
       success: true,

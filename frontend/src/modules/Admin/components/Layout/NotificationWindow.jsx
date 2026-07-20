@@ -144,7 +144,7 @@ const NotificationWindow = ({ isOpen, onClose, position = 'right' }) => {
     } else if (notification.orderId) {
       const orderId = notification.orderId._id || notification.orderId;
       if (isB2BVendor || isVendor) {
-        navigate(`/vendor/orders/${orderId}`);
+        navigate(`/vendor/orders`); // Assuming they want to go to vendor orders page (this is frontend route)
       } else if (isAdmin) {
         navigate(`/admin/orders/all-orders`);
       }

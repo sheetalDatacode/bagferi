@@ -74,6 +74,9 @@ const ProductCatalog = () => {
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState(
     searchParams.get("businessCategory") || null,
   );
+  const [selectedGender, setSelectedGender] = useState(
+    searchParams.get("gender") || "All"
+  );
 
   const BUSINESS_CATEGORIES = ['Manufacturing', 'Exporter', 'Wholesaler', 'Semi wholesaler', 'Retailers', 'Trading', 'Traders', 'Agency', 'Supplier'];
 
@@ -1112,6 +1115,10 @@ const ProductCatalog = () => {
         params.businessCategory = selectedBusinessCategory;
       }
 
+      if (selectedGender && selectedGender !== "All") {
+        params.gender = selectedGender;
+      }
+
       // Add Dynamic Filters
       if (Object.keys(dynamicFilters).length > 0) {
         params.dynamicFilters = JSON.stringify(dynamicFilters);
@@ -1392,6 +1399,7 @@ const ProductCatalog = () => {
         selectedBusinessType,
         selectedBusinessSubType,
         selectedBusinessCategory,
+        selectedGender,
         dynamicFilters,
         searchQuery,
         strict: searchParams.get("strict"),
@@ -1421,6 +1429,7 @@ const ProductCatalog = () => {
     selectedBusinessType,
     selectedBusinessSubType,
     selectedBusinessCategory,
+    selectedGender,
     allCategories.length,
     JSON.stringify(dynamicFilters),
     searchQuery,
@@ -2046,37 +2055,7 @@ const ProductCatalog = () => {
             onKeyDown={(e) => e.key === "Enter" && handleHeaderSearchSubmit(searchQuery)}
           />
         </div>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          <button
-            onClick={() => openOverlay('filters')}
-            className={`w-full px-2 py-1.5 rounded-full text-[9px] font-black uppercase tracking-tight border text-center transition-all ${isMobileFilterOpen || Object.keys(dynamicFilters).length > 0 || selectedPriceRange || customPriceRange.min ? "bg-primary-600 text-white border-primary-600 shadow-sm" : "bg-white text-gray-700 border-gray-200"}`}>
-            Filters
-          </button>
-          <button
-            onClick={() => {
-              if (selectedCategory && selectedCategory !== "All") {
-                setExpandedCategory(selectedCategory);
-                openOverlay('categories');
-              } else {
-                openOverlay('categories');
-              }
-            }}
-            className={`w-full px-2 py-1.5 rounded-full text-[9px] font-black uppercase tracking-tight border text-center transition-all ${selectedCategory !== "All" ? "bg-primary-600 text-white border-primary-600 shadow-sm" : "bg-white text-gray-700 border-gray-200"}`}>
-            {selectedCategory !== "All" ? "Varieties" : "Category"}
-          </button>
-          {!noProductsInBusinessType && (
-            <button
-              onClick={() => openOverlay('city')}
-              className={`w-full px-2 py-1.5 rounded-full text-[9px] font-black uppercase tracking-tight border text-center transition-all ${selectedCity !== "All Cities" ? "bg-primary-600 text-white border-primary-600 shadow-sm" : "bg-white text-gray-700 border-gray-200"}`}>
-              City
-            </button>
-          )}
-          {noProductsInBusinessType && (
-            <div className="col-span-3 px-3 py-2 bg-amber-50 border border-amber-100 rounded-full text-[10px] font-bold text-amber-800 text-center">
-              No products listed in this business type
-            </div>
-          )}
-        </div>
+
       </div>
 
       {isCityDropdownOpen && (
@@ -2314,6 +2293,62 @@ const ProductCatalog = () => {
       )}
 
       <main className=" mx-auto px-4 py-4 md:py-8">
+        {/* Dynamic Category Strip */}
+        <div className="mb-6 overflow-x-auto custom-scrollbar pb-2">
+          <div className="flex gap-4 min-w-max px-2">
+            <button
+              onClick={() => {
+                setSelectedCategory("All");
+                setSelectedSubcategory(null);
+                setExpandedCategory(null);
+              }}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div className={`w-16 h-16 rounded-full border-2 p-1 transition-all ${selectedCategory === "All" ? "border-primary-500 shadow-md scale-105" : "border-transparent hover:border-gray-200"}`}>
+                <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center">
+                  <FiGrid className={`text-xl ${selectedCategory === "All" ? "text-primary-600" : "text-gray-500"}`} />
+                </div>
+              </div>
+              <span className={`text-[10px] font-bold text-center w-16 truncate ${selectedCategory === "All" ? "text-primary-600" : "text-gray-600"}`}>All</span>
+            </button>
+            {allCategories.filter(c => c.name !== "All").map(cat => (
+              <button
+                key={cat._id || cat.name}
+                onClick={() => {
+                  setSelectedCategory(cat.name);
+                  setExpandedCategory(cat.name);
+                  setSelectedSubcategory(null);
+                }}
+                className="flex flex-col items-center gap-2 group"
+              >
+                <div className={`w-16 h-16 rounded-full border-2 p-1 transition-all ${selectedCategory === cat.name ? "border-primary-500 shadow-md scale-105" : "border-transparent hover:border-gray-200"}`}>
+                  <div className="w-full h-full rounded-full bg-gray-50 flex items-center justify-center overflow-hidden">
+                    {cat.image ? (
+                      <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xl font-bold text-gray-300">{cat.name.charAt(0)}</span>
+                    )}
+                  </div>
+                </div>
+                <span className={`text-[10px] font-bold text-center w-16 truncate ${selectedCategory === cat.name ? "text-primary-600" : "text-gray-600"}`}>{cat.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Gender Filter Row */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {["All", "Men", "Women", "Kids"].map(gender => (
+            <button
+              key={gender}
+              onClick={() => setSelectedGender(gender)}
+              className={`px-4 py-1.5 rounded-full text-[11px] font-bold transition-all border ${selectedGender === gender ? "bg-primary-600 text-white border-primary-600 shadow-sm" : "bg-white text-gray-600 border-gray-200 hover:border-primary-200 hover:bg-gray-50"}`}
+            >
+              {gender}
+            </button>
+          ))}
+        </div>
+
         {/* Search & Filter Bar max-w-7xl */}
         <div className="space-y-4 md:space-y-6 mb-2">
 

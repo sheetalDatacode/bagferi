@@ -25,16 +25,15 @@ import redisClient from "./config/redis.config.js";
 // Import routes
 import vendorDashboardRoutes from "./routes/vendorDashboard.routes.js";
 import publicVendorRoutes from "./routes/publicVendor.routes.js";
-import adminB2BSubscriptionPlanRoutes from "./routes/adminB2BSubscriptionPlan.routes.js";
-import adminB2BVendorSubscriptionRoutes from "./routes/adminB2BVendorSubscription.routes.js";
+
+
 import adminB2BVendorManagementRoutes from "./routes/adminB2BVendorManagement.routes.js";
 import adminB2BCategoryManagementRoutes from "./routes/adminB2BCategoryManagement.routes.js";
-import vendorSubscriptionRoutes from "./routes/vendorSubscription.routes.js";
+
 import publicB2BCategoryRoutes from "./routes/publicB2BCategory.routes.js";
 import publicB2BLocationRoutes from "./routes/publicB2BLocation.routes.js";
-import publicB2BSubscriptionRoutes from "./routes/publicB2BSubscription.routes.js";
-import SubscriptionRoutes from "./routes/SubscriptionRoute.js";
-import upgradeRoutes from "./routes/upgrade.routes.js";
+
+
 import adminB2BSettingsRoutes from "./routes/adminB2BSettings.routes.js";
 import feedbackRoutes from "./routes/Feedback.routes.js";
 
@@ -49,6 +48,9 @@ import vendorAuthRoutes from "./routes/vendorAuth.routes.js";
 import adminAuthRoutes from "./routes/adminAuth.routes.js";
 import userAuthRoutes from "./routes/userAuth.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import cartRoutes from "./routes/cart.routes.js";
+import orderRoutes from "./routes/order.routes.js";
+import wishlistRoutes from "./routes/wishlist.routes.js";
 
 import adminMediaRoutes from "./routes/media.routes.js";
 import heroBannerVendorRoutes from "./routes/heroBannerVendor.routes.js";
@@ -71,7 +73,7 @@ import referralRoutes from "./routes/referral.routes.js";
 import adminReferralSettingsRoutes from "./routes/adminReferralSettings.routes.js";
 import reelRoutes from "./routes/reel.routes.js";
 import adminReelRoutes from "./routes/adminReel.routes.js";
-import { B2BSubscriptionExpiryCron } from "./Cron/SubscriptionCron.js";
+
 import { syncVendorViewsCron } from "./Cron/VendorViewSync.cron.js";
 import bannerBookingCron from "./Cron/BannerBooking.cron.js";
 import { startReelExpiryCron, startYouTubeLinkValidationCron } from "./Cron/ReelExpiry.cron.js";
@@ -259,37 +261,37 @@ app.get("/api/test-db", (req, res) => {
   }
 });
 
-import { razorpayWebhook } from "./controllers/SubscriptionCtrl.js";
+
 
 // Routes
 app.use("/api/auth/vendor", vendorAuthRoutes);
 app.use("/api/auth/admin", adminAuthRoutes);
 app.use("/api/auth/user", userAuthRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/order", orderRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/user", userAuthRoutes);
 app.use("/api/staff/auth", staffAuthRoutes);
 
 app.use("/api/vendors", publicVendorRoutes);
 app.use("/api/public/b2b-categories", publicB2BCategoryRoutes);
 app.use("/api/public", publicB2BLocationRoutes);
-app.use("/api/public/b2b-subscription-plans", publicB2BSubscriptionRoutes);
 
-app.use("/api/subscription", SubscriptionRoutes);
-app.use("/api/subscriptions", SubscriptionRoutes);
-app.use("/api/subscriptions/upgrade", upgradeRoutes);
+
+
 app.use("/api/products", publicProductRoutes);
 app.use("/api/rating", ratingRoutes);
 app.use("/api/feedback", feedbackRoutes);
 
 app.use("/api/admin/media", adminMediaRoutes);
-app.use("/api/admin/b2b-subscription-plans", adminB2BSubscriptionPlanRoutes);
-app.use("/api/admin/b2b-vendors/subscriptions", adminB2BVendorSubscriptionRoutes);
+
+
 app.use("/api/admin/b2b-vendors", adminB2BVendorManagementRoutes);
 app.use("/api/admin/b2b-categories", adminB2BCategoryManagementRoutes);
 app.use("/api/admin/b2b-products", adminB2BProductManagementRoutes);
 app.use("/api/vendor/dashboard", vendorDashboardRoutes);
-app.use("/api/vendor/subscriptions", vendorSubscriptionRoutes);
-app.use("/api/vendor/subscription", vendorSubscriptionRoutes);
+
 app.use("/api/admin/b2b-settings", adminB2BSettingsRoutes);
 app.use("/api/vendor/analytics", vendorAnalyticsRoutes);
 app.use("/api/vendor/notifications", vendorNotificationRoutes);
@@ -332,7 +334,7 @@ process.on("uncaughtException", (error) => {
   if (process.env.NODE_ENV !== "production") process.exit(1);
 });
 
-app.post("/api/v1/razorpay-webhook", express.raw({ type: "application/json" }), razorpayWebhook);
+
 app.use(errorHandler);
 
 app.use((req, res) => {
@@ -388,7 +390,7 @@ const startServer = async () => {
     const io = setupSocketIO(httpServer, corsOrigins);
     app.set("io", io);
 
-    B2BSubscriptionExpiryCron.start();
+
     syncVendorViewsCron.start();
     bannerBookingCron();
     startReelExpiryCron();

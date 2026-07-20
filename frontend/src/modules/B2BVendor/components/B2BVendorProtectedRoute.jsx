@@ -21,40 +21,8 @@ const B2BVendorProtectedRoute = ({ children }) => {
     // Check subscription expiry on mount and periodically
     useEffect(() => {
         if (!isChecking && isAuthenticated && vendor && vendor.vendorType === 'b2b') {
-            const checkSubscription = async () => {
-                try {
-
-                    const response = await api.get('/vendor/subscriptions/current');
-                    if (response.success && response.data) {
-                        const subscription = response.data;
-                        // Check if subscription is expired
-                        if (subscription && subscription.endDate) {
-                            const now = new Date();
-                            const endDate = new Date(subscription.endDate);
-                            if (endDate < now) {
-                                console.log('[B2BVendorProtectedRoute] Subscription expired, warning only');
-                                // In simplified registration, we might want to allow login but limit features
-                                // For now, we'll allow access but backend will restrict product additions
-                            }
-
-                            if (subscription.status !== 'active') {
-                                console.log('[B2BVendorProtectedRoute] Subscription inactive:', subscription.status);
-                            }
-                        } else if (subscription === null) {
-                            // No subscription found for B2B vendor - allow access in simplified registration flow
-                            console.log('[B2BVendorProtectedRoute] No subscription found for B2B vendor, allowing access (simplified registration)');
-                        }
-                    }
-                } catch (error) {
-                    console.error('[B2BVendorProtectedRoute] Error checking subscription:', error);
-                    // Don't block access on error, backend will handle it
-                }
-            };
-
-            checkSubscription();
-            // Check every 5 minutes
-            const interval = setInterval(checkSubscription, 5 * 60 * 1000);
-            return () => clearInterval(interval);
+            // Subscription checks have been removed to bypass subscription requirements.
+            // No API call is made to prevent 404 errors.
         }
     }, [isChecking, isAuthenticated, vendor, logout]);
 

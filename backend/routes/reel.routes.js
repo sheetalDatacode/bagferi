@@ -20,7 +20,7 @@ import {
   getDailyUploadStatus,
   debugReels
 } from '../controllers/reel.controller.js';
-import { checkReelUpload } from '../middleware/subscriptionRestriction.middleware.js';
+
 import { asyncHandler } from '../middleware/errorHandler.middleware.js';
 
 const router = express.Router();
@@ -29,15 +29,25 @@ router.post(
   '/',
   authenticate,
   authorize('vendor', 'user'),
-  checkReelUpload,
+
   uploadVideo.single('video'),
   asyncHandler(uploadReel)
 );
 router.get('/daily-status', authenticate, authorize('vendor', 'user'), asyncHandler(getDailyUploadStatus));
 router.get('/my', authenticate, authorize('vendor', 'user'), asyncHandler(getMyReels));
 
-router.get('/debug', asyncHandler(debugReels));
 router.get('/feed', optionalAuthenticate, asyncHandler(getFeed));
+router.get('/debug', async (req, res) => {
+  const Reel = require('../models/Reel.model.js').default;
+  const count = await Reel.countDocuments({});
+  const allReels = await Reel.find({}).limit(5).lean();
+  res.json({ count, allReels });
+});
+router.get('/approve-all', async (req, res) => {
+  const Reel = require('../models/Reel.model.js').default;
+  const result = await Reel.updateMany({}, { status: 'approved' });
+  res.json({ success: true, modifiedCount: result.modifiedCount });
+});
 router.get('/share/:id', asyncHandler(getReelSharePage));
 router.get('/playlist/:categoryName', asyncHandler(getPlaylistByCategory));
 router.get('/:id', optionalAuthenticate, asyncHandler(getReelById));

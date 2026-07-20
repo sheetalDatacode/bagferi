@@ -5,7 +5,7 @@ import Product from '../models/Product.model.js';
 import BannerBooking from '../models/BannerBooking.model.js';
 import Transaction from '../models/Transaction.model.js';
 import B2BCategory from '../models/B2BCategory.model.js';
-import VendorSubscription from '../models/VendorSubscription.model.js';
+
 import Reel from '../models/Reel.model.js';
 import ReelReport from '../models/ReelReport.model.js';
 import VendorWalletTransaction from '../models/VendorWalletTransaction.model.js';
@@ -90,7 +90,7 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
             { $match: { status: 'completed', type: 'payment' } },
             { $group: { _id: null, total: { $sum: '$amount' } } }
         ]),
-        VendorSubscription.countDocuments({ status: 'active' }),
+        0,
         0,
         0,
         Reel.countDocuments(),

@@ -1,7 +1,7 @@
 import BannerSlot from '../models/BannerSlot.model.js';
 import BannerBooking from '../models/BannerBooking.model.js';
 import Vendor from '../models/Vendor.model.js';
-import VendorSubscription from '../models/VendorSubscription.model.js';
+
 import { uploadToCloudinary } from '../utils/cloudinary.util.js';
 import { asyncHandler } from '../middleware/errorHandler.middleware.js';
 import notificationService from '../services/notification.service.js';
@@ -1165,19 +1165,7 @@ export const getBannerRevenueStats = asyncHandler(async (req, res) => {
         BannerBooking.distinct('vendorId', { bannerType, paymentStatus: 'paid' }),
 
         // Subscription Revenue (Total from B2B plans)
-        VendorSubscription.aggregate([
-            { $match: { planId: { $exists: true, $ne: null }, status: { $in: ['active', 'expired'] } } },
-            {
-                $lookup: {
-                    from: 'b2bsubscriptionplans',
-                    localField: 'planId',
-                    foreignField: '_id',
-                    as: 'plan'
-                }
-            },
-            { $unwind: '$plan' },
-            { $group: { _id: null, total: { $sum: '$plan.price' } } }
-        ])
+        []
     ]);
 
     // Revenue = only active/completed bookings (realized revenue, excluding refunded)

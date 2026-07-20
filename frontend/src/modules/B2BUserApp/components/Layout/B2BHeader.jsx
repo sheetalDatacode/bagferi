@@ -9,6 +9,7 @@ import { debounce } from '../../../../shared/utils/helpers';
 import api from '../../../../shared/utils/api';
 import { useAuthStore } from '../../../../shared/store/authStore';
 import { useB2BVendorAuthStore } from '../../../B2BVendor/store/b2bVendorAuthStore';
+import { useCartStore } from '../../../../shared/store/cartStore';
 
 const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true, searchQuery: propSearchQuery, onSearchChange, onSearchSubmit, hideSearch = false, customNav, searchPlaceholder = "SEARCH PRODUCTS AND SHOPS", suggestionEndpoint = "/products/b2b-suggestions", transparent = false, minimal = false }) => {
     const navigate = useNavigate();
@@ -18,6 +19,14 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
     const { isAuthenticated, user } = useAuthStore();
     const { isAuthenticated: isVendorAuthenticated } = useB2BVendorAuthStore();
     const [localSearchQuery, setLocalSearchQuery] = useState(propSearchQuery || '');
+
+    const { cart, fetchCart } = useCartStore();
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchCart();
+        }
+    }, [isAuthenticated, fetchCart]);
+    const cartCount = cart?.items?.reduce((total, item) => total + item.quantity, 0) || 0;
 
     const handlePosterRedirect = () => {
         const returnUrl = window.location.origin + '/b2b/catalog';
@@ -293,9 +302,14 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                                     if (!isAuthenticated) return navigate('/b2b/login');
                                     navigate('/b2b/cart');
                                 }}
-                                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors relative"
                             >
                                 <FiShoppingCart className="text-xl" />
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                                        {cartCount}
+                                    </span>
+                                )}
                             </button>
                             <button 
                                 onClick={() => {
@@ -343,10 +357,14 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                                         if (!isAuthenticated) return navigate('/b2b/login');
                                         navigate('/b2b/cart');
                                     }}
-                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
-                                    title="Cart"
+                                    className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors relative"
                                 >
                                     <FiShoppingCart size={22} />
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                                            {cartCount}
+                                        </span>
+                                    )}
                                 </button>
                             </div>
 

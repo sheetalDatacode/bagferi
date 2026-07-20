@@ -74,6 +74,11 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
         brand: "",
         availability: "In Stock",
         unit: "",
+        videoLink: "",
+        sizes: [],
+        colors: [],
+        gender: "All",
+        stockQuantity: "",
     });
 
     const [categories, setCategories] = useState(categoriesCache || []);
@@ -539,8 +544,8 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
         if (!formData.moq) newErrors.moq = "Minimum order quantity is required";
         if (!formData.unit) newErrors.unit = "Unit is required";
 
-        if (formData.images.length === 0) {
-            newErrors.images = "At least one product image is required";
+        if (formData.images.length === 0 && !formData.videoLink?.trim()) {
+            newErrors.images = "At least one product image or a video link is required";
         }
 
         // Validate dynamic required fields
@@ -627,6 +632,10 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 brand: formData.brand || "",
                 availability: formData.availability || "In Stock",
                 unit: formData.unit || "Pcs",
+                videoLink: formData.videoLink || "",
+                sizes: formData.sizes || [],
+                colors: formData.colors || [],
+                stockQuantity: formData.stockQuantity !== "" ? parseInt(formData.stockQuantity) : "",
             };
 
             if (isEdit && productId) {
@@ -1066,6 +1075,54 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 </select>
                             </div>
 
+                            <div>
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Stock Quantity</label>
+                                <input
+                                    type="number"
+                                    name="stockQuantity"
+                                    value={formData.stockQuantity}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                    placeholder="e.g. 100"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Gender / Demographic</label>
+                                <select
+                                    name="gender"
+                                    value={formData.gender || "All"}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                >
+                                    <option value="All">All / Unisex</option>
+                                    <option value="Men">Men</option>
+                                    <option value="Women">Women</option>
+                                    <option value="Kids">Kids</option>
+                                </select>
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Sizes (Comma separated)</label>
+                                <input
+                                    type="text"
+                                    value={(formData.sizes || []).join(', ')}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, sizes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                    placeholder="e.g. S, M, L, XL"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Colors (Comma separated)</label>
+                                <input
+                                    type="text"
+                                    value={(formData.colors || []).join(', ')}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, colors: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                    placeholder="e.g. Red, Blue, Green"
+                                />
+                            </div>
 
                         </div>
                     </motion.div>
@@ -1256,7 +1313,21 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                             </div>
                         </div>
                         {errors.images && <p className="text-[10px] text-red-500 font-bold mt-2 ml-1">{errors.images}</p>}
-                        <p className="text-[10px] text-gray-400 leading-relaxed font-medium mt-2">
+                        
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">YouTube Video Link (Optional)</label>
+                            <input
+                                type="url"
+                                name="videoLink"
+                                value={formData.videoLink}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                placeholder="https://www.youtube.com/watch?v=..."
+                            />
+                            <p className="text-[10px] text-gray-400 font-medium mt-1 ml-1">If no image is added, this video will be shown instead. A Reel will also be automatically created.</p>
+                        </div>
+
+                        <p className="text-[10px] text-gray-400 leading-relaxed font-medium mt-4">
                             {MAX_PHOTOS === 0 ? "No photos allowed on this plan." : `First image is cover. Max ${MAX_PHOTOS < 0 ? 'unlimited' : MAX_PHOTOS} photos.`} Max 300KB each.
                         </p>
                         <p className="text-[10px] text-primary-600 font-black uppercase tracking-wider mt-1">

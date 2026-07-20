@@ -17,8 +17,6 @@ const B2BUserRegister = () => {
         const saved = localStorage.getItem('b2b_user_register_draft');
         let initialData = {
             name: '',
-            businessName: '',
-            email: '',
             phone: location.state?.phone ? location.state.phone.replace('+91', '') : '',
             password: '',
             address: {
@@ -101,21 +99,6 @@ const B2BUserRegister = () => {
             newErrors.name = 'Name should only contain alphabets';
         }
 
-        // Business Name Validation
-        if (!formData.businessName.trim()) {
-            newErrors.businessName = 'Business Name is required';
-        } else if (!/[a-zA-Z0-9]/.test(formData.businessName)) {
-            newErrors.businessName = 'Business Name must contain at least one letter or number';
-        }
-
-        // 2. Business Email Validation: Optional
-        if (formData.email.trim()) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,3}$/;
-            if (!emailRegex.test(formData.email)) {
-                newErrors.email = 'Enter a valid email (e.g., name@company.com)';
-            }
-        }
-
         // 3. Phone Number Validation: Exactly 10 digits
         if (!formData.phone.trim()) {
             newErrors.phone = 'Phone Number is required';
@@ -156,11 +139,11 @@ const B2BUserRegister = () => {
         try {
             const payload = {
                 name: formData.name,
-                email: formData.email,
+                email: '',
                 phone: formData.phone,
                 password: formData.password,
                 businessInfo: {
-                    companyName: formData.businessName,
+                    companyName: formData.name, // Fallback to user's name
                     address: {
                         city: formData.address.city,
                     }
@@ -185,7 +168,6 @@ const B2BUserRegister = () => {
                     navigate('/b2b/verification', { 
                         state: { 
                             phone: result.phone, 
-                            email: formData.email 
                         },
                         replace: true 
                     });
@@ -258,39 +240,7 @@ const B2BUserRegister = () => {
                         {errors.name && <p className="text-[10px] font-bold text-rose-500 ml-1">{errors.name}</p>}
                     </div>
 
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-gray-700 ml-1">Business Name</label>
-                        <div className="relative group">
-                            <FiBriefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
-                            <input
-                                type="text"
-                                name="businessName"
-                                value={formData.businessName}
-                                onChange={handleChange}
-                                placeholder="Example Corp"
-                                className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl transition-all font-medium text-sm ${errors.businessName ? 'border-rose-500 focus:border-rose-500 bg-rose-50/30' : 'border-transparent focus:border-primary-500 focus:bg-white'
-                                    }`}
-                            />
-                        </div>
-                        {errors.businessName && <p className="text-[10px] font-bold text-rose-500 ml-1">{errors.businessName}</p>}
-                    </div>
 
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-gray-700 ml-1">Business Email</label>
-                        <div className="relative group">
-                            <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
-                            <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="name@business.com"
-                                className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border-2 rounded-xl transition-all font-medium text-sm ${errors.email ? 'border-rose-500 focus:border-rose-500 bg-rose-50/30' : 'border-transparent focus:border-primary-500 focus:bg-white'
-                                    }`}
-                            />
-                        </div>
-                        {errors.email && <p className="text-[10px] font-bold text-rose-500 ml-1">{errors.email}</p>}
-                    </div>
 
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-700 ml-1">Phone Number</label>

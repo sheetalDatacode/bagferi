@@ -15,8 +15,7 @@ const connectDB = async () => {
     }
 
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      // Note: useNewUrlParser and useUnifiedTopology are no longer needed in Mongoose 6+
-      // but keeping for compatibility
+      family: 4, // Force IPv4 to fix MongoServerSelectionError timeouts
     });
 
     // console.log(`✅ MongoDB Connected Successfully!`);

@@ -11,7 +11,7 @@ if (ENABLE_FCM) {
   try {
     // Keep service worker syntax broadly compatible for older browser engines.
     var runtimeConfig = self.__FIREBASE_CONFIG__ || null;
-    var firebaseConfig = runtimeConfig || { messagingSenderId: "237174767048" };
+    var firebaseConfig = runtimeConfig || { messagingSenderId: "513826447526" };
     if (firebaseConfig.apiKey && firebaseConfig.projectId) {
       firebase.initializeApp(firebaseConfig);
       var messaging = firebase.messaging();

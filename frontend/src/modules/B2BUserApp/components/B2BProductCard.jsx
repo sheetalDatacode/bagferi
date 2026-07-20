@@ -8,12 +8,15 @@ import toast from '../../../shared/utils/toast';
 import { useAuthStore } from '../../../shared/store/authStore';
 import StarRating from '../../../shared/components/StarRating';
 import { getRatingSummary } from '../../../shared/services/ratingService';
+import { useWishlistStore } from '../../../shared/store/wishlistStore';
 
 const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemType, requireAuthForActions = false, showSecureDeal = false }) => {
     const navigate = useNavigate();
     const { isAuthenticated, user } = useAuthStore();
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, ratingCount: 0, type: 'product' });
+    const { wishlistItems, toggleWishlist } = useWishlistStore();
+    const isWishlisted = wishlistItems.includes(product._id);
 
     React.useEffect(() => {
         const fetchRating = async () => {
@@ -54,6 +57,15 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
             ...(Array.isArray(product.images) ? product.images : [])
         ].filter(Boolean);
     }
+
+    const getYouTubeId = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+    const videoLink = product.videoLink || (product.formType === 'shop-listing' ? product.items?.[0]?.videoLink : null);
+    const ytId = getYouTubeId(videoLink);
 
     const handleNextImage = (e) => {
         e.stopPropagation();
@@ -151,10 +163,23 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
                             />
                         </div>
                     ))
+                ) : ytId ? (
+                    <div className="w-full h-full bg-slate-900 flex items-center justify-center relative">
+                        <img
+                            src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
+                            alt={product.name}
+                            className="w-full h-full object-cover opacity-80 transition-transform duration-700 hover:scale-105"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center pl-1 shadow-[0_0_15px_rgba(220,38,38,0.5)] text-white">
+                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                            </div>
+                        </div>
+                    </div>
                 ) : (
                     <div className="w-full h-full bg-slate-50 flex items-center justify-center p-4">
                         <img
-                            src="https://via.placeholder.com/400x300?text=No+Image"
+                            src="https://placehold.co/400x300/f8fafc/94a3b8?text=No+Image"
                             alt={product.name}
                             className="w-full h-full object-contain opacity-50"
                         />
@@ -194,206 +219,49 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
                     </div>
                 )}
 
-                <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-primary-600/90 backdrop-blur-sm rounded-md text-[7px] font-black text-white uppercase tracking-wider shadow-sm z-20 pointer-events-none">
-                    {product.itemType === 'lotslot' ? 'Bulk Lot' : (product.formType === 'shop-listing' ? 'Shop Listing' : 'Bulk')}
-                </div>
-                <div className="absolute bottom-1.5 right-1.5 px-2 py-1 bg-white/95 backdrop-blur-sm rounded-lg shadow-sm border border-gray-100 z-20 pointer-events-none">
-                    <div className="flex items-baseline gap-0.5">
-                        <span className="text-[8px] font-black text-primary-600">₹</span>
-                        <span className="text-sm font-black text-gray-800">
-                            {product.formType === 'shop-listing' && product.items?.length > 0
-                                ? product.items[0].price
-                                : product.price}
-                        </span>
-                    </div>
+                <div className="absolute top-2 left-0 pl-2 pr-3 py-1 bg-gradient-to-r from-orange-500 to-orange-400 text-[10px] font-bold text-white shadow-sm z-20 pointer-events-none rounded-r-full">
+                    Bagferi Trusted
                 </div>
             </div>
 
             {/* Content Body - Ultra Compact */}
-            <div className={`p-2.5 flex flex-col gap-2 ${viewMode === 'list' ? 'flex-1 justify-center' : 'flex-1'}`}>
-                <div className="h-[55px] md:h-[65px] flex flex-col justify-center gap-0.5">
-                    <h3 className="text-[12px] font-black text-gray-800 line-clamp-1 group-hover:text-primary-600 transition-colors uppercase leading-tight">
-                        {product.formType === 'shop-listing' && product.items?.length > 0
-                            ? (product.items[0].itemName || product.items[0].name || 'Item')
-                            : product.name}
-                    </h3>
-                    
-                    {vendor?.address?.city && (
-                        <div className="flex items-center gap-1 text-[9px] font-black text-primary-600 uppercase tracking-tight truncate">
-                             <FiMapPin className="text-primary-500" size={10} />
-                             <span>{vendor.address.city}</span>
-                        </div>
-                    )}
-
-                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter truncate mt-0.5">
-                        <span className="text-gray-500">Mfg:</span>{' '}
-                        {vendor?.mfgOfWork ? vendor.mfgOfWork : (product.category || '—')}
-                    </p>
-
-                    {ratingSummary.ratingCount > 0 && (
-                        <div className="flex items-center gap-1 mt-0.5">
-                            <StarRating rating={ratingSummary.averageRating} size={10} />
-                            <span className="text-[9px] font-black text-gray-700">{ratingSummary.averageRating.toFixed(1)}</span>
-                            <span className="text-[8px] font-bold text-gray-400">({ratingSummary.ratingCount})</span>
-                            {ratingSummary.type === 'shop' && <span className="text-[7px] font-black text-primary-500 bg-primary-50 px-1 rounded">SHOP</span>}
-                        </div>
-                    )}
-                </div>
-
-                {/* Info Row: Unit and Vendor (no min order on catalog cards) */}
-                <div className="flex items-center justify-between gap-1 bg-gray-50/50 p-1.5 rounded-lg border border-gray-50 min-h-[42px]">
-                    <div className="flex items-center gap-1 text-[8px] font-black text-gray-500 uppercase whitespace-nowrap">
-                        <FiTruck className="text-primary-500" size={10} />
-                        <span>{moqValue ? `MOQ ${moqValue} ${unitDisplay}` : unitDisplay}</span>
-                    </div>
-                    {vendorIdStr ? (
-                        <div
-                            onClick={(e) => {
-                                if (redirectToLoginIfRequired(e)) return;
-                                e.stopPropagation();
-                                const vendorUrl = itemType ? `/b2b/vendor/${vendorIdStr}?itemType=${itemType}` : `/b2b/vendor/${vendorIdStr}`;
-                                navigate(vendorUrl);
-                            }}
-                            className="flex flex-col items-end gap-0.5 min-w-0 cursor-pointer group/vendor"
-                        >
-                            <div className="text-[9px] font-black text-primary-600 group-hover/vendor:text-primary-700 uppercase transition-colors select-none text-right leading-[1.1]">
-                                {shopDisplayName}
-                            </div>
-                            <span className="px-1 py-0.5 bg-primary-600 text-white rounded text-[6px] font-black uppercase tracking-tighter shadow-sm">
-                                Visit Store
-                            </span>
-                        </div>
-                    ) : (
-                        <span className="text-[8px] font-black text-gray-400 text-right uppercase leading-tight">
-                            {shopDisplayName}
-                        </span>
-                    )}
-                </div>
-
-                {/* Vendor Status Badges - Matching New Image Style */}
-                {/* <div className="flex flex-wrap items-center gap-2 mt-0.5 px-0.5 min-h-[30px]">
-                    {vendor?.gstNumber && (
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50/80 border border-green-100/50 rounded-full">
-                            <span className="text-[8px] font-black text-gray-700 uppercase tracking-tighter">GST</span>
-                            <div className="w-3.5 h-3.5 bg-green-500/10 flex items-center justify-center rounded-full">
-                                <FiCheck className="text-green-600" size={10} />
-                            </div>
-                        </div>
-                    )}
-                    {vendor?.phone && (
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50/80 border border-green-100/50 rounded-full">
-                            <span className="text-[8px] font-black text-gray-700 uppercase tracking-tighter">MOBILE</span>
-                            <div className="w-3.5 h-3.5 bg-green-500/10 flex items-center justify-center rounded-full">
-                                <FiCheck className="text-green-600" size={10} />
-                            </div>
-                        </div>
-                    )}
-                    {vendor?.email && (
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50/80 border border-green-100/50 rounded-full">
-                            <span className="text-[8px] font-black text-gray-700 uppercase tracking-tighter">EMAIL</span>
-                            <div className="w-3.5 h-3.5 bg-green-500/10 flex items-center justify-center rounded-full">
-                                <FiCheck className="text-green-600" size={10} />
-                            </div>
-                        </div>
-                    )}
-
-                </div> */}
-                <div className="mt-1 px-1">
-                    {/* Mobile: text + right check, like desktop but compact */}
-                    <div className="md:hidden flex flex-wrap items-center gap-2">
-                        <div className="flex items-center justify-between gap-1 px-2 py-0.5 bg-gray-50 border border-gray-100 rounded-full whitespace-nowrap shrink-0">
-                            <span className="text-[8px] font-black text-gray-600 uppercase">GST</span>
-                            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-200 text-green-700">
-                                <FiCheck size={8} />
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-1 px-2 py-0.5 bg-gray-50 border border-gray-100 rounded-full whitespace-nowrap shrink-0">
-                            <span className="text-[8px] font-black text-gray-600 uppercase">Email</span>
-                            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-200 text-green-700">
-                                <FiCheck size={8} />
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-1 px-2 py-0.5 bg-gray-50 border border-gray-100 rounded-full whitespace-nowrap shrink-0">
-                            <span className="text-[8px] font-black text-gray-600 uppercase">Mobile</span>
-                            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-200 text-green-700">
-                                <FiCheck size={8} />
-                            </span>
-                        </div>
-                    </div>
-                    {/* Desktop: text + check badges */}
-                    <div className="hidden md:flex items-center gap-3">
-                        <div className="flex items-center gap-1">
-                            <span className="text-[8px] font-black text-gray-500 uppercase">GST</span>
-                            <span className="inline-flex items-center justify-center p-0.5 rounded-full bg-green-200 text-green-700">
-                                <FiCheck size={10} />
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <span className="text-[8px] font-black text-gray-500 uppercase">Email</span>
-                            <span className="inline-flex items-center justify-center p-0.5 rounded-full bg-green-200 text-green-700">
-                                <FiCheck size={10} />
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <span className="text-[8px] font-black text-gray-500 uppercase">Mobile</span>
-                            <span className="inline-flex items-center justify-center p-0.5 rounded-full bg-green-200 text-green-700">
-                                <FiCheck size={10} />
-                            </span>
-                        </div>
-                    </div>
-                </div>
+            <div className={`p-3 flex flex-col gap-1.5 ${viewMode === 'list' ? 'flex-1 justify-center' : 'flex-1'}`}>
+                <h3 className="text-[13px] text-gray-600 line-clamp-1 group-hover:text-primary-600 transition-colors leading-tight">
+                    {product.formType === 'shop-listing' && product.items?.length > 0
+                        ? (product.items[0].itemName || product.items[0].name || 'Item')
+                        : product.name}
+                </h3>
                 
-                {/* Quota warning removed */}
+                <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-lg font-bold text-gray-900">
+                        ₹{product.formType === 'shop-listing' && product.items?.length > 0
+                            ? product.items[0].price
+                            : product.price}
+                    </span>
+                    <span className="text-[10px] text-gray-500 line-through">
+                        ₹{product.price * 1.5}
+                    </span>
+                </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                    {vendor?.phone ? (
-                        <>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (redirectToLoginIfRequired(e)) return;
-                                    toast.success('Added to Cart!');
-                                }}
-                                className="flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200"
-                                title="Add to Cart"
-                            >
-                                <FiShoppingCart size={16} />
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (redirectToLoginIfRequired(e)) return;
-                                    toast.success('Added to Favorites!');
-                                }}
-                                className="flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border-red-100"
-                                title="Favorite"
-                            >
-                                <FiHeart size={16} />
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (redirectToLoginIfRequired(e)) return;
-                                    toast.success('Proceed to Checkout');
-                                }}
-                                className="flex-1 h-10 md:h-11 rounded-xl transition-all border flex items-center justify-center shadow-sm bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100"
-                                title="Buy Now"
-                            >
-                                <FiShoppingBag size={16} />
-                            </button>
-                        </>
+                <div className="flex items-center gap-2 mt-1">
+                    {ratingSummary.ratingCount > 0 ? (
+                        <div className="flex items-center gap-1 bg-green-600 px-1.5 py-0.5 rounded text-white font-bold text-[10px]">
+                            <span>{ratingSummary.averageRating.toFixed(1)}</span>
+                            <StarRating rating={1} size={8} color="#fff" />
+                        </div>
                     ) : (
-                        <button
-                            onClick={(e) => {
-                                if (redirectToLoginIfRequired(e)) return;
-                                e.stopPropagation();
-                                navigate(`/b2b/product/${product._id}`);
-                            }}
-                            className="w-full py-1.5 bg-primary-50 text-primary-600 rounded-lg font-black text-[9px] uppercase tracking-wider border border-primary-100"
-                        >
-                            View Details
-                        </button>
+                        <div className="flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 font-bold text-[10px]">
+                            <span>New</span>
+                            <StarRating rating={1} size={8} color="#4b5563" />
+                        </div>
                     )}
+                    <span className="text-[10px] text-gray-500">
+                        {ratingSummary.ratingCount > 0 ? `${ratingSummary.ratingCount} Reviews` : 'No Reviews'}
+                    </span>
+                </div>
+
+                <div className="mt-1 flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-2 py-0.5 w-fit">
+                    <span className="text-[9px] font-medium text-gray-600">Free Delivery</span>
                 </div>
             </div>
         </motion.div>

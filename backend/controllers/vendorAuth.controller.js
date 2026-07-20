@@ -420,34 +420,10 @@ export const checkSubscriptionByEmail = async (req, res, next) => {
       });
     }
 
-    // Get subscription
-    const SubscriptionService = (await import('../services/subscription.service.js')).default;
-    const subscription = await SubscriptionService.getVendorSubscription(vendor._id);
-
-    if (!subscription) {
-      return res.status(200).json({
-        success: true,
-        message: 'No subscription found',
-        data: { isExpired: false, hasSubscription: false, isB2B: true },
-      });
-    }
-
-    // Check if expired
-    const now = new Date();
-    const isExpired = subscription.endDate && new Date(subscription.endDate) < now;
-    const isActive = subscription.status === 'active';
-
     return res.status(200).json({
       success: true,
-      message: 'Subscription status retrieved',
-      data: {
-        isExpired,
-        hasSubscription: true,
-        isB2B: true,
-        status: subscription.status,
-        endDate: subscription.endDate,
-        isActive,
-      },
+      message: 'No subscription found',
+      data: { isExpired: false, hasSubscription: false, isB2B: true },
     });
   } catch (error) {
     next(error);

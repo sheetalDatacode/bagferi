@@ -5,7 +5,7 @@ import { useVendorSettings } from "../../hooks/useVendorSettings";
 import api from "../../../../shared/utils/api";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import SubscriptionGate from '../../components/SubscriptionGate';
+
 import QuotaBanner from '../../components/QuotaBanner';
 
 const AddProduct = () => {
@@ -39,9 +39,9 @@ const AddProduct = () => {
                     <QuotaBanner action="product" />
                 </div>
 
-            <SubscriptionGate action="product" showLimitInfo={false} fullPage={true}>
+
                 <B2BVendorProductForm isEdit={false} />
-            </SubscriptionGate>
+
         </motion.div>
     );
 };

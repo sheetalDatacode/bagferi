@@ -1,6 +1,6 @@
 import ShopUnit from '../models/ShopUnit.model.js';
 import { uploadBase64ToCloudinary } from '../utils/cloudinary.util.js';
-import subscriptionRulesService from '../services/subscriptionRules.service.js';
+
 
 export const getMyUnit = async (req, res, next) => {
     try {
@@ -94,27 +94,7 @@ export const createOrUpdateUnit = async (req, res, next) => {
             seenName.add(nameKey);
         }
 
-        // Ensure eligibility before listing shop
-        const eligibilityCheck = await subscriptionRulesService.canListShop(vendorId);
-        if (!eligibilityCheck.allowed) {
-            return res.status(403).json({
-                success: false,
-                message: eligibilityCheck.message,
-                subscriptionRequired: true
-            });
-        }
 
-        // Check for slideshow permission if more than 1 image is provided
-        if (images && images.length > 1) {
-            const slideshowCheck = await subscriptionRulesService.canUseShopSlideshow(vendorId);
-            if (!slideshowCheck.allowed) {
-                return res.status(403).json({
-                    success: false,
-                    message: slideshowCheck.message,
-                    subscriptionRequired: slideshowCheck.subscriptionRequired
-                });
-            }
-        }
 
         let shop = await ShopUnit.findOne({ vendorId });
 

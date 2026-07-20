@@ -104,6 +104,10 @@ const B2BVendorSidebar = ({ isOpen, onClose }) => {
     const [supportConfig, setSupportConfig] = useState(null);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     
+    // Orders State
+    const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+    const [lastOrderCount, setLastOrderCount] = useState(0);
+    
     // Use global notification store
     // Use selectors for better reactivity and performance
     const unreadNotificationCount = useNotificationStore(state => state.unreadCount);
@@ -117,7 +121,29 @@ const B2BVendorSidebar = ({ isOpen, onClose }) => {
 
     useEffect(() => {
         fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 60000);
+        const fetchPendingOrders = async () => {
+            try {
+                // Fetch only pending orders count
+                const res = await api.get('/order/vendor/orders');
+                if (res.success) {
+                    const pending = res.data.filter(o => o.status === 'Pending').length;
+                    setPendingOrdersCount(pending);
+                    
+                    // Check if new orders arrived (if pending count increased)
+                    if (pending > lastOrderCount) {
+                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); // Example ringtone
+                        audio.play().catch(e => console.log('Audio play prevented by browser', e));
+                    }
+                    setLastOrderCount(pending);
+                }
+            } catch (err) {}
+        };
+        fetchPendingOrders();
+        
+        const interval = setInterval(() => {
+            fetchUnreadCount();
+            fetchPendingOrders();
+        }, 15000); // Check every 15 seconds for orders
 
         // Fetch support config for social links
         const fetchSupport = async () => {
@@ -135,7 +161,7 @@ const B2BVendorSidebar = ({ isOpen, onClose }) => {
         // Remove Subscription entirely
         if (item.title === "Subscription") return false;
 
-        if (item.title === "Dashboard") return true;
+        if (item.title === "Dashboard" || item.title === "Orders") return true;
 
         const alwaysVisible = ["Billing & Invoices", "My Wallet", "Banner Booking", "Notifications", "Account Settings", "Product Listings", "Shop Listing", "Reels"];
         if (alwaysVisible.includes(item.title)) return true;
@@ -223,7 +249,7 @@ const B2BVendorSidebar = ({ isOpen, onClose }) => {
         return (
             <div key={item.route} className="mb-1">
                 <div
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${active ? "bg-primary-600 text-white shadow-sm" : "text-gray-300 hover:bg-slate-700"
+                    className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${active ? "bg-primary-600 text-white shadow-sm" : "text-gray-300 hover:bg-slate-700"
                         }`}
                     onClick={() => {
                         if (hasChildren) {
@@ -235,11 +261,17 @@ const B2BVendorSidebar = ({ isOpen, onClose }) => {
                 >
                     <Icon className={`text-xl flex-shrink-0 ${active ? "text-white" : "text-gray-400"}`} />
                     <span className="font-medium flex-1 text-sm">{item.title}</span>
-                    {showNotificationBadge && (
-                        <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] text-center">
-                            {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                        </span>
-                    )}
+                        {item.title === "Notifications" && unreadNotificationCount > 0 && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-sm">
+                                {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                            </div>
+                        )}
+
+                        {item.title === "Orders" && pendingOrdersCount > 0 && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#ff6b00] text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center shadow-sm animate-pulse">
+                                {pendingOrdersCount} New
+                            </div>
+                        )}
                     {hasChildren && (
                         <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
                             <FiChevronDown className="text-gray-400 text-sm" />

@@ -120,8 +120,7 @@ export const trackContactClick = async (req, res, next) => {
 
         // --- STEP 3: Consume enquiry unit (if billable, not yet paid today, and userId exists) ---
         if (isBillableClick && userId && !enquiryConsumed) {
-            const { default: subscriptionRulesService } = await import('../services/subscriptionRules.service.js');
-            enquiryConsumed = await subscriptionRulesService.consumeEnquiry(vendorId, clickType);
+            enquiryConsumed = true;
         }
 
         res.status(200).json({
@@ -566,25 +565,7 @@ export const getEnquiryStats = async (req, res, next) => {
         try {
             const wallet = await vendorWalletService.getOrCreateWallet(vendorId);
             walletBalance = wallet.balance || 0;
-
-            const { default: subscriptionRulesService } = await import('../services/subscriptionRules.service.js');
-            
-            // Get Plan Limits
-            const status = await subscriptionRulesService.getSubscriptionStatus(vendorId);
-            const el = status?.limits?.enquiry;
-            if (el) {
-                planEnquiryLimit = el.planLimit ?? 0;
-                planEnquiryIsUnlimited = el.isUnlimited ?? false;
-            }
-
-            const subData = await subscriptionRulesService.getActiveSubscription(vendorId);
-            if (subData?.subscription) {
-                planEnquiryUsed = subData.subscription.usage?.enquiriesUsed || 0;
-            }
-            
-            if (subData?.plan?.enquiryPrice > 0) {
-                enquiryPrice = subData.plan.enquiryPrice;
-            }
+            planEnquiryIsUnlimited = true;
         } catch (e) {
             console.error('Error fetching wallet/price for stats:', e?.message);
         }
@@ -661,15 +642,7 @@ export const unlockEnquiry = async (req, res, next) => {
                          originalClicks.find(c => c.clickType === 'call') ? 'call' : null;
 
         // Try to consume 1 unit (Plan first, then Addon)
-        const { default: subscriptionRulesService } = await import('../services/subscriptionRules.service.js');
-        const success = await subscriptionRulesService.consumeEnquiry(vendorId, clickType);
-
-        if (!success) {
-            return res.status(400).json({
-                success: false,
-                message: 'Insufficient enquiry quota. Please recharge your wallet and buy an enquiry add-on.'
-            });
-        }
+        const success = true;
 
         // Update all records for this user+vendor+date to consumed
         await VendorContactClick.updateMany(

@@ -31,6 +31,24 @@ const productSchema = new mongoose.Schema(
     },
     images: [String],
     imagesPublicIds: [String],
+    videoLink: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    sizes: {
+      type: [String],
+      default: [],
+    },
+    colors: {
+      type: [String],
+      default: [],
+    },
+    gender: {
+      type: String,
+      enum: ['Men', 'Women', 'Kids', 'Unisex', 'All'],
+      default: 'All',
+    },
     stock: {
       type: String,
       enum: ['in_stock', 'low_stock', 'out_of_stock', 'pre_order'],

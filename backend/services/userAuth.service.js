@@ -1,4 +1,5 @@
 import User from '../models/User.model.js';
+import Vendor from '../models/Vendor.model.js';
 import TemporaryRegistration from '../models/TemporaryRegistration.model.js';
 import { hashPassword, comparePassword } from '../utils/bcrypt.util.js';
 import { generateToken } from '../utils/jwt.util.js';
@@ -362,8 +363,18 @@ export const resendUserVerificationOTP = async (email) => {
  * Get user addresses
  */
 export const getUserAddresses = async (userId) => {
-    const user = await User.findById(userId);
+    let user = await User.findById(userId);
+    let isVendor = false;
+    
+    // If not found in User, check Vendor collection (Vendors acting as Buyers)
+    if (!user) {
+        user = await Vendor.findById(userId);
+        isVendor = true;
+    }
+    
     if (!user) throw new Error('User not found');
+    
+    // Vendor might not have addresses array initialized
     return user.addresses || [];
 };
 
@@ -371,8 +382,21 @@ export const getUserAddresses = async (userId) => {
  * Add user address
  */
 export const addUserAddress = async (userId, addressData) => {
-    const user = await User.findById(userId);
+    let user = await User.findById(userId);
+    let isVendor = false;
+    
+    // Check Vendor collection if User not found
+    if (!user) {
+        user = await Vendor.findById(userId);
+        isVendor = true;
+    }
+    
     if (!user) throw new Error('User not found');
+    
+    // Ensure addresses array exists (Vendor might not have it in schema yet)
+    if (!user.addresses) {
+        user.addresses = [];
+    }
 
     // If this is the first address, make it default
     if (!user.addresses || user.addresses.length === 0) {

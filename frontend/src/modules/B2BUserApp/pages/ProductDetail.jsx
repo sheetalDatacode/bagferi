@@ -14,9 +14,11 @@ import api from '../../../shared/utils/api';
 import { useAuthStore } from '../../../shared/store/authStore';
 import toast from 'react-hot-toast';
 import { formatPrice, getGoogleMapsUrl, getWhatsAppUserDetailsSuffix } from '../../../shared/utils/helpers';
+import { useCartStore } from '../../../shared/store/cartStore';
 import { handleShare } from '../../../shared/utils/share';
 import { getRatingSummary, getUserRating, submitRating } from '../../../shared/services/ratingService';
 import StarRating from '../../../shared/components/StarRating';
+import { useWishlistStore } from '../../../shared/store/wishlistStore';
 
 const B2BProductDetail = () => {
     const { id } = useParams();
@@ -37,9 +39,15 @@ const B2BProductDetail = () => {
     const [draftRating, setDraftRating] = useState(0);
     const [draftComment, setDraftComment] = useState('');
     const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+    const [productReviews, setProductReviews] = useState([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
 
     const [relatedProducts, setRelatedProducts] = useState([]);
     const [loadingRelated, setLoadingRelated] = useState(false);
+
+    const { addToCart } = useCartStore();
+    const { wishlistItems, toggleWishlist } = useWishlistStore();
+    const isWishlisted = product ? wishlistItems.includes(product._id) : false;
 
     useEffect(() => {
         const fetchRelated = async () => {
@@ -103,6 +111,19 @@ const B2BProductDetail = () => {
                         setDraftComment(userR.comment || '');
                     }
                 }
+
+                // Fetch full reviews list
+                setLoadingReviews(true);
+                try {
+                    const revRes = await api.get('/rating/list', { params: { targetType: 'product', targetId: id } });
+                    if (revRes.success && revRes.data) {
+                        setProductReviews(revRes.data);
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch reviews', e);
+                } finally {
+                    setLoadingReviews(false);
+                }
             }
         };
         // wait for product to be fetched so we have vendorId
@@ -128,6 +149,14 @@ const B2BProductDetail = () => {
                 setUserRating(result);
                 const summary = await getRatingSummary('product', id);
                 if (summary) setRatingSummary({ ...summary, type: 'product' });
+                
+                // Refresh reviews list
+                const revRes = await api.get('/rating/list', { params: { targetType: 'product', targetId: id } });
+                if (revRes.success && revRes.data) {
+                    setProductReviews(revRes.data);
+                }
+                
+                toast.success('Review submitted successfully!');
             }
         } finally {
             setIsSubmittingRating(false);
@@ -242,9 +271,19 @@ const B2BProductDetail = () => {
             });
         }
     }
-    if (productImages.length === 0) productImages = ['https://via.placeholder.com/800x600?text=No+Image'];
+    if (productImages.length === 0 && !product.videoLink) {
+        productImages = ['https://via.placeholder.com/800x600?text=No+Image'];
+    }
 
-    const safeSelectedImage = Math.min(selectedImage, productImages.length - 1);
+    const safeSelectedImage = Math.min(selectedImage, Math.max(0, productImages.length - 1));
+
+    const getYouTubeId = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+    const ytId = getYouTubeId(product.videoLink);
 
     const getCategoryName = () => {
         if (product.formType === 'shop-listing') return 'Shop Listing';
@@ -343,18 +382,48 @@ const B2BProductDetail = () => {
                     {/* Media Section */}
                     <div className="space-y-4">
                         <div className="relative aspect-square md:aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 flex items-center justify-center p-4">
-                            <img
-                                src={productImages[safeSelectedImage]}
-                                alt={product.name}
-                                className="w-full h-full object-cover"
-                            />
+                            {(ytId && productImages.length === 0) ? (
+                                <iframe 
+                                    width="100%" 
+                                    height="100%" 
+                                    src={`https://www.youtube.com/embed/${ytId}`} 
+                                    title="YouTube video player" 
+                                    frameBorder="0" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowFullScreen
+                                    className="rounded-xl"
+                                ></iframe>
+                            ) : (
+                                <img
+                                    src={productImages[safeSelectedImage]}
+                                    alt={product.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            )}
                             {/* Overlay Icons */}
                             <div className="absolute top-4 right-4 flex gap-2">
-                                <button onClick={handleShareClick} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow hover:bg-gray-50 transition-colors">
-                                    <FiShare2 className="text-gray-600 text-lg" />
+                                <button
+                                    onClick={() => {
+                                        if (!isAuthenticated) {
+                                            toast.error('Please login first');
+                                            return navigate('/b2b/login');
+                                        }
+                                        toggleWishlist(product._id);
+                                    }}
+                                    className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors border shadow-sm ${
+                                        isWishlisted 
+                                            ? 'bg-red-50 text-red-500 border-red-100 hover:bg-red-100' 
+                                            : 'bg-white text-gray-500 border-gray-200 hover:text-red-500 hover:border-red-500 hover:bg-red-50'
+                                    }`}
+                                    title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+                                >
+                                    <FiHeart className={`text-xl ${isWishlisted ? 'fill-current' : ''}`} />
                                 </button>
-                                <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow hover:bg-gray-50 transition-colors">
-                                    <FiHeart className="text-gray-600 text-lg" />
+                                <button 
+                                    onClick={handleShareClick}
+                                    className="w-12 h-12 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-500 hover:text-teal-600 hover:border-teal-600 shadow-sm transition-colors"
+                                >
+                                    <FiShare2 className="text-xl" />
                                 </button>
                             </div>
                         </div>
@@ -370,6 +439,23 @@ const B2BProductDetail = () => {
                                         <img src={img} alt="" className="w-full h-full object-cover" />
                                     </button>
                                 ))}
+                            </div>
+                        )}
+                        
+                        {ytId && productImages.length > 0 && (
+                            <div className="mt-4">
+                                <h4 className="text-sm font-bold text-gray-800 mb-2">Product Video</h4>
+                                <div className="aspect-video rounded-xl overflow-hidden shadow-sm">
+                                    <iframe 
+                                        width="100%" 
+                                        height="100%" 
+                                        src={`https://www.youtube.com/embed/${ytId}`} 
+                                        title="YouTube video player" 
+                                        frameBorder="0" 
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                        allowFullScreen
+                                    ></iframe>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -413,6 +499,28 @@ const B2BProductDetail = () => {
                             {product.unitDetails?.description || product.description || (product.formType === 'shop-listing' && product.items?.[0]?.description) || 'No description provided.'}
                         </p>
 
+                        {product.sizes && product.sizes.length > 0 && (
+                            <div className="mt-4">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sizes</span>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {product.sizes.map((s, idx) => (
+                                        <span key={idx} className="px-3 py-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg">{s}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {product.colors && product.colors.length > 0 && (
+                            <div className="mt-4">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Colors</span>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {product.colors.map((c, idx) => (
+                                        <span key={idx} className="px-3 py-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg">{c}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Summary Grid */}
                         <div className="mt-8 border-t border-b border-gray-100 py-4 grid grid-cols-[1fr_2fr] gap-y-3 text-sm">
                             <span className="text-slate-400 font-medium">Material</span>
@@ -429,9 +537,15 @@ const B2BProductDetail = () => {
 
                             <span className="text-slate-400 font-medium">Stock</span>
                             <div>
-                                <span className="text-[#10b981] bg-[#10b981]/10 px-2 py-1 rounded text-xs font-bold">
-                                    In Stock
-                                </span>
+                                {product.stock === 'out_of_stock' ? (
+                                    <span className="text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-bold">Out of Stock</span>
+                                ) : product.stock === 'pre_order' ? (
+                                    <span className="text-orange-600 bg-orange-50 px-2 py-1 rounded text-xs font-bold">Pre-Order</span>
+                                ) : (
+                                    <span className="text-[#10b981] bg-[#10b981]/10 px-2 py-1 rounded text-xs font-bold">
+                                        In Stock {product.stockQuantity ? `(${product.stockQuantity})` : ''}
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -443,22 +557,29 @@ const B2BProductDetail = () => {
                         </div>
 
                         {/* Sticky Action Buttons */}
-                        <div className="mt-8 grid grid-cols-2 gap-4 sticky bottom-0 bg-white py-4 border-t border-gray-100 md:border-none md:py-0 md:static z-40">
+                        <div className="fixed bottom-[64px] left-0 right-0 px-4 py-3 bg-white border-t border-gray-100 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] md:static md:shadow-none md:border-none md:p-0 md:bg-transparent z-40 mt-8 grid grid-cols-2 gap-4">
                             <button
                                 onClick={() => {
-                                    if (!isAuthenticated) return navigate('/login');
-                                    toast.success('Added to Cart!');
+                                    if (!isAuthenticated) {
+                                        toast.error('Please login first');
+                                        return navigate('/b2b/login');
+                                    }
+                                    addToCart(product._id, quantity);
                                 }}
-                                className="bg-[#14b8a6] hover:bg-[#0d9488] text-white py-3.5 px-4 rounded font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
+                                className="bg-[#ff6b00] hover:bg-[#e66000] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
                             >
                                 <FiShoppingCart className="text-lg" /> Add to Cart
                             </button>
                             <button
-                                onClick={() => {
-                                    if (!isAuthenticated) return navigate('/login');
-                                    toast.success('Proceed to Checkout');
+                                onClick={async () => {
+                                    if (!isAuthenticated) {
+                                        toast.error('Please login first');
+                                        return navigate('/b2b/login');
+                                    }
+                                    await addToCart(product._id, quantity);
+                                    navigate('/b2b/checkout');
                                 }}
-                                className="bg-[#0f172a] hover:bg-black text-white py-3.5 px-4 rounded font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
+                                className="bg-[#04439c] hover:bg-[#03367c] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
                             >
                                 <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M12.9868 6.94103C13.2519 6.64332 13.0405 6.16669 12.6416 6.16669H7.66667V0.833354C7.66667 0.395167 7.15174 0.158102 6.8188 0.443903L0.342611 6.00223C0.0336631 6.26732 0.222378 6.77259 0.635852 6.77259H5.5303V12.1667C5.5303 12.6049 6.04523 12.8419 6.37817 12.5561L12.9868 6.94103Z" fill="currentColor" />
@@ -586,9 +707,10 @@ const B2BProductDetail = () => {
                         </button>
                         {openSections.reviews && (
                             <div className="px-6 py-6 border-t border-gray-100 bg-gray-50/30">
-                                <div className="max-w-md">
-                                    <h4 className="text-sm font-bold text-slate-800 mb-4">{userRating ? 'Your Rating' : 'Rate this Product'}</h4>
-                                    <div className="flex items-center gap-4">
+                                
+                                <div className="mb-8 max-w-md bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                                    <h4 className="text-sm font-bold text-slate-800 mb-4">{userRating ? 'Update Your Review' : 'Write a Review'}</h4>
+                                    <div className="flex items-center gap-4 mb-4">
                                         <StarRating
                                             rating={draftRating}
                                             interactive={true}
@@ -596,14 +718,53 @@ const B2BProductDetail = () => {
                                             size={24}
                                         />
                                     </div>
-                                    {draftRating > 0 && (
-                                        <button
-                                            onClick={handleRatingSubmit}
-                                            disabled={isSubmittingRating || !isAuthenticated}
-                                            className="mt-4 w-full py-2.5 bg-slate-900 text-white rounded font-bold text-xs uppercase tracking-wide hover:bg-black transition-colors disabled:opacity-50"
-                                        >
-                                            {isSubmittingRating ? 'Submitting...' : 'Submit Review'}
-                                        </button>
+                                    <textarea
+                                        value={draftComment}
+                                        onChange={(e) => setDraftComment(e.target.value)}
+                                        placeholder="Share your experience with this product..."
+                                        className="w-full h-24 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 mb-3"
+                                        maxLength={500}
+                                    />
+                                    <button
+                                        onClick={handleRatingSubmit}
+                                        disabled={isSubmittingRating || !isAuthenticated || draftRating === 0}
+                                        className="w-full py-2.5 bg-slate-900 text-white rounded font-bold text-xs uppercase tracking-wide hover:bg-black transition-colors disabled:opacity-50"
+                                    >
+                                        {isSubmittingRating ? 'Submitting...' : 'Submit Review'}
+                                    </button>
+                                </div>
+
+                                <div className="mt-8">
+                                    <h4 className="text-md font-black text-slate-900 mb-4">Customer Reviews</h4>
+                                    {loadingReviews ? (
+                                        <div className="text-sm text-gray-500">Loading reviews...</div>
+                                    ) : productReviews.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {productReviews.map((rev) => (
+                                                <div key={rev._id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div>
+                                                            <div className="font-bold text-slate-800 text-sm">
+                                                                {rev.userId?.name || 'Anonymous User'}
+                                                            </div>
+                                                            <div className="text-xs text-gray-400">
+                                                                {new Date(rev.createdAt).toLocaleDateString()}
+                                                            </div>
+                                                        </div>
+                                                        <StarRating rating={rev.rating} size={14} />
+                                                    </div>
+                                                    {rev.comment && (
+                                                        <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap leading-relaxed">
+                                                            {rev.comment}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm text-gray-500 bg-white p-4 rounded-xl border border-gray-100">
+                                            No reviews yet. Be the first to review this product!
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -623,21 +784,65 @@ const B2BProductDetail = () => {
                             <div className="col-span-2 md:col-span-4 text-center py-8 text-gray-400 text-sm">Loading related products...</div>
                         ) : relatedProducts.length > 0 ? (
                             relatedProducts.map((rp, idx) => {
-                                const pImages = rp.media?.map(m => m.url) || rp.images || [rp.image];
-                                const pImg = pImages.find(i => i) || 'https://via.placeholder.com/300';
+                                const getYouTubeId = (url) => {
+                                    if (!url) return null;
+                                    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                                    const match = url.match(regExp);
+                                    return (match && match[2].length === 11) ? match[2] : null;
+                                };
+                                const videoLink = rp.videoLink || (rp.formType === 'shop-listing' ? rp.items?.[0]?.videoLink : null);
+                                const ytId = getYouTubeId(videoLink);
+
+                                let rawImages = rp.media?.map(m => m.url) || rp.images || [rp.image];
+                                if (rp.formType === 'shop-listing' && rp.items?.[0]?.images?.length > 0) {
+                                    rawImages = rp.items[0].images;
+                                } else if (rp.formType === 'shop-listing' && rp.items?.[0]?.image) {
+                                    rawImages = [rp.items[0].image];
+                                }
+                                
+                                const validImages = Array.isArray(rawImages) ? rawImages.filter(Boolean) : [];
+                                const hasImage = validImages.length > 0;
+                                const pImg = hasImage 
+                                    ? validImages[0] 
+                                    : ytId 
+                                        ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
+                                        : 'https://placehold.co/300x300/f8fafc/94a3b8?text=No+Image';
+                                
                                 const pPrice = rp.pricing?.b2b?.price || rp.price || 0;
                                 const formCat = rp.formType === 'shop-listing' ? rp.items?.[0]?.category : rp.category;
                                 const pCat = typeof formCat === 'object' ? formCat?.name : formCat;
                                 const pName = rp.formType === 'shop-listing' && rp.items?.[0] ? (rp.items[0].itemName || rp.name) : rp.name;
+                                const isRpWishlisted = wishlistItems.includes(rp._id);
 
                                 return (
                                     <Link to={`/b2b/product/${rp._id}`} key={idx} onClick={() => window.scrollTo(0, 0)} className="border border-gray-100 rounded-xl p-3 flex flex-col relative group hover:shadow-lg transition-shadow bg-white text-left">
                                         {idx === 0 && <span className="absolute top-3 left-3 bg-teal-50 text-teal-600 text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider z-10 border border-teal-100">Top Choice</span>}
-                                        <button className="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-red-500 z-10 transition-colors" onClick={(e) => { e.preventDefault(); /* handle wish */ }}>
-                                            <FiHeart className="text-sm" />
+                                        <button 
+                                            className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center shadow-sm z-10 transition-colors ${
+                                                isRpWishlisted 
+                                                    ? 'bg-red-50 text-red-500 border border-red-100' 
+                                                    : 'bg-white text-gray-400 hover:text-red-500 border border-gray-100'
+                                            }`}
+                                            onClick={(e) => { 
+                                                e.preventDefault();
+                                                if (!isAuthenticated) {
+                                                    toast.error('Please login first');
+                                                    return navigate('/b2b/login');
+                                                }
+                                                toggleWishlist(rp._id);
+                                            }}
+                                        >
+                                            <FiHeart className={`text-sm ${isRpWishlisted ? 'fill-current' : ''}`} />
                                         </button>
-                                        <div className="bg-gray-50 h-32 md:h-48 rounded-lg mb-3 flex items-center justify-center text-gray-400 text-xs overflow-hidden">
-                                            <img src={pImg} className="w-full h-full object-cover rounded-lg" alt={pName} />
+                                        <div className="bg-gray-50 h-32 md:h-48 rounded-lg mb-3 flex items-center justify-center text-gray-400 text-xs overflow-hidden relative">
+                                            <img src={pImg} className={`w-full h-full object-cover rounded-lg ${ytId && !hasImage ? 'opacity-80' : ''}`} alt={pName} />
+                                            {ytId && !hasImage && (
+                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                    <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center pl-1 shadow-lg text-white">
+                                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                         <h3 className="font-bold text-slate-900 text-sm truncate">{pName}</h3>
                                         <span className="text-xs text-gray-400 mb-2 truncate">{pCat || 'Product'}</span>

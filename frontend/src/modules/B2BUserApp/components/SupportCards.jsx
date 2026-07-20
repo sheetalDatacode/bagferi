@@ -62,34 +62,34 @@ const SupportCards = () => {
                         HELP & SUPPORT
                     </h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
                     <button
                         type="button"
                         onClick={handleSupportRedirect}
-                        className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-md flex flex-col items-center justify-center gap-4 text-center group hover:border-primary-200 transition-all hover:shadow-lg"
+                        className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-2 text-center group hover:border-primary-200 transition-all hover:shadow-md"
                     >
-                        <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-colors shadow-inner">
-                            <FiPhoneCall size={28} />
+                        <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-colors shadow-inner">
+                            <FiPhoneCall size={18} />
                         </div>
                         <div>
-                            <p className="font-bold text-gray-800 text-lg leading-tight mb-1">{phoneTitle}</p>
-                            <p className="text-sm font-black text-primary-600 mb-1">{phone}</p>
-                            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{callHours}</p>
+                            <p className="font-bold text-gray-800 text-sm leading-tight mb-0.5">{phoneTitle}</p>
+                            <p className="text-xs font-black text-primary-600 mb-0.5">{phone}</p>
+                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{callHours}</p>
                         </div>
                     </button>
 
                     <button
                         type="button"
                         onClick={handleSupportRedirect}
-                        className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-md flex flex-col items-center justify-center gap-4 text-center group hover:border-primary-200 transition-all hover:shadow-lg"
+                        className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-2 text-center group hover:border-primary-200 transition-all hover:shadow-md"
                     >
-                        <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-colors shadow-inner">
-                            <FiMail size={28} />
+                        <div className="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-colors shadow-inner">
+                            <FiMail size={18} />
                         </div>
                         <div>
-                            <p className="font-bold text-gray-800 text-lg leading-tight mb-1">{emailTitle}</p>
-                            <p className="text-sm font-black text-primary-600 mb-1">{email}</p>
-                            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{emailResponse}</p>
+                            <p className="font-bold text-gray-800 text-sm leading-tight mb-0.5">{emailTitle}</p>
+                            <p className="text-xs font-black text-primary-600 mb-0.5">{email}</p>
+                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{emailResponse}</p>
                         </div>
                     </button>
 
@@ -101,15 +101,15 @@ const SupportCards = () => {
                             e.preventDefault();
                             handleSupportRedirect();
                         }}
-                        className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-md flex flex-col items-center justify-center gap-4 text-center group hover:border-green-200 transition-all hover:shadow-lg"
+                        className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center gap-2 text-center group hover:border-green-200 transition-all hover:shadow-md"
                     >
-                        <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors shadow-inner">
-                            <FiMessageSquare size={28} />
+                        <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors shadow-inner">
+                            <FiMessageSquare size={18} />
                         </div>
                         <div>
-                            <p className="font-bold text-gray-800 text-lg leading-tight mb-1">{whatsappTitle}</p>
-                            <p className="text-sm font-black text-green-600 mb-1">+{whatsapp}</p>
-                            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{whatsappDesc}</p>
+                            <p className="font-bold text-gray-800 text-sm leading-tight mb-0.5">{whatsappTitle}</p>
+                            <p className="text-xs font-black text-green-600 mb-0.5">+{whatsapp}</p>
+                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">{whatsappDesc}</p>
                         </div>
                     </a>
                 </div>

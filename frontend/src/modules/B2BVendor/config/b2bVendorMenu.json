@@ -5,6 +5,11 @@
         "children": []
     },
     {
+        "title": "Orders",
+        "route": "/b2b-vendor/orders",
+        "children": []
+    },
+    {
         "title": "Product Listings",
         "route": "/b2b-vendor/products",
         "children": [

@@ -10,6 +10,8 @@ import React, { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
 import { lazyWithRetry } from "./shared/utils/lazyWithRetry";
+import { useAuthStore } from "./shared/store/authStore";
+import { useWishlistStore } from "./shared/store/wishlistStore";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   initializePushNotifications,
@@ -65,9 +67,7 @@ const AdminB2BSubscriptionWallet = lazyWithRetry(
 const AdminB2BVendorAnalyticsPage = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/B2BVendorAnalytics"),
 );
-const AdminB2BSubscriptions = lazyWithRetry(
-  () => import("./modules/Admin/pages/b2b-vendors/Subscriptions"),
-);
+
 const B2BWallet = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/B2BWallet"),
 );
@@ -163,9 +163,7 @@ const B2BVendorSettings = lazyWithRetry(
 const B2BVendorProfile = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/Profile"),
 );
-const B2BVendorSubscription = lazyWithRetry(
-  () => import("./modules/B2BVendor/pages/Subscription"),
-);
+
 const B2BVendorBilling = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/Billing"),
 );
@@ -228,7 +226,10 @@ const B2BUserProfile = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/Profile"),
 );
 const B2BPersonalProfile = lazyWithRetry(
-  () => import("./modules/B2BUserApp/pages/PersonalProfile"),
+  () => import("./modules/B2BUserApp/pages/PersonalProfile")
+);
+const B2BOrders = lazyWithRetry(
+  () => import("./modules/B2BUserApp/pages/Orders")
 );
 const B2BCompanyProfile = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/CompanyProfile"),
@@ -250,6 +251,19 @@ const B2BSupport = lazyWithRetry(
 );
 const B2BProductDetail = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/ProductDetail"),
+);
+
+const B2BWishlist = lazyWithRetry(
+  () => import("./modules/B2BUserApp/pages/Wishlist"),
+);
+const B2BCart = lazyWithRetry(
+  () => import("./modules/B2BUserApp/pages/B2BCart"),
+);
+const B2BCheckout = lazyWithRetry(
+  () => import("./modules/B2BUserApp/pages/B2BCheckout"),
+);
+const VendorOrders = lazyWithRetry(
+  () => import("./modules/B2BVendor/pages/Orders"),
 );
 const B2BVendorStore = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/B2BVendorStore"),
@@ -359,7 +373,7 @@ const AppRoutes = () => {
               path="subscription-wallet"
               element={<AdminB2BSubscriptionWallet />}
             />
-            <Route path="subscriptions" element={<AdminB2BSubscriptions />} />
+
             <Route path="categories" element={<AdminB2BCategories />} />
             <Route
               path="banner-bookings"
@@ -407,6 +421,8 @@ const AppRoutes = () => {
         <Route path="/b2b" element={<Navigate to="/b2b/landing" replace />} />
         <Route path="/b2b/landing" element={<B2BLanding />} />
         <Route path="/b2b/categories" element={<B2BCategories />} />
+        <Route path="/b2b/cart" element={<B2BCart />} />
+        <Route path="/b2b/checkout" element={<B2BCheckout />} />
         <Route
           path="/b2b/reels"
           element={<ReelFeed />}
@@ -460,6 +476,14 @@ const AppRoutes = () => {
           }
         />
         <Route
+          path="/b2b/wishlist"
+          element={
+            <ProtectedRoute>
+              <B2BWishlist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/b2b/payments"
           element={
             <ProtectedRoute>
@@ -507,6 +531,7 @@ const AppRoutes = () => {
             element={<Navigate to="/b2b-vendor/dashboard" replace />}
           />
           <Route path="dashboard" element={<B2BVendorDashboard />} />
+          <Route path="orders" element={<VendorOrders />} />
           <Route path="products">
             <Route index element={<B2BVendorProducts />} />
             <Route
@@ -523,7 +548,7 @@ const AppRoutes = () => {
             path="settings/business"
             element={<Navigate to="/b2b-vendor/settings/profile" replace />}
           />
-          <Route path="subscription" element={<B2BVendorSubscription />} />
+
           <Route path="billing" element={<B2BVendorBilling />} />
           <Route path="wallet" element={<B2BVendorWallet />} />
           <Route path="banner-booking" element={<B2BVendorBannerBooking />} />
@@ -540,7 +565,15 @@ const AppRoutes = () => {
           <Route path="how-to-use" element={<B2BVendorHowToUse />} />
           <Route path="support" element={<B2BVendorSupport />} />
         </Route>
-        <Route path="*" element={<Navigate to="/b2b/landing" replace />} />
+        <Route
+          path="/b2b/orders"
+          element={
+            <ProtectedRoute>
+              <B2BOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );
@@ -573,6 +606,18 @@ function App() {
       }
     } catch { }
   }, []);
+
+  const { isAuthenticated } = useAuthStore();
+  const { fetchWishlist, clearWishlist } = useWishlistStore();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchWishlist();
+    } else {
+      clearWishlist();
+    }
+  }, [isAuthenticated]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>

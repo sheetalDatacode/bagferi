@@ -7,7 +7,7 @@ import Badge from "../../../../shared/components/Badge";
 import ConfirmModal from "../../../Admin/components/ConfirmModal";
 import toast from "../../../../shared/utils/toast";
 import api from "../../../../shared/utils/api";
-import SubscriptionGate from "../../components/SubscriptionGate";
+
 import RatingSummaryBadge from "../../../../shared/components/RatingSummaryBadge";
 
 const ManageProducts = () => {
@@ -152,15 +152,14 @@ const ManageProducts = () => {
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="flex flex-col md:flex-row items-center justify-end gap-6">
-                {/* Wrapped with SubscriptionGate to enforce product limits */}
-                <SubscriptionGate action="product">
+
                     <button 
                         onClick={() => navigate("/b2b-vendor/products/add-product")} 
                         className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl whitespace-nowrap"
                     >
                         <FiPlus className="text-lg" /> <span>Add New Listing</span>
                     </button>
-                </SubscriptionGate>
+
             </div>
 
             <div className="relative">

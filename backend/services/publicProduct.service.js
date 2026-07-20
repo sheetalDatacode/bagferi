@@ -30,6 +30,7 @@ export const getPublicProducts = async (filters) => {
         market,
         businessType,
         businessCategory,
+        gender,
         excludeBusinessTypes, // Added excludeBusinessTypes to destructuring
         dynamicFilters,
         strict
@@ -106,6 +107,11 @@ export const getPublicProducts = async (filters) => {
             query.price = {};
             if (minPrice) query.price.$gte = Number(minPrice);
             if (maxPrice) query.price.$lte = Number(maxPrice);
+        }
+
+        // Gender Filter
+        if (gender && gender !== 'All') {
+            query.gender = gender;
         }
 
         // Dynamic Filters (Attributes)

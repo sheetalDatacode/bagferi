@@ -101,3 +101,20 @@ export const getUserRating = async (userId, targetType, targetId) => {
   if (!doc) return null;
   return { rating: doc.rating, comment: doc.comment };
 }
+
+/**
+ * Get a list of ratings for a target.
+ */
+export const getTargetRatings = async (targetType, targetId, limit = 50) => {
+  if (!VALID_TARGET_TYPES.includes(targetType) || !mongoose.Types.ObjectId.isValid(targetId)) {
+    return [];
+  }
+  return await Rating.find({
+    targetType,
+    targetId: new mongoose.Types.ObjectId(targetId),
+  })
+    .populate('userId', 'name')
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+};

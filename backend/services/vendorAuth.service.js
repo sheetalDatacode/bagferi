@@ -6,7 +6,7 @@ import { generateOTP, verifyOTP, resendOTP } from './otp.service.js';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email.service.js';
 import { isValidEmail, isValidPhone, validatePassword } from '../utils/validators.util.js';
 import { uploadBase64ToCloudinary } from '../utils/cloudinary.util.js';
-import SubscriptionService from './subscription.service.js';
+
 import notificationService from './notification.service.js';
 import { geocodeAddress } from '../utils/geocoding.util.js';
 import { normalizeAddress } from '../utils/addressNormalizer.util.js';
@@ -417,21 +417,7 @@ export const loginVendor = async (identifier, password) => {
     const vendorObj = vendor.toObject();
     delete vendorObj.password;
 
-    if (vendor.currentSubscription) {
-      try {
-        await vendor.populate({
-          path: 'currentSubscription',
-          populate: {
-            path: 'planId',
-            select: 'name duration price features isActive',
-            model: 'B2BSubscriptionPlan',
-          },
-        });
-        vendorObj.currentSubscription = vendor.currentSubscription;
-      } catch (subError) {
-        console.error(`[Login Warning] Failed to populate subscription:`, subError.message);
-      }
-    }
+
 
     return {
       vendor: vendorObj,

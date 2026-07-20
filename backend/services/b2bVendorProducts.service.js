@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 import Product from '../models/Product.model.js';
 import Vendor from '../models/Vendor.model.js';
+import Reel from '../models/Reel.model.js';
 import { uploadBase64ToCloudinary, deleteFromCloudinary } from '../utils/cloudinary.util.js';
 import { sanitizeImageUrl, sanitizeImageUrls } from '../utils/imageValidation.util.js';
-import subscriptionService from './subscription.service.js';
+
 import { ensureCategoryStructure } from './categoryAutomation.service.js';
 
 /**
@@ -229,7 +230,7 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
     // Parallelize all initial checks and generations for maximum speed
     const [vendor, subscription, activeProductCount, sku] = await Promise.all([
       verifyB2BVendor(vendorId),
-      subscriptionService.getVendorSubscription(vendorId),
+
       Product.countDocuments({ vendorId, isActive: true }),
       generateSKU(name, vendorId)
     ]);
@@ -249,6 +250,9 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
       brand,
       availability,
       unit,
+      videoLink,
+      sizes,
+      colors,
     } = productData;
 
     // Process images - upload to Cloudinary
@@ -314,7 +318,9 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
 
     await uploadShopImages();
 
-    if (images && images.length > 0 && !imageUrl) {
+    if (!videoLink && images && images.length === 0) {
+       // If no videoLink and no images, then error
+    } else if (!videoLink && images && images.length > 0 && !imageUrl) {
       throw new Error('Failed to upload main product image');
     }
     // Process specifications into attributes array
@@ -383,9 +389,37 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
       vendorName: vendor.storeName || vendor.name,
       isActive: true,
       isVisible: true,
+      videoLink: videoLink || null,
+      sizes: sizes || [],
+      colors: colors || [],
     });
 
     const created = product.toObject();
+
+    // Auto-create Reel if videoLink exists
+    if (created.videoLink) {
+      try {
+        await Reel.create({
+          title: created.name,
+          description: created.description,
+          categoryId: catIds.categoryId || null,
+          categoryName: catIds.categoryId ? (category || 'B2B Category') : 'B2B Category',
+          productId: created._id,
+          uploaderId: vendorId,
+          uploaderType: 'vendor',
+          uploaderName: vendor.storeName || vendor.name,
+          videoUrl: created.videoLink,
+          reelType: 'link',
+          externalLinkType: 'youtube',
+          status: 'approved',
+          approvedAt: new Date(),
+          price: created.price,
+        });
+      } catch (reelErr) {
+        console.error('[B2B Product Upload] Failed to auto-create reel:', reelErr);
+      }
+    }
+
     return created;
   } catch (error) {
     throw error;

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     FiSearch, FiX, FiChevronDown, FiGrid, FiShoppingBag,
     FiUser, FiArrowRight, FiArrowLeft, FiBriefcase, FiTrendingUp, FiHome, FiMapPin, FiFilter,
-    FiTruck, FiPhone, FiShoppingCart, FiVideo, FiImage
+    FiTruck, FiPhone, FiShoppingCart, FiVideo, FiImage, FiHeart
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { appLogo } from '../../../data/logos';
@@ -955,6 +955,13 @@ const B2BLanding = () => {
                         <div className="flex items-center gap-2 lg:gap-4">
 
 
+                            <Link to="/b2b/wishlist" onClick={(e) => { e.preventDefault(); navigateWithAuth('/b2b/wishlist'); }} className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-primary-50 hover:text-primary-600 transition-all">
+                                <FiHeart className="text-lg md:text-xl" />
+                            </Link>
+                            <Link to="/b2b/cart" onClick={(e) => { e.preventDefault(); navigateWithAuth('/b2b/cart'); }} className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-primary-50 hover:text-primary-600 transition-all">
+                                <FiShoppingCart className="text-lg md:text-xl" />
+                            </Link>
+
                             {/* User Actions */}
                             {!isAuthenticated ? (
                                 <Link to="/b2b/login" className="px-3 py-1.5 md:px-5 md:py-2 bg-primary-600 text-white rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-primary-700 transition-all shadow-lg shadow-primary-200">
@@ -1089,25 +1096,6 @@ const B2BLanding = () => {
                     </div>
                 </section>
 
-                
-                {/* --- SUGGESTED FOR YOU --- */}
-                {suggestedProducts.length > 0 && (
-                    <section className="w-full bg-white pt-6 pb-2">
-                        <div className="max-w-[1920px] mx-auto px-4 md:px-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-xl md:text-2xl font-black text-gray-900 capitalize">Suggested For You</h2>
-                                <button className="w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-black transition-colors">
-                                    <FiArrowRight size={16} />
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-                                {suggestedProducts.map(prod => (
-                                    <SuggestedProductCard key={prod._id} product={prod} />
-                                ))}
-                            </div>
-                        </div>
-                    </section>
-                )}
 
                 {/* --- LOWEST PRICES: ONLY ON LIVE --- */}
                 {liveReels.length > 0 && (
@@ -1115,8 +1103,8 @@ const B2BLanding = () => {
                         <div className="max-w-[1920px] mx-auto px-4 md:px-6">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
-                                    <h2 className="text-xl md:text-2xl font-black text-gray-900">Lowest prices: Only on LIVE</h2>
-                                    <p className="text-sm text-gray-600 font-medium">Hurry! only during lives</p>
+                                    <h2 className="text-xl md:text-2xl font-black text-gray-900">Featured Product Videos</h2>
+                                    <p className="text-sm text-gray-600 font-medium">Discover products in action</p>
                                 </div>
                                 <button className="w-8 h-8 bg-white text-gray-900 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors">
                                     <FiArrowRight size={16} />
@@ -1170,60 +1158,26 @@ const B2BLanding = () => {
                     </section>
                 )}
 
-                {/* --- PREMIUM SUPPLIERS --- */}
-                <section className="w-full pt-6 pb-6 bg-gradient-to-b from-primary-50/30 to-white">
-                    <div className="max-w-[1920px] mx-auto px-4 md:px-6 mb-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-xl md:text-2xl font-black text-gray-900 uppercase tracking-tighter">
-                                Premium Suppliers
-                            </h2>
-                            <div className="bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                Verified
+
+
+                {/* --- SUGGESTED FOR YOU --- */}
+                {suggestedProducts.length > 0 && (
+                    <section className="w-full bg-white pt-6 pb-2">
+                        <div className="max-w-[1920px] mx-auto px-4 md:px-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl md:text-2xl font-black text-gray-900 capitalize">Suggested For You</h2>
+                                <button className="w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-black transition-colors">
+                                    <FiArrowRight size={16} />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
+                                {suggestedProducts.map(prod => (
+                                    <SuggestedProductCard key={prod._id} product={prod} />
+                                ))}
                             </div>
                         </div>
-                    </div>
-
-                    <div className="relative group">
-                        <div
-                            ref={premiumSuppliersScrollRef}
-                            className="flex gap-4 md:gap-6 py-3 px-4 md:px-8 overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing"
-                            onMouseEnter={pauseAutoScroll}
-                            onMouseLeave={() => resumeAutoScroll(500)}
-                            onTouchStart={pauseAutoScroll}
-                            onTouchMove={pauseAutoScroll}
-                            onTouchEnd={() => resumeAutoScroll(2000)}
-
-                        >
-
-                            {/* Seamless loop logic: Ensure enough items to cover the screen twice */}
-                            {(vendorsWithShop.length > 0 ? (
-                                [...Array(Math.max(2, Math.ceil(24 / vendorsWithShop.length)))].flatMap((_, i) => vendorsWithShop).map((vendor, idx) => (
-                                    <div
-                                        key={`${vendor._id}-${idx}`}
-                                        className="flex-shrink-0 w-[140px] md:w-[160px]"
-                                    >
-                                        <B2BVendorCard
-                                            vendor={vendor}
-                                            viewMode="grid"
-                                            trackContactClick={trackContactClick}
-                                            compact={true}
-                                            requireAuthForActions={true}
-                                        />
-                                    </div>
-                                ))
-                            ) : null)}
-                        </div>
-                        <style>{`
-                            .no-scrollbar {
-                                -ms-overflow-style: none;
-                                scrollbar-width: none;
-                            }
-                            .no-scrollbar::-webkit-scrollbar {
-                                display: none;
-                            }
-                        `}</style>
-                    </div>
-                </section>
+                    </section>
+                )}
 
                 {/* --- SUPPORT SECTION --- */}
                 <SupportCards />
