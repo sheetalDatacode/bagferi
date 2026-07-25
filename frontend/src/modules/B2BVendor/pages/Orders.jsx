@@ -139,33 +139,36 @@ const VendorOrders = () => {
 
     return (
         <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input 
-                            type="text" 
-                            placeholder="Search Order ID..." 
-                            className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg outline-none focus:border-primary-500 w-full md:w-64 text-sm"
-                        />
-                    </div>
-                    <div className="flex bg-gray-100 rounded-lg p-1 border border-gray-200 overflow-x-auto whitespace-nowrap hide-scrollbar">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                {/* Search Box */}
+                <div className="relative w-full lg:max-w-xs shrink-0">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Search Order ID..." 
+                        className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-primary-500 w-full text-sm font-medium transition-colors"
+                    />
+                </div>
+                
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
+                    <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap w-full sm:w-auto overflow-x-auto hide-scrollbar">
                         {['All', 'Fashion', 'Grocery'].map(m => (
                             <button
                                 key={m}
                                 onClick={() => setModuleFilter(m)}
-                                className={`px-4 py-1.5 rounded-md text-sm font-bold transition-colors ${moduleFilter === m ? 'bg-white shadow-sm text-primary-600' : 'text-gray-600 hover:text-gray-900'}`}
+                                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all shrink-0 ${moduleFilter === m ? 'bg-white shadow-sm text-primary-600 border border-gray-100/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'}`}
                             >
                                 {m}
                             </button>
                         ))}
                     </div>
-                    <div className="flex bg-gray-100 rounded-lg p-1 border border-gray-200 overflow-x-auto whitespace-nowrap hide-scrollbar">
+                    <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap w-full sm:w-auto overflow-x-auto hide-scrollbar">
                         {['All', 'Pending', 'Accepted', 'Dispatched', 'Completed', 'Cancelled'].map(f => (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
-                                className={`px-4 py-1.5 rounded-md text-sm font-bold transition-colors ${filter === f ? 'bg-white shadow-sm text-primary-600' : 'text-gray-600 hover:text-gray-900'}`}
+                                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all shrink-0 ${filter === f ? 'bg-white shadow-sm text-primary-600 border border-gray-100/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'}`}
                             >
                                 {f}
                             </button>

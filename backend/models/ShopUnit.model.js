@@ -33,8 +33,8 @@ const shopUnitSchema = new mongoose.Schema(
             default: null
         },
         deliveryZones: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Zone'
+            type: String,
+            trim: true
         }],
         mapUrl: {
             type: String,

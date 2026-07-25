@@ -387,6 +387,9 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             maxPrice: String(formData.maxPrice),
             images: formData.images,
             details: validDetails,
+            companyName: formData.companyName,
+            accountDetails: formData.accountDetails,
+            deliveryZones: formData.deliveryZones,
         };
 
         // Clear draft on successful submit
@@ -638,34 +641,85 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     <option value="" disabled>Select Shop Zone (City: Surat)</option>
                                     {zones.map((z) => (
                                         <option key={z._id} value={z._id}>
-                                            {z.name} - {z.area} ({z.pincode})
+                                            {z.name}
                                         </option>
                                     ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
-                                <label className={labelStyle}>Delivery Areas (Multi-select) <span className="text-red-500">*</span></label>
-                                <div className={`${inputStyle} h-32 overflow-y-auto p-2 space-y-1`}>
-                                    {zones.map((z) => (
-                                        <label key={`delivery-${z._id}`} className="flex items-center gap-2 cursor-pointer p-1 hover:bg-slate-50 rounded">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.deliveryZones.includes(z._id)}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        deliveryZones: checked 
-                                                            ? [...prev.deliveryZones, z._id]
-                                                            : prev.deliveryZones.filter(id => id !== z._id)
-                                                    }));
-                                                    setIsShopModified(true);
-                                                }}
-                                                className="w-4 h-4 text-blue-600 rounded border-gray-300"
-                                            />
-                                            <span className="text-sm font-medium text-gray-700">{z.name} - {z.area} ({z.pincode})</span>
-                                        </label>
-                                    ))}
+                                <label className={labelStyle}>Delivery Areas (Select Specific Areas) <span className="text-red-500">*</span></label>
+                                <div className={`${inputStyle} h-64 overflow-y-auto p-3 space-y-4 bg-gray-50/50`}>
+                                    {zones.map((z) => {
+                                        if (!z.pincodes || z.pincodes.length === 0) return null;
+                                        return (
+                                            <div key={`zone-group-${z._id}`} className="mb-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                                <div className="text-[11px] font-black text-primary-600 uppercase tracking-widest mb-3 border-b border-gray-100 pb-2">{z.name}</div>
+                                                <div className="space-y-3">
+                                                    {z.pincodes.map(p => {
+                                                        const isAllSelected = p.areas?.length > 0 && p.areas.every(a => formData.deliveryZones.includes(`${p.code}|${a.name}`));
+                                                        const isPartiallySelected = p.areas?.length > 0 && p.areas.some(a => formData.deliveryZones.includes(`${p.code}|${a.name}`)) && !isAllSelected;
+
+                                                        return (
+                                                            <div key={`delivery-pin-${p.code}`} className="border border-gray-100 rounded-lg p-2.5 bg-gray-50/30">
+                                                                <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100/60">
+                                                                    <label className="flex items-center gap-2.5 cursor-pointer group">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={isAllSelected}
+                                                                            ref={input => {
+                                                                                if (input) input.indeterminate = isPartiallySelected;
+                                                                            }}
+                                                                            onChange={(e) => {
+                                                                                const checked = e.target.checked;
+                                                                                setFormData(prev => {
+                                                                                    let newZones = [...prev.deliveryZones];
+                                                                                    p.areas?.forEach(a => {
+                                                                                        const areaKey = `${p.code}|${a.name}`;
+                                                                                        if (checked && !newZones.includes(areaKey)) newZones.push(areaKey);
+                                                                                        if (!checked) newZones = newZones.filter(k => k !== areaKey);
+                                                                                    });
+                                                                                    return { ...prev, deliveryZones: newZones };
+                                                                                });
+                                                                                setIsShopModified(true);
+                                                                            }}
+                                                                            className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                                                                        />
+                                                                        <span className="text-sm font-black text-gray-800 tracking-tight group-hover:text-primary-600 transition-colors">Pincode: {p.code}</span>
+                                                                    </label>
+                                                                </div>
+                                                                
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-1">
+                                                                    {p.areas?.map(a => {
+                                                                        const areaKey = `${p.code}|${a.name}`;
+                                                                        return (
+                                                                            <label key={areaKey} className="flex items-start gap-2.5 cursor-pointer p-1.5 hover:bg-white rounded-md transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={formData.deliveryZones.includes(areaKey)}
+                                                                                    onChange={(e) => {
+                                                                                        const checked = e.target.checked;
+                                                                                        setFormData(prev => ({
+                                                                                            ...prev,
+                                                                                            deliveryZones: checked 
+                                                                                                ? [...prev.deliveryZones, areaKey]
+                                                                                                : prev.deliveryZones.filter(k => k !== areaKey)
+                                                                                        }));
+                                                                                        setIsShopModified(true);
+                                                                                    }}
+                                                                                    className="w-3.5 h-3.5 text-blue-600 rounded border-gray-300 mt-0.5"
+                                                                                />
+                                                                                <span className="text-xs font-bold text-gray-600 leading-tight">{a.name}</span>
+                                                                            </label>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                             <div className="space-y-2">

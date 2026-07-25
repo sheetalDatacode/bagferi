@@ -103,11 +103,8 @@ const B2BUserLogin = () => {
                 </button>
                 <div className="w-full max-w-md">
                     <div className="text-center mb-10">
-                        <div className="flex justify-center items-center gap-2 mb-4">
-                             <div className="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-200">
-                                 <FiShoppingBag className="text-white text-2xl" />
-                             </div>
-                             <span className="text-3xl font-extrabold text-primary-600 tracking-tight">Bagferi</span>
+                        <div className="flex justify-center items-center mb-4">
+                             <img src="/bagferi-logo.png" alt="Bagferi Logo" className="h-16 w-auto object-contain" />
                         </div>
                     </div>
 

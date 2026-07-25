@@ -204,8 +204,8 @@ const B2BUserRegister = () => {
                 </button>
 
                 <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-primary-50">
-                        <FiBriefcase className="text-primary-600 text-2xl" />
+                    <div className="flex justify-center mx-auto mb-4">
+                        <img src="/bagferi-logo.png" alt="Bagferi Logo" className="h-14 w-auto object-contain" />
                     </div>
                     <h1 className="text-2xl font-extrabold text-gray-800 mb-1">B2B Registration</h1>
                     <p className="text-sm text-gray-500 font-medium tracking-tight">Join as a Verified Business Buyer</p>

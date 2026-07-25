@@ -165,7 +165,7 @@ export const registerB2BVendor = async (vendorData) => {
     await ensureReferralCodeForOwner({ userId: createdVendor._id, userModel: 'Vendor' });
 
     // Generate 6-digit OTP for phone
-    const otp = "1234";
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
     
     const fullPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
@@ -183,6 +183,8 @@ export const registerB2BVendor = async (vendorData) => {
     const token = generateToken({ vendorId: createdVendor._id.toString(), email: createdVendor.email, role: createdVendor.role });
     const vendorObj = createdVendor.toObject();
     delete vendorObj.password;
+    delete vendorObj.otp;
+    delete vendorObj.otpExpiresAt;
 
     return { 
       success: true, 

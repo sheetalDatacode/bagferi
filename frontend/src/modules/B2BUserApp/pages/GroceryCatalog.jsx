@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiSearch, FiPackage, FiArrowLeft } from "react-icons/fi";
+import { FiSearch, FiPackage, FiArrowLeft, FiFilter } from "react-icons/fi";
 import B2BHeader from "../components/Layout/B2BHeader";
 import B2BBottomNav from "../components/Layout/B2BBottomNav";
 import api from "../../../shared/utils/api";
@@ -18,6 +18,19 @@ const GroceryCatalog = () => {
   const [selectedRootId, setSelectedRootId] = useState(null);
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [sortBy, setSortBy] = useState('newest');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [debouncedMinPrice, setDebouncedMinPrice] = useState('');
+  const [debouncedMaxPrice, setDebouncedMaxPrice] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedMinPrice(minPrice);
+      setDebouncedMaxPrice(maxPrice);
+    }, 600);
+    return () => clearTimeout(handler);
+  }, [minPrice, maxPrice]);
 
   useEffect(() => {
     fetchCategories();
@@ -50,7 +63,11 @@ const GroceryCatalog = () => {
       if (!selectedRootId) return;
       try {
         setLoadingProducts(true);
-        const res = await api.get(`/grocery/products?category=${selectedRootId}&limit=20`);
+        let url = `/grocery/products?category=${selectedRootId}&limit=20&sort=${sortBy}`;
+        if (debouncedMinPrice) url += `&minPrice=${debouncedMinPrice}`;
+        if (debouncedMaxPrice) url += `&maxPrice=${debouncedMaxPrice}`;
+        
+        const res = await api.get(url);
         if (res.success) {
           setProducts(res.data.products || res.data || []);
         }
@@ -61,7 +78,7 @@ const GroceryCatalog = () => {
       }
     };
     fetchProducts();
-  }, [selectedRootId]);
+  }, [selectedRootId, sortBy, debouncedMinPrice, debouncedMaxPrice]);
 
   const selectedRoot = categories.find(c => c._id === selectedRootId) || null;
 
@@ -157,10 +174,45 @@ const GroceryCatalog = () => {
                     </div>
 
                     <div className="mt-8">
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
                             <h3 className="text-sm md:text-base font-extrabold text-gray-800 capitalize">
                                 Recommended in {selectedRoot.name}
                             </h3>
+                            
+                            {/* Filter Bar */}
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+                                    <FiFilter className="text-gray-400 text-sm" />
+                                    <select 
+                                        value={sortBy} 
+                                        onChange={(e) => setSortBy(e.target.value)}
+                                        className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none cursor-pointer"
+                                    >
+                                        <option value="newest">Newest First</option>
+                                        <option value="price_asc">Price: Low to High</option>
+                                        <option value="price_desc">Price: High to Low</option>
+                                    </select>
+                                </div>
+                                
+                                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+                                    <span className="text-xs font-bold text-gray-400">₹</span>
+                                    <input 
+                                        type="number" 
+                                        placeholder="Min" 
+                                        value={minPrice}
+                                        onChange={(e) => setMinPrice(e.target.value)}
+                                        className="w-12 text-xs font-semibold text-gray-700 bg-transparent focus:outline-none placeholder-gray-400"
+                                    />
+                                    <span className="text-xs text-gray-300 font-bold">-</span>
+                                    <input 
+                                        type="number" 
+                                        placeholder="Max" 
+                                        value={maxPrice}
+                                        onChange={(e) => setMaxPrice(e.target.value)}
+                                        className="w-12 text-xs font-semibold text-gray-700 bg-transparent focus:outline-none placeholder-gray-400"
+                                    />
+                                </div>
+                            </div>
                         </div>
                         {loadingProducts ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
