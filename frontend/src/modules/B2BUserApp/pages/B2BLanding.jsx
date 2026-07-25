@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     FiSearch, FiX, FiChevronDown, FiGrid, FiShoppingBag,
     FiUser, FiArrowRight, FiArrowLeft, FiBriefcase, FiTrendingUp, FiHome, FiMapPin, FiFilter,
-    FiTruck, FiPhone, FiShoppingCart, FiVideo, FiImage, FiHeart
+    FiTruck, FiPhone, FiShoppingCart, FiVideo, FiImage, FiHeart,
+    FiCheckCircle, FiXCircle, FiCreditCard, FiRefreshCw, FiPackage, FiShield, FiStar, FiAward
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { appLogo } from '../../../data/logos';
@@ -19,13 +20,17 @@ import RealEstateCard from '../components/RealEstateCard';
 import SuggestedProductCard from '../components/SuggestedProductCard';
 import LiveReelCard from '../components/LiveReelCard';
 import B2BBottomNav from '../components/Layout/B2BBottomNav';
+import B2BHeaderComponent from '../components/Layout/B2BHeader';
 import api from '../../../shared/utils/api';
 import { debounce, getGoogleMapsUrl } from '../../../shared/utils/helpers';
 import { useB2BCategoryStore } from '../../../shared/store/b2bCategoryStore';
 import { useAuthStore } from '../../../shared/store/authStore';
 import { useB2BLocationStore } from '../../../shared/store/b2bLocationStore';
 import { useB2BVendorAuthStore } from '../../B2BVendor/store/b2bVendorAuthStore';
-
+const ICONS = {
+    FiCheckCircle, FiXCircle, FiTruck, FiCreditCard, 
+    FiRefreshCw, FiPackage, FiShield, FiTrendingUp, FiStar, FiAward
+};
 
 const B2BLanding = () => {
     const navigate = useNavigate();
@@ -54,6 +59,8 @@ const B2BLanding = () => {
     // State
     const [suggestedProducts, setSuggestedProducts] = useState([]);
     const [liveReels, setLiveReels] = useState([]);
+    const [groceryCategories, setGroceryCategories] = useState([]);
+    const [groceryProducts, setGroceryProducts] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -100,6 +107,7 @@ const B2BLanding = () => {
 
     const [citySearchQuery, setCitySearchQuery] = useState('');
     const [categorySearchQuery, setCategorySearchQuery] = useState('');
+    const [homeFeatures, setHomeFeatures] = useState([]);
 
     // Store hooks
     const { states: availableStates, initialize: fetchLocations, isLoading: locationsLoading } = useB2BLocationStore();
@@ -109,6 +117,18 @@ const B2BLanding = () => {
         fetchCategories();
         // Force refresh once to migrate location data format from strings to objects
         fetchLocations(true);
+
+        const fetchHomeFeatures = async () => {
+            try {
+                const response = await api.get('/public/b2b-settings');
+                if (response.success && response.data?.homeFeatures) {
+                    setHomeFeatures(response.data.homeFeatures.filter(f => f.isActive));
+                }
+            } catch (error) {
+                console.error('Error fetching home features:', error);
+            }
+        };
+        fetchHomeFeatures();
 
         const fetchBusinessTypes = async () => {
             try {
@@ -158,13 +178,30 @@ const B2BLanding = () => {
 
         const fetchLiveReels = async () => {
             try {
-                const response = await api.get('/reels/feed', { params: { limit: 10 } });
+                const response = await api.get('/reels/feed', { params: { limit: 50 } });
                 if (response.success && response.data) {
                     const reels = Array.isArray(response.data) ? response.data : (response.data.reels || []);
-                    setLiveReels(reels);
+                    const productReels = reels.filter(r => r.productId != null && r.productId !== "");
+                    setLiveReels(productReels);
                 }
             } catch (error) {
                 console.error('Error fetching reels:', error);
+            }
+        };
+
+        const fetchGroceryData = async () => {
+            try {
+                const catRes = await api.get('/grocery/categories');
+                if (catRes.success) {
+                    setGroceryCategories(catRes.data || []);
+                }
+                const prodRes = await api.get('/grocery/products?limit=10');
+                if (prodRes.success) {
+                    const prods = Array.isArray(prodRes.data) ? prodRes.data : (prodRes.data.products || []);
+                    setGroceryProducts(prods);
+                }
+            } catch (error) {
+                console.error('Error fetching grocery data:', error);
             }
         };
 
@@ -172,6 +209,7 @@ const B2BLanding = () => {
         fetchAllVendors();
         fetchSuggestedProducts();
         fetchLiveReels();
+        fetchGroceryData();
     }, [fetchCategories, fetchLocations, selectedCity]);
 
     // Effect to calculate header height dynamically
@@ -470,19 +508,16 @@ const B2BLanding = () => {
     };
 
     const handleCategoryClick = (category) => {
-        // Check if this category has subcategories
-        const hasSubcategories = category.subcategories && category.subcategories.length > 0;
-
-        if (hasSubcategories) {
-            setSelectedRootCategory(category);
+        // If it's the Grocery category, navigate to the grocery specific catalog
+        if (category.name.toLowerCase() === 'grocery & essentials' || category.name.toLowerCase() === 'grocery') {
             setIsCategoryDropdownOpen(false);
-            setActivePopup('subcategories');
-        } else {
-            // No subcategories, navigate directly
-            setIsCategoryDropdownOpen(false);
-            const cityParam = selectedCity !== 'All Cities' ? `&city=${encodeURIComponent(selectedCity)}` : '';
-            navigateWithAuth(`/b2b/catalog?category=${encodeURIComponent(category.name)}${cityParam}`);
+            navigateWithAuth('/b2b/grocery');
+            return;
         }
+
+        // Navigate to categories page with the selected category pre-selected
+        setIsCategoryDropdownOpen(false);
+        navigateWithAuth(`/b2b/categories?category=${encodeURIComponent(category.name)}`);
     };
 
     const handleSubCategoryClick = (subCat) => {
@@ -944,117 +979,13 @@ const B2BLanding = () => {
         >
             
             {/* --- E-COMMERCE HEADER (Web & Mobile) --- */}
-            <div ref={headerRef} className="bg-white border-b border-gray-100 shadow-sm pt-safe pb-2 sticky top-0 z-[1000]">
-                <div className="max-w-[1920px] mx-auto px-4 md:px-6">
-                    {/* Top Row: Logo & Quick Actions */}
-                    <div className="flex items-center justify-between py-2">
-                        <Link to={!isAuthenticated ? "/b2b/login" : (window.location.pathname.includes('/b2b/catalog') ? "/b2b/landing" : "/b2b/catalog")} className="hover:opacity-80 transition-opacity flex-shrink-0">
-                            <img src={appLogo.src} alt="Bagferi" className="h-10 md:h-12 w-auto object-contain" />
-                        </Link>
-                        
-                        <div className="flex items-center gap-2 lg:gap-4">
-
-
-                            <Link to="/b2b/wishlist" onClick={(e) => { e.preventDefault(); navigateWithAuth('/b2b/wishlist'); }} className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-primary-50 hover:text-primary-600 transition-all">
-                                <FiHeart className="text-lg md:text-xl" />
-                            </Link>
-                            <Link to="/b2b/cart" onClick={(e) => { e.preventDefault(); navigateWithAuth('/b2b/cart'); }} className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-primary-50 hover:text-primary-600 transition-all">
-                                <FiShoppingCart className="text-lg md:text-xl" />
-                            </Link>
-
-                            {/* User Actions */}
-                            {!isAuthenticated ? (
-                                <Link to="/b2b/login" className="px-3 py-1.5 md:px-5 md:py-2 bg-primary-600 text-white rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-primary-700 transition-all shadow-lg shadow-primary-200">
-                                    Login
-                                </Link>
-                            ) : (
-                                <Link to="/b2b/profile" className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-primary-50 hover:text-primary-600 transition-all">
-                                    <FiUser className="text-lg md:text-xl" />
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Bottom Row: Search Bar */}
-                    <div className="py-2">
-                        <div className="relative" ref={searchRef}>
-                            <div className="relative group">
-                                <FiSearch className="absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-gray-400 text-lg md:text-xl group-focus-within:text-primary-600 transition-colors" />
-                                <input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={handleSearchChange}
-                                    onFocus={() => {
-                                        if (searchQuery.trim().length > 0) setShowSuggestions(true);
-                                    }}
-                                    placeholder="Search products, stores, real estate..."
-                                    className="w-full bg-gray-50/80 border border-gray-200 text-gray-900 text-sm md:text-base rounded-2xl md:rounded-[1.2rem] pl-12 pr-12 md:pl-14 md:pr-14 py-3.5 md:py-4 focus:ring-4 focus:ring-primary-50 focus:border-primary-300 focus:bg-white transition-all outline-none font-medium placeholder-gray-400 shadow-inner"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && searchQuery.trim()) {
-                                            handleSearchProductPopup(searchQuery.trim());
-                                        }
-                                    }}
-                                />
-                                {searchQuery && (
-                                    <button
-                                        onClick={() => {
-                                            setSearchQuery('');
-                                            setSuggestions([]);
-                                            setShowSuggestions(false);
-                                        }}
-                                        className="absolute right-4 md:right-5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors p-1"
-                                    >
-                                        <FiX size={18} />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Search Suggestions */}
-                            <AnimatePresence>
-                                {showSuggestions && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                                        className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[100]"
-                                    >
-                                        {isSearching ? (
-                                            <div className="p-8 text-center text-gray-400">
-                                                <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                                                <p className="text-[10px] font-black uppercase tracking-widest">Searching...</p>
-                                            </div>
-                                        ) : suggestions.length > 0 ? (
-                                            <ul className="max-h-[300px] overflow-y-auto py-2 custom-scrollbar">
-                                                {suggestions.map((suggestion, index) => (
-                                                    <li key={index}>
-                                                        <button
-                                                            onClick={() => handleSearchProductPopup(suggestion)}
-                                                            className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center justify-between group transition-colors"
-                                                        >
-                                                            <div className="flex flex-col">
-                                                                <span className="text-xs font-bold text-gray-700 group-hover:text-primary-600 truncate">{suggestion.text}</span>
-                                                                <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 mt-0.5">
-                                                                    {suggestion.type === 'product' ? 'Product' : suggestion.type === 'store' ? 'Store' : 'Real Estate'}
-                                                                </span>
-                                                            </div>
-                                                            <FiArrowRight className="text-gray-300 opacity-0 group-hover:opacity-100 group-hover:text-primary-500 transition-all -translate-x-2 group-hover:translate-x-0" />
-                                                        </button>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <div className="p-8 text-center text-gray-400">
-                                                <FiSearch className="mx-auto text-2xl mb-3 opacity-20" />
-                                                <p className="text-[10px] font-black uppercase tracking-widest">No results found</p>
-                                            </div>
-                                        )}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <B2BHeaderComponent 
+                sticky={true}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                onSearchSubmit={(q) => handleSearchProductPopup(q)}
+                searchPlaceholder="Search products, stores, real estate..."
+            />
 
             {/* --- MAIN CONTENT START --- */}
             <div className="flex-1 overflow-y-auto pb-20">
@@ -1096,6 +1027,40 @@ const B2BLanding = () => {
                     </div>
                 </section>
 
+                {/* --- FEATURE CARDS SECTION --- */}
+                {homeFeatures && homeFeatures.length > 0 && (
+                    <section className="w-full bg-white pb-6 pt-6">
+                        <div className="max-w-[1920px] mx-auto px-4 md:px-6">
+                            <div className="mb-4">
+                                <h2 className="text-[14px] md:text-lg font-black text-gray-900 capitalize">Platform Benefits</h2>
+                                <p className="text-[11px] md:text-sm text-gray-500 mt-1">Enjoy these exclusive benefits designed to make your wholesale shopping seamless and secure.</p>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                                {homeFeatures.map((feature, idx) => {
+                                    const Icon = ICONS[feature.iconName] || FiCheckCircle;
+                                    return (
+                                        <div key={idx} className="bg-gray-50 border border-gray-100 rounded-[1rem] p-4 flex items-start gap-3 hover:shadow-md hover:border-primary-100 transition-all duration-300 group">
+                                            <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-full flex items-center justify-center text-primary-600 shadow-sm shrink-0 group-hover:scale-110 group-hover:bg-primary-50 transition-transform">
+                                                <Icon className="text-xl md:text-2xl" />
+                                            </div>
+                                            <div className="flex flex-col flex-1 min-w-0">
+                                                <h3 className="text-[13px] md:text-sm font-bold text-gray-900 leading-tight">
+                                                    {feature.title}
+                                                </h3>
+                                                {feature.subtitle && (
+                                                    <p className="text-[10px] md:text-xs text-gray-500 mt-1 line-clamp-2">
+                                                        {feature.subtitle}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
 
                 {/* --- LOWEST PRICES: ONLY ON LIVE --- */}
                 {liveReels.length > 0 && (
@@ -1121,12 +1086,69 @@ const B2BLanding = () => {
                     </section>
                 )}
 
+                {/* --- GROCERY & ESSENTIALS --- */}
+                {groceryCategories.length > 0 && (
+                    <section className="w-full bg-white pt-6 pb-4">
+                        <div className="max-w-[1920px] mx-auto px-4 md:px-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h2 className="text-[14px] md:text-lg font-black text-gray-900 capitalize">Grocery & Essentials</h2>
+                                </div>
+                                <button 
+                                    onClick={() => navigateWithAuth('/b2b/grocery')}
+                                    className="text-xs font-bold text-primary-600 hover:text-primary-700"
+                                >
+                                    View All
+                                </button>
+                            </div>
+                            <div className="flex overflow-x-auto no-scrollbar gap-3 md:gap-6 pb-4 px-2 snap-x">
+                                {groceryCategories.map((cat, idx) => (
+                                    <button
+                                        key={cat._id || idx}
+                                        onClick={() => navigateWithAuth(`/b2b/grocery/category/${cat._id}`)}
+                                        className="flex flex-col items-center gap-2 group min-w-[70px] md:min-w-[90px] snap-start"
+                                    >
+                                        <div className="w-[50px] h-[50px] md:w-[65px] md:h-[65px] rounded-[1rem] bg-gray-50 overflow-hidden shadow-sm border border-gray-100 group-hover:border-primary-300 group-hover:shadow-md transition-all">
+                                            {cat.image ? (
+                                                <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-300 group-hover:text-primary-400 group-hover:bg-primary-50 transition-colors">
+                                                    <FiGrid size={20} />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className="text-[9px] md:text-[11px] font-bold text-gray-600 text-center uppercase tracking-tight leading-tight line-clamp-2">
+                                            {cat.name}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* --- TRENDING GROCERY --- */}
+                {groceryProducts.length > 0 && (
+                    <section className="w-full bg-white pt-2 pb-6">
+                        <div className="max-w-[1920px] mx-auto px-4 md:px-6">
+                            <h2 className="text-[14px] md:text-lg font-black text-gray-900 mb-4 capitalize">Trending Grocery</h2>
+                            <div className="flex overflow-x-auto no-scrollbar gap-3 md:gap-4 pb-4 px-2 snap-x">
+                                {groceryProducts.map(prod => (
+                                    <div key={prod._id} className="w-[150px] min-w-[150px] md:w-[200px] md:min-w-[200px] shrink-0 snap-start">
+                                        <SuggestedProductCard product={prod} linkPrefix="/b2b/grocery/product/" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
                 {/* --- EXPLORE MORE (Subcategories Grid) --- */}
                 {allSubcategories.length > 0 && (
                     <section className="w-full bg-white pt-4 pb-4">
                         <div className="max-w-[1920px] mx-auto px-4 md:px-6">
                             <h2 className="text-[14px] md:text-lg font-black text-gray-900 mb-4 capitalize">Explore More</h2>
-                            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-x-3 gap-y-6">
+                            <div className="flex overflow-x-auto no-scrollbar gap-3 md:gap-6 pb-4 px-2 snap-x">
                                 {allSubcategories.slice(0, 16).map((sub, idx) => (
                                     <button
                                         key={sub.id || idx}
@@ -1137,7 +1159,7 @@ const B2BLanding = () => {
                                                 handleSubCategoryClick(sub);
                                             }
                                         }}
-                                        className="flex flex-col items-center gap-2 group"
+                                        className="flex flex-col items-center gap-2 group min-w-[70px] md:min-w-[90px] snap-start"
                                     >
                                         <div className="w-[50px] h-[50px] md:w-[65px] md:h-[65px] rounded-[1rem] bg-gray-50 overflow-hidden shadow-sm border border-gray-100 group-hover:border-primary-300 group-hover:shadow-md transition-all">
                                             {sub.image ? (

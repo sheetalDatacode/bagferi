@@ -8,6 +8,7 @@ import B2BBottomNav from '../components/Layout/B2BBottomNav';
 const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [moduleFilter, setModuleFilter] = useState('All');
 
     useEffect(() => {
         fetchOrders();
@@ -38,6 +39,8 @@ const Orders = () => {
         }
     };
 
+    const filteredOrders = moduleFilter === 'All' ? orders : orders.filter(o => (o.module || 'fashion') === moduleFilter.toLowerCase());
+
     return (
         <div className="bg-gray-50 min-h-screen pb-20 md:pb-0 font-sans">
             <B2BHeader />
@@ -48,6 +51,18 @@ const Orders = () => {
                         <FiPackage className="text-primary-600" /> My Order History
                     </h1>
                     <p className="text-gray-500 text-sm mt-1">Track your bulk orders and contact vendors</p>
+                </div>
+
+                <div className="flex bg-white rounded-xl p-1 border border-gray-200 overflow-x-auto whitespace-nowrap hide-scrollbar max-w-fit shadow-sm">
+                    {['All', 'Fashion', 'Grocery'].map(m => (
+                        <button
+                            key={m}
+                            onClick={() => setModuleFilter(m)}
+                            className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${moduleFilter === m ? 'bg-primary-50 shadow-sm text-primary-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+                        >
+                            {m} Orders
+                        </button>
+                    ))}
                 </div>
 
                 {loading ? (
@@ -64,7 +79,7 @@ const Orders = () => {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {orders.map(order => {
+                        {filteredOrders.map(order => {
                             const showVendorDetails = (order.status !== 'Pending' && order.status !== 'Cancelled') || (order.advancePayment > 0);
                             
                             return (
@@ -100,9 +115,11 @@ const Orders = () => {
                                                                 <FiPackage className="w-full h-full p-3 text-gray-400" />
                                                             )}
                                                         </div>
-                                                        <div>
+                                                                                        <div>
                                                             <p className="text-sm font-bold text-gray-900 line-clamp-1">{item.product?.name || 'Product'}</p>
-                                                            <p className="text-xs text-gray-500 font-medium">₹{item.price} × {item.quantity}</p>
+                                                            <p className="text-xs text-gray-500 font-medium">
+                                                                ₹{item.price} × {item.quantity} = <span className="font-bold text-gray-800">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -124,28 +141,63 @@ const Orders = () => {
                                                     </div>
                                                 ) : (
                                                     <div className="mt-3 space-y-2 text-sm text-gray-600">
-                                                        {order.vendor?.phone && (
+                                                        {(order.vendor?.phone || order.vendor?.mobile) && (
                                                             <div className="flex items-center gap-2">
-                                                                <FiPhoneCall className="text-gray-400" /> 
-                                                                <a href={`tel:${order.vendor.phone}`} className="font-bold text-blue-600 hover:underline">{order.vendor.phone}</a>
+                                                                 <FiPhoneCall className="text-gray-400" /> 
+                                                                 <a href={`tel:${order.vendor.phone || order.vendor.mobile}`} className="font-bold text-blue-600 hover:underline">{order.vendor.phone || order.vendor.mobile}</a>
                                                             </div>
                                                         )}
-                                                        {order.vendor?.address && (
-                                                            <div className="flex items-start gap-2">
-                                                                <FiMapPin className="text-gray-400 mt-1 flex-shrink-0" /> 
-                                                                <p className="leading-snug text-gray-500">
-                                                                    {order.vendor.address.street && `${order.vendor.address.street}, `}
-                                                                    {order.vendor.address.city}, {order.vendor.address.state} - {order.vendor.address.pincode}
-                                                                </p>
+                                                        {order.vendor?.email && (
+                                                            <div className="flex items-center gap-2">
+                                                                <FiBox className="text-gray-400" /> 
+                                                                <a href={`mailto:${order.vendor.email}`} className="font-medium text-gray-600 hover:underline">{order.vendor.email}</a>
                                                             </div>
                                                         )}
+                                                        <div className="flex items-start gap-2">
+                                                            <FiMapPin className="text-gray-400 mt-1 flex-shrink-0" /> 
+                                                            <p className="leading-snug text-gray-500">
+                                                                {order.vendor?.address ? (
+                                                                    <>
+                                                                        {order.vendor.address.street && `${order.vendor.address.street}, `}
+                                                                        {order.vendor.address.area && `${order.vendor.address.area}, `}
+                                                                        {order.vendor.address.city && `${order.vendor.address.city}, `}
+                                                                        {order.vendor.address.state} {order.vendor.address.pincode ? `- ${order.vendor.address.pincode}` : ''}
+                                                                        {!order.vendor.address.city && !order.vendor.address.state && 'Address not provided by vendor'}
+                                                                    </>
+                                                                ) : 'Address not provided by vendor'}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex items-center justify-between text-xs">
-                                                <span className="font-bold text-gray-500">Advance Paid</span>
-                                                <span className="font-black text-green-600">₹{order.advancePayment?.toLocaleString('en-IN') || 0}</span>
+                                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2 text-xs">
+                                                <div className="flex justify-between items-center text-gray-500 font-semibold">
+                                                    <span>Subtotal</span>
+                                                    <span className="font-bold text-gray-800">₹{order.totalAmount?.toLocaleString('en-IN')}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-gray-500 font-semibold">
+                                                    <span>Advance Paid</span>
+                                                    <span className="font-black text-green-600">₹{order.advancePayment?.toLocaleString('en-IN') || 0}</span>
+                                                </div>
+                                                <div className="border-t border-gray-200/60 pt-2 flex justify-between items-center font-bold text-gray-900">
+                                                    <span>Remaining COD</span>
+                                                    <span className="font-black text-primary-600">₹{(order.totalAmount - (order.advancePayment || 0)).toLocaleString('en-IN')}</span>
+                                                </div>
+                                                
+                                                {order.status === 'Dispatched' && order.deliveryOtp && (
+                                                    <div className="mt-4 pt-3 border-t border-dashed border-gray-300">
+                                                        <div className="bg-blue-50 p-3 rounded-lg flex items-center justify-between border border-blue-100">
+                                                            <div>
+                                                                <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-0.5">Delivery OTP</p>
+                                                                <p className="text-xs text-blue-600 font-medium">Share this with the delivery partner</p>
+                                                            </div>
+                                                            <div className="bg-white px-3 py-1.5 rounded shadow-sm border border-blue-200">
+                                                                <span className="text-lg font-black text-blue-700 tracking-[0.2em]">{order.deliveryOtp}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

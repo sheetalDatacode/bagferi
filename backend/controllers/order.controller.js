@@ -2,6 +2,9 @@ import Order from '../models/Order.model.js';
 import Cart from '../models/Cart.model.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import B2BSettings from '../models/B2BSettings.model.js';
+import PlatformLedger from '../models/PlatformLedger.model.js';
+import vendorWalletService from '../services/vendorWallet.service.js';
 
 // Initialize Razorpay (assuming keys are in env)
 // Note: If Razorpay keys aren't in env, this won't crash until used.
@@ -25,22 +28,25 @@ export const initiateCheckout = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cart is empty' });
     }
 
-    // Group items by vendor
-    const itemsByVendor = {};
+    // Group items by vendor and module
+    const itemsByGroup = {};
     cart.items.forEach(item => {
       const vId = item.vendor.toString();
-      if (!itemsByVendor[vId]) {
-        itemsByVendor[vId] = [];
+      const module = item.productModel === 'GroceryProduct' ? 'grocery' : 'fashion';
+      const groupKey = `${vId}_${module}`;
+      
+      if (!itemsByGroup[groupKey]) {
+        itemsByGroup[groupKey] = [];
       }
-      itemsByVendor[vId].push(item);
+      itemsByGroup[groupKey].push(item);
     });
 
-    const vendorIds = Object.keys(itemsByVendor);
-    const numberOfOrders = vendorIds.length;
+    const groupKeys = Object.keys(itemsByGroup);
+    const numberOfOrders = groupKeys.length;
     
-    // As per user requirement: 200 Rs advance compulsory.
-    // If there are multiple vendors, we charge 200 per vendor order.
-    const advancePerOrder = 200;
+    // Fetch dynamic advance amount
+    const settings = await B2BSettings.findOne() || { advancePaymentAmount: 200 };
+    const advancePerOrder = settings.advancePaymentAmount;
     const totalAdvanceRequired = numberOfOrders * advancePerOrder;
 
     if (paymentMethod === 'Online') {
@@ -103,28 +109,40 @@ export const verifyCheckoutPayment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cart is empty' });
     }
 
-    // Group items by vendor
-    const itemsByVendor = {};
+    // Group items by vendor and module
+    const itemsByGroup = {};
     cart.items.forEach(item => {
       const vId = item.vendor.toString();
-      if (!itemsByVendor[vId]) {
-        itemsByVendor[vId] = [];
+      const module = item.productModel === 'GroceryProduct' ? 'grocery' : 'fashion';
+      const groupKey = `${vId}_${module}`;
+      
+      if (!itemsByGroup[groupKey]) {
+        itemsByGroup[groupKey] = {
+            vendorId: vId,
+            module: module,
+            items: []
+        };
       }
-      itemsByVendor[vId].push(item);
+      itemsByGroup[groupKey].items.push(item);
     });
 
-    const advancePerOrder = 200;
+    const settings = await B2BSettings.findOne() || { advancePaymentAmount: 200, advancePaymentCommissionPercentage: 0 };
+    const advancePerOrder = settings.advancePaymentAmount;
+    const commissionPct = settings.advancePaymentCommissionPercentage;
     const createdOrders = [];
 
-    for (const [vendorId, items] of Object.entries(itemsByVendor)) {
+    for (const [groupKey, group] of Object.entries(itemsByGroup)) {
+      const items = group.items;
       const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       
       const order = new Order({
         orderNumber: generateOrderNumber(),
+        module: group.module,
         user: userId,
-        vendor: vendorId,
+        vendor: group.vendorId,
         items: items.map(i => ({
           product: i.product,
+          productModel: i.productModel,
           quantity: i.quantity,
           price: i.price,
         })),
@@ -141,6 +159,28 @@ export const verifyCheckoutPayment = async (req, res, next) => {
 
       await order.save();
       createdOrders.push(order);
+
+      const vendorShare = advancePerOrder * (1 - (commissionPct / 100));
+
+      // Platform Ledger (Full Advance comes to Platform)
+      await PlatformLedger.create({
+        entryType: 'credit',
+        transactionType: 'PAYMENT_RECEIVED',
+        amount: advancePerOrder,
+        referenceId: order._id.toString(),
+        vendorId: group.vendorId,
+        description: `Advance payment for order ${order.orderNumber}`,
+        metadata: { type: 'order_advance' }
+      });
+
+      // Vendor Wallet Transaction (Advance minus commission goes to vendor wallet)
+      await vendorWalletService.creditWallet(
+        group.vendorId,
+        vendorShare,
+        `Advance received for order ${order.orderNumber} (Admin deducted ${commissionPct}% commission)`,
+        order._id.toString(),
+        'order'
+      );
     }
 
     // Clear cart after successful order creation
@@ -163,7 +203,7 @@ export const getMyOrders = async (req, res, next) => {
     const userId = req.user._id || req.user.id;
     const orders = await Order.find({ user: userId })
       .populate('items.product', 'name image price')
-      .populate('vendor', 'storeName address phone')
+      .populate('vendor', 'storeName address phone mobile email')
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -201,6 +241,13 @@ export const updateVendorOrderStatus = async (req, res, next) => {
     const order = await Order.findOne({ _id: orderId, vendor: vendorId });
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (status === 'Dispatched' && !order.deliveryOtp) {
+      // Generate a 4-digit OTP for delivery
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      order.deliveryOtp = otp;
+      console.log(`[Delivery OTP] Order ${order.orderNumber}: ${otp}`);
     }
 
     order.status = status;

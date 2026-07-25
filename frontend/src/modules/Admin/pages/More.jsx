@@ -56,6 +56,16 @@ const More = () => {
       hoverShadow: 'hover:shadow-green-500/30',
       description: 'Manage Support & FAQs'
     },
+    {
+      path: '/admin/b2b-home-features',
+      label: 'B2B Home Features',
+      icon: FiGrid,
+      gradient: 'from-indigo-500 via-indigo-600 to-indigo-700',
+      lightGradient: 'from-indigo-50 via-indigo-100/80 to-indigo-50',
+      shadowColor: 'shadow-indigo-500/20',
+      hoverShadow: 'hover:shadow-indigo-500/30',
+      description: 'Manage B2B landing features'
+    },
   ];
 
   return (

@@ -57,7 +57,7 @@ export const registerUser = async (userData) => {
     // we can create the user directly.
     if (userType === 'b2b') {
         // Generate 6-digit OTP for phone
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = "1234";
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
         const fullPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
 
@@ -255,7 +255,7 @@ export const loginUser = async (identifier, password) => {
 
     if (user.currentMarketplace === 'b2b' && !user.isPhoneVerified) {
         // Generate new OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = "1234";
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
         const fullPhone = user.phone.startsWith('+91') ? user.phone : `+91${user.phone}`;
 

@@ -2,6 +2,7 @@ import { asyncHandler } from '../middleware/errorHandler.middleware.js';
 import User from '../models/User.model.js';
 import Vendor from '../models/Vendor.model.js';
 import Product from '../models/Product.model.js';
+import GroceryProduct from '../models/GroceryProduct.model.js';
 import BannerBooking from '../models/BannerBooking.model.js';
 import Transaction from '../models/Transaction.model.js';
 import B2BCategory from '../models/B2BCategory.model.js';
@@ -27,11 +28,13 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
         totalCustomers,
         totalVendors,
         totalProducts,
+        totalGroceryProducts,
         totalProperties,
         activeBanners,
         recentVendors,
         activeVendors,
         activeProducts,
+        activeGroceryProducts,
         activeProperties,
         vendorDistribution,
         topCategoriesRaw,
@@ -47,6 +50,7 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
         User.countDocuments(),
         Vendor.countDocuments({ vendorType: { $ne: 'admin' } }),
         Product.countDocuments(),
+        GroceryProduct.countDocuments(),
         0,
         BannerBooking.countDocuments({
             status: 'active',
@@ -61,6 +65,7 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
             .lean(),
         Vendor.countDocuments({ vendorType: { $ne: 'admin' }, status: 'approved' }),
         Product.countDocuments({ isActive: true }),
+        GroceryProduct.countDocuments({ isActive: true }),
         0,
         Vendor.aggregate([
             { $match: { vendorType: { $ne: 'admin' } } },
@@ -125,14 +130,7 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
 
     // Real revenue: sum totalAmount from paid subscriptions + banner bookings + addons + wallet recharges
     const [subRevenueResult, bannerRevenueResult, addonRevenueResult, walletRevenueResult] = await Promise.all([
-      VendorSubscription.aggregate([
-        { $match: { 
-          status: { $in: ['active', 'expired'] }, 
-          totalAmount: { $gt: 0 },
-          paymentMethod: { $nin: ['wallet', 'free'] } 
-        } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-      ]),
+      [],
       BannerBooking.aggregate([
         { $match: { paymentStatus: 'paid' } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
@@ -157,26 +155,7 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5); 
     sixMonthsAgo.setDate(1); 
 
-    const revenueAggregation = await VendorSubscription.aggregate([
-        { $unwind: '$auditLogs' },
-        {
-            $match: {
-                'auditLogs.action': { $in: ['subscription_payment', 'upgrade_payment'] },
-                'auditLogs.details.status': 'completed',
-                'auditLogs.timestamp': { $gte: sixMonthsAgo }
-            }
-        },
-        {
-            $group: {
-                _id: {
-                    month: { $month: '$auditLogs.timestamp' },
-                    year: { $year: '$auditLogs.timestamp' }
-                },
-                totalRevenue: { $sum: '$auditLogs.details.amount' }
-            }
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } }
-    ]);
+    const revenueAggregation = [];
 
     // Format revenue data for the chart (ensure all 6 months are present)
     const revenueData = [];
@@ -199,23 +178,13 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
 
     // Combined Payment History — subscriptions + banners + addons, payment status only
     const [recentSubs, recentBanners, recentAddons] = await Promise.all([
-        VendorSubscription.find({ status: { $in: ['active', 'expired'] }, totalAmount: { $gt: 0 } })
-            .sort({ lastPaymentDate: -1, createdAt: -1 })
-            .limit(8)
-            .populate('vendorId', 'name storeName email')
-            .populate('planId', 'name')
-            .lean(),
+        [],
         BannerBooking.find({ paymentStatus: 'paid' })
             .sort({ createdAt: -1 })
             .limit(5)
             .populate('vendorId', 'name storeName email')
             .lean(),
         []
-            .sort({ createdAt: -1 })
-            .limit(5)
-            .populate('vendorId', 'name storeName email')
-            .populate('addonPlanId', 'name')
-            .lean()
     ]);
 
     const combinedHistory = [
@@ -280,10 +249,12 @@ export const getDashboardSummary = asyncHandler(async (req, res) => {
                 totalCustomers,
                 totalVendors,
                 totalProducts,
+                totalGroceryProducts,
                 totalProperties,
                 activeBanners,
                 activeVendors,
                 activeProducts,
+                activeGroceryProducts,
                 activeProperties,
                 totalRevenue,
                 activeSubscriptionsCount,

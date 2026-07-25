@@ -212,7 +212,7 @@ export const registerVendor = async (vendorData) => {
       await ensureReferralCodeForOwner({ userId: vendor._id, userModel: 'Vendor' });
 
       // Generate 6-digit OTP for phone
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otp = "1234";
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
       
       const fullPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
@@ -381,7 +381,7 @@ export const loginVendor = async (identifier, password) => {
     // Only force verification for B2B vendors or if specifically required
     if (!vendor.isPhoneVerified) {
       // Generate new OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otp = "1234";
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
       const fullPhone = vendor.phone.startsWith('+91') ? vendor.phone : `+91${vendor.phone}`;
 

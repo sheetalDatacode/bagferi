@@ -8,7 +8,7 @@ import { useAuthStore } from '../../../shared/store/authStore';
 const B2BVendorVerification = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const [codes, setCodes] = useState(['', '', '', '', '', '']); // 6 digit OTP
+    const [codes, setCodes] = useState(['', '', '', '']); // 4 digit OTP
     const [isLoading, setIsLoading] = useState(false);
     const [cooldown, setCooldown] = useState(30);
     const inputRefs = useRef([]);
@@ -44,16 +44,16 @@ const B2BVendorVerification = () => {
         }
 
         if (cleanedValue.length > 1) {
-            const pasteData = cleanedValue.slice(0, 6);
+            const pasteData = cleanedValue.slice(0, 4);
             if (!/^\d+$/.test(pasteData)) return;
 
             const newCodes = [...codes];
             pasteData.split('').forEach((char, i) => {
-                if (index + i < 6) newCodes[index + i] = char;
+                if (index + i < 4) newCodes[index + i] = char;
             });
             setCodes(newCodes);
             
-            const nextIndex = Math.min(index + pasteData.length, 5);
+            const nextIndex = Math.min(index + pasteData.length, 3);
             inputRefs.current[nextIndex]?.focus();
             return;
         }
@@ -64,7 +64,7 @@ const B2BVendorVerification = () => {
         newCodes[index] = cleanedValue;
         setCodes(newCodes);
         
-        if (index < 5) {
+        if (index < 3) {
             inputRefs.current[index + 1]?.focus();
         }
     };
@@ -79,23 +79,23 @@ const B2BVendorVerification = () => {
 
     const handlePaste = (e) => {
         e.preventDefault();
-        const pasteData = e.clipboardData.getData('text').trim().slice(0, 6);
+        const pasteData = e.clipboardData.getData('text').trim().slice(0, 4);
         if (!/^\d+$/.test(pasteData)) return;
 
         const newCodes = [...codes];
         pasteData.split('').forEach((char, index) => {
-            if (index < 6) newCodes[index] = char;
+            if (index < 4) newCodes[index] = char;
         });
         setCodes(newCodes);
 
-        const focusIndex = Math.min(pasteData.length, 5);
+        const focusIndex = Math.min(pasteData.length, 3);
         inputRefs.current[focusIndex]?.focus();
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         const otp = codes.join('');
-        if (otp.length !== 6) return;
+        if (otp.length !== 4) return;
 
         setIsLoading(true);
         try {
@@ -161,7 +161,7 @@ const B2BVendorVerification = () => {
                     </div>
                     <h1 className="text-2xl font-black text-gray-800 mb-2">Vendor Verification</h1>
                     <p className="text-sm text-gray-500 font-medium leading-relaxed px-4">
-                        We've sent a 6-digit code to <br />
+                        We've sent a 4-digit code to <br />
                         <span className="font-bold text-primary-600 text-base">{phone}</span>
                     </p>
                 </div>

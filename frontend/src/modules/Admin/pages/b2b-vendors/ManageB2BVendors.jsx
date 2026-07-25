@@ -268,9 +268,9 @@ const ManageB2BVendors = () => {
         const typeSet = new Set();
         b2bVendors.forEach((v) => {
             const bt = (v.businessType || v.businessTypeRef?.name || '').trim();
-            if (bt && bt !== 'N/A') typeSet.add(bt);
+            if (bt && bt !== 'N/A' && /[a-zA-Z0-9]/.test(bt)) typeSet.add(bt);
         });
-        return ['All Types', ...Array.from(typeSet).sort()];
+        return ['All Types', ...Array.from(typeSet).filter(t => /[a-zA-Z0-9]/.test(t)).sort()];
     }, [b2bVendors]);
 
     // Filtered vendors based on city and business type

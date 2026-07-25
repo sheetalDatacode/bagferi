@@ -10,6 +10,7 @@ import api from '../../../../shared/utils/api';
 import { useAuthStore } from '../../../../shared/store/authStore';
 import { useB2BVendorAuthStore } from '../../../B2BVendor/store/b2bVendorAuthStore';
 import { useCartStore } from '../../../../shared/store/cartStore';
+import { useWishlistStore } from '../../../../shared/store/wishlistStore';
 
 const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true, searchQuery: propSearchQuery, onSearchChange, onSearchSubmit, hideSearch = false, customNav, searchPlaceholder = "SEARCH PRODUCTS AND SHOPS", suggestionEndpoint = "/products/b2b-suggestions", transparent = false, minimal = false }) => {
     const navigate = useNavigate();
@@ -21,12 +22,16 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
     const [localSearchQuery, setLocalSearchQuery] = useState(propSearchQuery || '');
 
     const { cart, fetchCart } = useCartStore();
+    const { wishlistItems, fetchWishlist } = useWishlistStore();
+    
     useEffect(() => {
         if (isAuthenticated) {
             fetchCart();
+            fetchWishlist();
         }
-    }, [isAuthenticated, fetchCart]);
+    }, [isAuthenticated, fetchCart, fetchWishlist]);
     const cartCount = cart?.items?.reduce((total, item) => total + item.quantity, 0) || 0;
+    const wishlistCount = wishlistItems?.length || 0;
 
     const handlePosterRedirect = () => {
         const returnUrl = window.location.origin + '/b2b/catalog';
@@ -214,15 +219,35 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                             )}
                         </div>
                         
-                        {/* Desktop Navigation Links Removed */}
+                        {/* Desktop Navigation Links */}
+                        <div className="hidden lg:flex items-center gap-4 xl:gap-6 ml-4 mt-1">
+                            <Link to="/b2b/catalog" className="flex flex-col items-center justify-center gap-1 hover:opacity-80 transition-opacity group">
+                                <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden group-hover:bg-primary-50 transition-colors">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/3159/3159614.png" alt="Fashion" className="w-6 h-6 object-contain" />
+                                </div>
+                                <span className="text-[9px] font-black uppercase text-gray-700 tracking-wider group-hover:text-primary-600 transition-colors">Fashion</span>
+                            </Link>
+                            <Link to="/b2b/grocery" className="flex flex-col items-center justify-center gap-1 hover:opacity-80 transition-opacity group">
+                                <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden group-hover:bg-primary-50 transition-colors">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/1261/1261126.png" alt="Grocery" className="w-6 h-6 object-contain" />
+                                </div>
+                                <span className="text-[9px] font-black uppercase text-gray-700 tracking-wider group-hover:text-primary-600 transition-colors">Grocery</span>
+                            </Link>
+                            <Link to="/b2b/reels" className="flex flex-col items-center justify-center gap-1 hover:opacity-80 transition-opacity group">
+                                <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden group-hover:bg-primary-50 transition-colors text-gray-700 group-hover:text-primary-600">
+                                    <FiVideo size={20} />
+                                </div>
+                                <span className="text-[9px] font-black uppercase text-gray-700 tracking-wider group-hover:text-primary-600 transition-colors">Reels</span>
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Search - Growing to fill middle space */}
                     {!hideSearch && (
-                        <div className="hidden lg:flex flex-1 min-w-[200px] max-w-2xl mx-2 xl:mx-8">
+                        <div className="hidden lg:flex flex-1 min-w-[200px] max-w-3xl mx-2 xl:mx-8 items-center gap-3">
                             <form
                                 onSubmit={handleSearchSubmit}
-                                className="relative w-full group"
+                                className="relative flex-1 group"
                                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                             >
                                 <div className="absolute left-5 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -289,6 +314,7 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                                     )}
                                 </AnimatePresence>
                             </form>
+                            {customNav && <div className="shrink-0">{customNav}</div>}
                         </div>
                     )}
 
@@ -314,11 +340,16 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                             <button 
                                 onClick={() => {
                                     if (!isAuthenticated) return navigate('/b2b/login');
-                                    navigate('/b2b/favorites');
+                                    navigate('/b2b/wishlist');
                                 }}
-                                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors relative"
                             >
                                 <FiHeart className="text-xl" />
+                                {wishlistCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                                        {wishlistCount}
+                                    </span>
+                                )}
                             </button>
                             
                             {/* Become Seller (Prominent on small screens too) */}
@@ -345,12 +376,17 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
                                 <button 
                                     onClick={() => {
                                         if (!isAuthenticated) return navigate('/b2b/login');
-                                        navigate('/b2b/favorites');
+                                        navigate('/b2b/wishlist');
                                     }}
-                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors relative"
                                     title="Favorites"
                                 >
                                     <FiHeart size={22} />
+                                    {wishlistCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                                            {wishlistCount}
+                                        </span>
+                                    )}
                                 </button>
                                 <button 
                                     onClick={() => {

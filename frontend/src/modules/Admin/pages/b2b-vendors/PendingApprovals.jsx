@@ -233,9 +233,9 @@ const B2BVendorPendingApprovals = () => {
         const set = new Set();
         approvals.forEach((v) => {
             const bt = (v.businessType || '').trim();
-            if (bt && bt !== 'N/A') set.add(bt);
+            if (bt && bt !== 'N/A' && /[a-zA-Z0-9]/.test(bt)) set.add(bt);
         });
-        return ['All Types', ...Array.from(set).sort()];
+        return ['All Types', ...Array.from(set).filter(t => /[a-zA-Z0-9]/.test(t)).sort()];
     }, [approvals]);
 
     const filteredApprovals = useMemo(() => {

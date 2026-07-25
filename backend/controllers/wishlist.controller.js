@@ -8,7 +8,11 @@ import mongoose from 'mongoose';
  */
 export const getWishlist = async (req, res, next) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = req.user._id || req.user.id || req.user.adminId;
+    
+    if (!userId) {
+      return res.status(200).json({ success: true, data: [], count: 0 });
+    }
     
     // Find all wishlist items for this user and populate the product details
     const wishlistItems = await Wishlist.find({ userId })
@@ -40,7 +44,11 @@ export const getWishlist = async (req, res, next) => {
  */
 export const toggleWishlist = async (req, res, next) => {
   try {
-    const userId = req.user._id || req.user.id;
+    const userId = req.user._id || req.user.id || req.user.adminId;
+    
+    if (!userId) {
+      return res.status(200).json({ success: true, data: [], count: 0 });
+    }
     const { productId } = req.body;
 
     if (!productId) {

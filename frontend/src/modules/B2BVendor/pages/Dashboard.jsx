@@ -15,7 +15,8 @@ import {
     FiArrowUpRight,
     FiCreditCard,
     FiVideo,
-    FiBriefcase
+    FiBriefcase,
+    FiTrendingUp
 } from "react-icons/fi";
 import { useB2BVendorAuthStore } from "../store/b2bVendorAuthStore";
 import { useVendorSettings } from "../hooks/useVendorSettings";
@@ -152,6 +153,25 @@ const B2BVendorDashboard = () => {
         );
     }
 
+    const growthPoints = dashboardData?.growthData || [];
+    const maxRevenue = Math.max(...growthPoints.map(p => p.revenue), 1000);
+    const chartHeight = 150;
+    const chartWidth = 500;
+
+    const points = growthPoints.map((p, idx) => {
+        const x = (idx / Math.max(growthPoints.length - 1, 1)) * chartWidth;
+        const y = chartHeight - ((p.revenue / maxRevenue) * chartHeight);
+        return { x, y, label: p.date, revenue: p.revenue, orders: p.orders };
+    });
+
+    const pathD = points.length > 0 
+        ? `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')
+        : '';
+
+    const areaD = points.length > 0
+        ? `${pathD} L ${points[points.length - 1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z`
+        : '';
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -195,29 +215,6 @@ const B2BVendorDashboard = () => {
                         </div>
                     </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 xl:w-96">
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex sm:flex-col justify-between sm:justify-start items-center sm:items-start">
-                        <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0 sm:mb-1">Overall Status</p>
-                        <p className="text-sm font-black text-slate-800">Operational</p>
-                    </div>
-                    <button 
-                        onClick={() => navigate('/b2b-vendor/subscription')}
-                        className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex sm:flex-col justify-between sm:justify-start items-center sm:items-start text-left hover:bg-amber-100 transition-all group shadow-sm active:scale-95"
-                    >
-                        <p className="text-[9px] sm:text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-0 sm:mb-1">Nearest Expiry</p>
-                        <div className="flex flex-col">
-                            <p className="text-sm font-black text-amber-700">
-                                {dashboard.subscriptions.length > 0
-                                    ? new Date(Math.min(...dashboard.subscriptions.map(s => new Date(s.expiry)))).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                                    : 'No Active Plan'}
-                            </p>
-                            {dashboard.subscriptions.length === 0 && (
-                                <p className="text-[9px] font-black text-amber-500 uppercase mt-1 underline underline-offset-2">Buy Plan</p>
-                            )}
-                        </div>
-                    </button>
-                </div>
             </header>
 
             {/* ------------------------------------------
@@ -226,16 +223,16 @@ const B2BVendorDashboard = () => {
             {config.widgets.includes('stats') && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
                     {[
-                        { label: 'Total Call Inquiries', value: dashboard.overview.callClicks, icon: FiPhone, color: 'text-emerald-600', bg: 'bg-emerald-50', analyticsType: 'call' },
-                        { label: 'Total WhatsApp Clicks', value: dashboard.overview.whatsappClicks, icon: FiMessageSquare, color: 'text-purple-600', bg: 'bg-purple-50', analyticsType: 'whatsapp' },
-                        { label: 'Total Map Clicks', value: dashboard.overview.mapClicks, icon: FiMapPin, color: 'text-orange-600', bg: 'bg-orange-50', analyticsType: 'map' },
-                        { label: 'Wallet Balance', value: `₹${dashboard.walletBalance.toLocaleString('en-IN')}`, icon: FiCreditCard, color: 'text-blue-600', bg: 'bg-blue-50', action: () => navigate('/b2b-vendor/wallet') },
+                        { label: 'Wallet Balance', value: `₹${(dashboard.walletBalance || 0).toLocaleString('en-IN')}`, icon: FiCreditCard, color: 'text-blue-600', bg: 'bg-blue-50', action: () => navigate('/b2b-vendor/wallet') },
+                        { label: 'Total Products', value: dashboard.counts?.products?.total || 0, icon: FiPackage, color: 'text-emerald-600', bg: 'bg-emerald-50', action: () => navigate('/b2b-vendor/products/manage-products') },
+                        { label: 'Total Orders', value: dashboardData?.totalOrders || 0, icon: FiHash, color: 'text-purple-600', bg: 'bg-purple-50', action: () => navigate('/b2b-vendor/orders') },
+                        { label: 'Total Revenue', value: `₹${(dashboardData?.totalRevenue || 0).toLocaleString('en-IN')}`, icon: FiTrendingUp, color: 'text-orange-600', bg: 'bg-orange-50' },
                     ].map((stat, i) => (
                         <button
                             key={i}
                             type="button"
-                            onClick={() => stat.action ? stat.action() : (stat.analyticsType && navigate(`/b2b-vendor/analytics/clicks?type=${stat.analyticsType}`))}
-                            className={`bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-6 group hover:shadow-lg transition-all text-left ${stat.analyticsType || stat.action ? 'cursor-pointer' : 'cursor-default'}`}
+                            onClick={() => stat.action ? stat.action() : null}
+                            className={`bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-6 group hover:shadow-lg transition-all text-left ${stat.action ? 'cursor-pointer' : 'cursor-default'}`}
                         >
                             <div className={`w-14 h-14 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform`}>
                                 <stat.icon />
@@ -261,95 +258,179 @@ const B2BVendorDashboard = () => {
                             <div className="flex items-center justify-between mb-6 px-2">
                                 <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Breakdown</h2>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                {config.enableProductListing && (
-                                    <div onClick={() => navigate('/b2b-vendor/products')} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative group overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-slate-200">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="p-3 bg-blue-100 text-blue-600 rounded-xl"><FiPackage size={24} /></div>
-                                            <button className="text-slate-400 group-hover:text-slate-900 transition-colors"><FiArrowUpRight size={20} /></button>
-                                        </div>
-                                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Product Catalog</h3>
-                                        <div className="flex items-end justify-between">
-                                            <p className="text-4xl font-black text-slate-900">{dashboard.counts.products.total}</p>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-bold text-emerald-500 uppercase">{dashboard.counts.products.approved} Approved</p>
-                                                <p className="text-[10px] font-bold text-amber-500 uppercase">{dashboard.counts.products.pending} Pending</p>
-                                            </div>
-                                        </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                <div onClick={() => navigate('/b2b-vendor/products/manage-products')} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative group overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-slate-200">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="p-3 bg-blue-100 text-blue-600 rounded-xl"><FiPackage size={24} /></div>
+                                        <button className="text-slate-400 group-hover:text-slate-900 transition-colors"><FiArrowUpRight size={20} /></button>
                                     </div>
-                                )}
+                                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4">Standard Products</h3>
+                                    <p className="text-4xl font-black text-slate-900">{dashboardData?.counts?.standard?.total || 0}</p>
+                                </div>
 
-                                {config.enablePropertyListing && (
-                                    <div onClick={() => navigate('/b2b-vendor/properties')} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative group overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-slate-200">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="p-3 bg-purple-100 text-purple-600 rounded-xl"><FiHome size={24} /></div>
-                                            <button className="text-slate-400 group-hover:text-slate-900 transition-colors"><FiArrowUpRight size={20} /></button>
-                                        </div>
-                                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Commercial Portfolio</h3>
-                                        <div className="flex items-end justify-between">
-                                            <p className="text-4xl font-black text-slate-900">{dashboard.counts.properties.total}</p>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-bold text-emerald-500 uppercase">{dashboard.counts.properties.approved} Active</p>
-                                                <p className="text-[10px] font-bold text-amber-500 uppercase">{dashboard.counts.properties.pending} Review</p>
-                                            </div>
-                                        </div>
+                                <div onClick={() => navigate('/b2b-vendor/grocery-products/manage-grocery')} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative group overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-slate-200">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl"><FiPackage size={24} /></div>
+                                        <button className="text-slate-400 group-hover:text-slate-900 transition-colors"><FiArrowUpRight size={20} /></button>
                                     </div>
-                                )}
+                                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4">Grocery Products</h3>
+                                    <p className="text-4xl font-black text-slate-900">{dashboardData?.counts?.grocery?.total || 0}</p>
+                                </div>
 
-                                {config.enableLotSlotListing && (
-                                    <div onClick={() => navigate('/b2b-vendor/lotslot')} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative group overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-slate-200">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="p-3 bg-amber-100 text-amber-600 rounded-xl"><FiHash size={24} /></div>
-                                            <button className="text-slate-400 group-hover:text-slate-900 transition-colors">
-                                                <FiArrowUpRight size={20} />
-                                            </button>
-                                        </div>
-                                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Lots / Slots</h3>
-                                        <div className="flex items-end justify-between">
-                                            <p className="text-4xl font-black text-slate-900">{dashboard.counts.lotSlot.total}</p>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-bold text-emerald-500 uppercase">{dashboard.counts.lotSlot.approved} Active</p>
-                                            </div>
-                                        </div>
+                                <div onClick={() => navigate('/b2b-vendor/products/manage-products')} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative group overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-slate-200">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="p-3 bg-purple-100 text-purple-600 rounded-xl"><FiPackage size={24} /></div>
+                                        <button className="text-slate-400 group-hover:text-slate-900 transition-colors"><FiArrowUpRight size={20} /></button>
                                     </div>
-                                )}
-
-                                {config.enableReels && (
-                                    <div onClick={() => navigate('/b2b-vendor/reels')} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative group overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-slate-200">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="p-3 bg-rose-100 text-rose-600 rounded-xl"><FiVideo size={24} /></div>
-                                            <button className="text-slate-400 group-hover:text-slate-900 transition-colors"><FiArrowUpRight size={20} /></button>
-                                        </div>
-                                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Reels & Media</h3>
-                                        <div className="flex items-end justify-between">
-                                            <p className="text-4xl font-black text-slate-900">{dashboard.counts.reels.total}</p>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-bold text-emerald-500 uppercase">{dashboard.counts.reels.approved} Approved</p>
-                                                <p className="text-[10px] font-bold text-amber-500 uppercase">{dashboard.counts.reels.pending} Review</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {config.enableJobListing && (
-                                    <div onClick={() => navigate('/b2b-vendor/jobs')} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative group overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-slate-200">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="p-3 bg-teal-100 text-teal-600 rounded-xl"><FiBriefcase size={24} /></div>
-                                            <button className="text-slate-400 group-hover:text-slate-900 transition-colors"><FiArrowUpRight size={20} /></button>
-                                        </div>
-                                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Job Postings</h3>
-                                        <div className="flex items-end justify-between">
-                                            <p className="text-4xl font-black text-slate-900">{dashboard.counts.jobs.total}</p>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-bold text-emerald-500 uppercase">{dashboard.counts.jobs.approved} Active</p>
-                                                <p className="text-[10px] font-bold text-amber-500 uppercase">{dashboard.counts.jobs.pending} Hidden</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4">Fashion Products</h3>
+                                    <p className="text-4xl font-black text-slate-900">{dashboardData?.counts?.fashion?.total || 0}</p>
+                                </div>
                             </div>
                         </div>
                     )}
+
+                    {/* ------------------------------------------
+                        BUSINESS GROWTH CHART
+                    ------------------------------------------ */}
+                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Business Growth</h2>
+                                <p className="text-xl font-black text-slate-800 mt-1">Order Revenue (Last 7 Days)</p>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-xs font-black text-slate-400 uppercase tracking-wider bg-slate-50 border border-slate-100 px-3 py-1 rounded-xl">7 Days</span>
+                            </div>
+                        </div>
+                        
+                        {growthPoints.length > 0 ? (
+                            <div className="relative pt-4">
+                                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-48 overflow-visible">
+                                    <defs>
+                                        <linearGradient id="growthGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.15" />
+                                            <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.0" />
+                                        </linearGradient>
+                                    </defs>
+                                    
+                                    {/* Horizontal grid lines */}
+                                    {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+                                        const y = ratio * chartHeight;
+                                        return (
+                                            <line 
+                                                key={idx} 
+                                                x1="0" 
+                                                y1={y} 
+                                                x2={chartWidth} 
+                                                y2={y} 
+                                                stroke="#f1f5f9" 
+                                                strokeWidth="1" 
+                                                strokeDasharray="4 4"
+                                            />
+                                        );
+                                    })}
+                                    
+                                    {/* Area fill */}
+                                    <path d={areaD} fill="url(#growthGrad)" />
+                                    
+                                    {/* Stroke path */}
+                                    <path d={pathD} fill="none" stroke="#4f46e5" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                                    
+                                    {/* Data points */}
+                                    {points.map((p, idx) => (
+                                        <g key={idx} className="group/point cursor-pointer">
+                                            <circle 
+                                                cx={p.x} 
+                                                cy={p.y} 
+                                                r="4" 
+                                                fill="#ffffff" 
+                                                stroke="#4f46e5" 
+                                                strokeWidth="3" 
+                                                className="transition-all duration-200 group-hover/point:r-6"
+                                            />
+                                            {/* Tooltip on hover */}
+                                            <title>{p.label}: ₹{p.revenue.toLocaleString('en-IN')} ({p.orders} Orders)</title>
+                                        </g>
+                                    ))}
+                                </svg>
+                                
+                                {/* X Axis Labels */}
+                                <div className="flex justify-between mt-3 px-1">
+                                    {points.map((p, idx) => (
+                                        <span key={idx} className="text-[9px] font-black text-slate-400 uppercase tracking-tight">{p.label}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="py-12 text-center text-slate-400 uppercase text-xs font-bold">
+                                No growth data available
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ------------------------------------------
+                        NEW ORDERS TABLE
+                    ------------------------------------------ */}
+                    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Activity</h2>
+                                <p className="text-xl font-black text-slate-800 mt-1">New Orders</p>
+                            </div>
+                            <button 
+                                onClick={() => navigate('/b2b-vendor/orders')}
+                                className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors"
+                            >
+                                View All Orders
+                            </button>
+                        </div>
+                        
+                        {dashboardData?.recentOrders?.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                                            <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Order ID</th>
+                                            <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Customer</th>
+                                            <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Date</th>
+                                            <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Amount</th>
+                                            <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {dashboardData.recentOrders.map((order) => (
+                                            <tr key={order._id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="py-4 px-6 text-xs font-black text-slate-900 uppercase">#{order._id?.slice(-6)}</td>
+                                                <td className="py-4 px-6">
+                                                    <p className="text-xs font-bold text-slate-800">{order.user?.name || 'Guest User'}</p>
+                                                    <p className="text-[9px] font-bold text-slate-400 mt-0.5">{order.user?.phone}</p>
+                                                </td>
+                                                <td className="py-4 px-6 text-xs font-medium text-slate-500">
+                                                    {new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                                </td>
+                                                <td className="py-4 px-6 text-xs font-black text-slate-800">₹{(order.totalAmount || 0).toLocaleString('en-IN')}</td>
+                                                <td className="py-4 px-6">
+                                                    <span className={`inline-block px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
+                                                        order.status === 'Completed' || order.status === 'delivered'
+                                                            ? 'bg-emerald-50 text-emerald-600'
+                                                            : order.status === 'Pending' || order.status === 'pending'
+                                                            ? 'bg-amber-50 text-amber-600 font-extrabold'
+                                                            : 'bg-blue-50 text-blue-600'
+                                                    }`}>
+                                                        {order.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="py-12 text-center text-slate-400 uppercase text-xs font-bold">
+                                No new orders received yet
+                            </div>
+                        )}
+                    </div>
 
                     {/* ------------------------------------------
                         SECTION 4: CONFIG-BASED SUBSCRIPTION OVERVIEW
@@ -407,31 +488,6 @@ const B2BVendorDashboard = () => {
                     {/* ------------------------------------------
                         SECTION 6: ALERT & ACTION PANEL
                     ------------------------------------------ */}
-                    {config.widgets.includes('alerts') && (
-                        <div>
-                            <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6 px-2 border-l-4 border-primary-600 pl-4">Action Center</h2>
-                            {dashboard.alerts.length > 0 && (
-                                <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 space-y-4">
-                                    {dashboard.alerts.map((alert, idx) => (
-                                        <div key={alert.id || idx} className={`p-5 rounded-3xl border flex gap-4 ${alert.type === 'warning' ? 'bg-amber-50 border-amber-100' : 'bg-blue-50 border-blue-100'}`}>
-                                            <div className={`mt-1 h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${alert.type === 'warning' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
-                                                <FiAlertCircle size={16} />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-700 leading-relaxed">{alert.message}</p>
-                                                <button 
-                                                    onClick={() => alert.actionLink && navigate(alert.actionLink)}
-                                                    className={`mt-2 text-[10px] font-black text-slate-900 uppercase underline underline-offset-4 decoration-slate-300 ${alert.actionLink ? 'cursor-pointer' : 'cursor-default'}`}
-                                                >
-                                                    Take Action
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
 
                     {/* ------------------------------------------
                         SECTION 7: QUICK ACTIONS
@@ -440,100 +496,31 @@ const B2BVendorDashboard = () => {
                         <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-xl">
                             <h2 className="text-xs font-black text-primary-400 uppercase tracking-widest mb-6 ml-2">Quick Actions</h2>
                             <div className="grid grid-cols-2 gap-4">
-                                {config.enablePropertyListing ? (
-                                    <>
-                                        <button
-                                            onClick={() => navigate('/b2b-vendor/properties/add-commercial')}
-                                            className="p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all bg-slate-800 hover:bg-primary-600/20 hover:text-primary-400 border border-slate-700"
-                                        >
-                                            <FiPlus size={20} />
-                                            <span className="text-[10px] font-black uppercase tracking-tight">Add Property</span>
-                                        </button>
-                                        <button
-                                            onClick={() => navigate('/b2b-vendor/properties/add-flat')}
-                                            className="p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all bg-slate-800 hover:bg-primary-600/20 hover:text-primary-400 border border-slate-700"
-                                        >
-                                            <FiPlus size={20} />
-                                            <span className="text-[10px] font-black uppercase tracking-tight">Add Flat</span>
-                                        </button>
-                                        <button
-                                            onClick={() => navigate('/b2b-vendor/properties/add-villa')}
-                                            className="p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all bg-slate-800 hover:bg-primary-600/20 hover:text-primary-400 border border-slate-700"
-                                        >
-                                            <FiPlus size={20} />
-                                            <span className="text-[10px] font-black uppercase tracking-tight">Add Villa</span>
-                                        </button>
-                                        <button
-                                            onClick={() => navigate('/b2b-vendor/properties/add-plot')}
-                                            className="p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all bg-slate-800 hover:bg-primary-600/20 hover:text-primary-400 border border-slate-700"
-                                        >
-                                            <FiPlus size={20} />
-                                            <span className="text-[10px] font-black uppercase tracking-tight">Add Plot</span>
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={() => config.enableProductListing && navigate('/b2b-vendor/products/add-product')}
-                                            className={`p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all ${config.enableProductListing ? 'bg-slate-800 hover:bg-primary-600/20 hover:text-primary-400 border border-slate-700' : 'opacity-30 cursor-not-allowed bg-slate-800'}`}
-                                        >
-                                            <FiPlus size={20} />
-                                            <span className="text-[10px] font-black uppercase tracking-tight">Add Product</span>
-                                        </button>
-                                        <button
-                                            onClick={() => config.enableLotSlotListing && navigate('/b2b-vendor/lotslot/add-lotslot')}
-                                            className={`p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all ${config.enableLotSlotListing ? 'bg-slate-800 hover:bg-primary-600/20 hover:text-primary-400 border border-slate-700' : 'opacity-30 cursor-not-allowed bg-slate-800'}`}
-                                        >
-                                            <FiPlus size={20} />
-                                            <span className="text-[10px] font-black uppercase tracking-tight">Add Lot/Slot</span>
-                                        </button>
-                                    </>
-                                )}
+                                <button
+                                    onClick={() => navigate('/b2b-vendor/products/add-product')}
+                                    className="p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all w-full bg-slate-800 hover:bg-primary-600/20 hover:text-primary-400 border border-slate-700"
+                                >
+                                    <FiPlus size={20} />
+                                    <span className="text-[10px] font-black uppercase tracking-tight">Add Product</span>
+                                </button>
+                                <button
+                                    onClick={() => navigate('/b2b-vendor/reels')}
+                                    className="p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all w-full bg-slate-800 hover:bg-primary-600/20 hover:text-primary-400 border border-slate-700"
+                                >
+                                    <FiPlus size={20} />
+                                    <span className="text-[10px] font-black uppercase tracking-tight">Add Reel</span>
+                                </button>
+                                <button
+                                    onClick={() => navigate('/b2b-vendor/grocery-products/add-grocery')}
+                                    className="p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all w-full bg-slate-800 hover:bg-primary-600/20 hover:text-primary-400 border border-slate-700 xl:col-span-2"
+                                >
+                                    <FiPlus size={20} />
+                                    <span className="text-[10px] font-black uppercase tracking-tight">Add Grocery</span>
+                                </button>
                             </div>
                         </div>
                     )}
 
-                    {/* ------------------------------------------
-                        SECTION 5: BANNER & PROMOTION (CONDITIONAL)
-                    ------------------------------------------ */}
-                    {config.widgets.includes('banner_promo') && (
-                        config.enableBanner ? (
-                            <div className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-200">
-                                <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 ml-2">Active Promotion</h2>
-                                <div className="space-y-6">
-                                    {dashboard.banners.length > 0 ? dashboard.banners.map((banner, i) => (
-                                        <div key={i} className="flex gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                                            <div className="w-16 h-16 bg-slate-900 rounded-xl flex items-center justify-center text-primary-400 flex-shrink-0">
-                                                <FiImage size={24} />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-sm font-black text-slate-800">{banner.title}</h4>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight mb-2">{banner.type} • Ads</p>
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600">
-                                                    <FiCalendar size={12} /> {new Date(banner.expiry).toLocaleDateString('en-GB')}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )) : (
-                                        <div className="p-6 text-center bg-white rounded-2xl border border-dashed border-slate-200">
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase">No Active Banners</p>
-                                        </div>
-                                    )}
-                                    <button
-                                        onClick={() => navigate('/b2b-vendor/banner-booking')}
-                                        className="w-full py-4 bg-white text-slate-800 rounded-2xl border-2 border-slate-200 border-dashed hover:border-slate-800 hover:text-slate-900 transition-all font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2"
-                                    >
-                                        <FiPlus /> New Campaign
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="bg-slate-50 rounded-[2.5rem] p-10 border border-slate-200 border-dashed text-center">
-                                <FiImage className="text-slate-300 text-4xl mx-auto mb-4 opacity-50" />
-                                <p className="text-xs font-bold text-slate-400 uppercase leading-relaxed">Banner promotions are not allowed for your business type.</p>
-                            </div>
-                        )
-                    )}
                 </div>
             </div>
         </motion.div>

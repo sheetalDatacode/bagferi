@@ -6,6 +6,8 @@ import zohoBooksService from '../services/zohoBooks.service.js';
 import Vendor from '../models/Vendor.model.js';
 import VendorWalletTransaction from '../models/VendorWalletTransaction.model.js';
 
+import Order from '../models/Order.model.js';
+
 /**
  * @desc    Get vendor wallet balance and transaction history
  * @route   GET /api/vendor/wallet
@@ -16,12 +18,42 @@ export const getMyWallet = asyncHandler(async (req, res) => {
     const wallet = await vendorWalletService.getOrCreateWallet(vendorId);
     const transactions = await vendorWalletService.getVendorTransactions(vendorId);
 
+    // Fetch order history for revenue tracking
+    const orders = await Order.find({ vendor: vendorId }).sort({ createdAt: -1 });
+    
+    let codRevenue = 0;
+    let onlineRevenue = 0;
+    let pendingRevenue = 0;
+
+    orders.forEach(order => {
+        // We consider the 'remainingBalance' as the vendor's actual revenue portion 
+        // since the 200 advance goes to the Admin.
+        const vendorShare = order.remainingBalance || 0;
+
+        if (order.status === 'Completed') {
+            if (order.paymentStatus === 'Advance Paid' || order.paymentMethod === 'COD') {
+                codRevenue += vendorShare;
+            } else if (order.paymentStatus === 'Paid' || order.paymentMethod === 'Online') {
+                onlineRevenue += vendorShare;
+            }
+        } else if (order.status !== 'Cancelled') {
+            // Pending, Accepted, Dispatched
+            pendingRevenue += vendorShare;
+        }
+    });
+
     res.status(200).json({
         success: true,
         data: {
             balance: wallet.balance,
             pendingBalance: wallet.pendingBalance,
-            transactions
+            transactions,
+            revenue: {
+                codRevenue,
+                onlineRevenue,
+                pendingRevenue
+            },
+            orderHistory: orders
         }
     });
 });

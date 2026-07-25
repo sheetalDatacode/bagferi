@@ -7,7 +7,8 @@ import { asyncHandler } from '../middleware/errorHandler.middleware.js';
 // @route   GET /api/business-types
 // @access  Public
 export const getActiveBusinessTypes = asyncHandler(async (req, res) => {
-    const businessTypesRaw = await BusinessType.find({ isActive: true }).lean();
+    // Only return business types that contain at least one letter/number (excludes empty strings, spaces only, etc)
+    const businessTypesRaw = await BusinessType.find({ isActive: true, name: { $regex: /[a-zA-Z0-9]/ } }).lean();
 
     // Fetch settings for all these business types
     const settings = await BusinessTypeSettings.find({

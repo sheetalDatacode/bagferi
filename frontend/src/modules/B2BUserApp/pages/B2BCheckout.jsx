@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiMapPin, FiPlus, FiCheckCircle, FiShield } from 'react-icons/fi';
+import { FiMapPin, FiPlus, FiCheckCircle, FiShield, FiShoppingBag, FiMinus } from 'react-icons/fi';
 import { useCartStore } from '../../../shared/store/cartStore';
 import { useAuthStore } from '../../../shared/store/authStore';
 import B2BHeader from '../components/Layout/B2BHeader';
@@ -19,13 +19,14 @@ const loadRazorpay = () => {
 
 const B2BCheckout = () => {
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuthStore();
-    const { cart, loading, fetchCart, clearCart } = useCartStore();
+    const { isAuthenticated, user } = useAuthStore();
+    const { cart, loading, fetchCart, clearCart, updateQuantity } = useCartStore();
 
     const [addresses, setAddresses] = useState([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [isAddingAddress, setIsAddingAddress] = useState(false);
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+    const [advancePerOrder, setAdvancePerOrder] = useState(200);
 
     // Form State
     const [newAddress, setNewAddress] = useState({
@@ -61,6 +62,23 @@ const B2BCheckout = () => {
             console.error(err);
         }
     };
+
+    const fetchSettings = async () => {
+        try {
+            const res = await api.get('/public/b2b-settings');
+            if (res.success && res.data) {
+                if (res.data.advancePaymentAmount !== undefined) {
+                    setAdvancePerOrder(res.data.advancePaymentAmount);
+                }
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    useEffect(() => {
+        fetchSettings();
+    }, []);
 
     const handleAddAddress = async (e) => {
         e.preventDefault();
@@ -100,11 +118,16 @@ const B2BCheckout = () => {
     }, {});
     
     const numberOfOrders = Object.keys(groupedItems).length;
-    const advancePerOrder = 200;
     const totalAdvance = numberOfOrders * advancePerOrder;
 
     const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const remainingBalance = subtotal - totalAdvance > 0 ? subtotal - totalAdvance : 0;
+
+    const handleQuantityChange = async (productId, currentQty, change) => {
+        const newQty = currentQty + change;
+        if (newQty < 1) return;
+        await updateQuantity(productId, newQty);
+    };
 
     const handleCheckout = async () => {
         if (selectedIndex === null || selectedIndex >= addresses.length) {
@@ -114,7 +137,7 @@ const B2BCheckout = () => {
 
         const selectedAddress = addresses[selectedIndex];
         const shippingAddress = {
-            fullName: 'User',
+            fullName: user?.name || 'User',
             phone: selectedAddress.phone,
             addressLine1: selectedAddress.streetAddress,
             city: selectedAddress.city,
@@ -274,6 +297,62 @@ const B2BCheckout = () => {
                             </form>
                         )}
                     </div>
+
+                    {/* Order Items */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+                        <h2 className="text-lg font-black uppercase text-gray-900 mb-4 flex items-center gap-2">
+                            <FiShoppingBag className="text-primary-600" /> Order Items
+                        </h2>
+                        
+                        <div className="divide-y divide-gray-100">
+                            {cartItems.map((item) => {
+                                const prod = item.product || {};
+                                const images = prod.images || [];
+                                const hasImage = images.length > 0 || prod.image || prod.media?.length > 0;
+                                const imgUrl = images.length > 0 ? images[0] : (prod.image || prod.media?.[0]?.url);
+                                
+                                return (
+                                    <div key={prod._id || item._id} className="py-4 flex flex-row gap-4 first:pt-0 last:pb-0">
+                                        <div className="w-20 h-20 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50">
+                                            {hasImage ? (
+                                                <img src={imgUrl} alt={prod.name || prod.title} className="w-full h-full object-cover mix-blend-multiply" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                    <FiShoppingBag size={20} />
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="flex-1 min-w-0 flex flex-col">
+                                            <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{prod.name || prod.title}</h3>
+                                            <p className="text-xs text-gray-400 mt-1 uppercase font-bold tracking-wider">Sold by: {item.vendor?.storeName || item.vendor?.name || 'Vendor'}</p>
+                                            
+                                            <div className="mt-auto flex items-center justify-between">
+                                                {/* Quantity Selector */}
+                                                <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-lg p-0.5 scale-90 origin-left">
+                                                    <button 
+                                                        onClick={() => handleQuantityChange(prod._id || item._id, item.quantity, -1)}
+                                                        className="w-6 h-6 rounded bg-white hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 border border-gray-100 shadow-sm transition-colors disabled:opacity-50"
+                                                        disabled={item.quantity <= 1}
+                                                    >
+                                                        <FiMinus size={12} />
+                                                    </button>
+                                                    <span className="w-6 text-center text-xs font-black text-slate-800">{item.quantity}</span>
+                                                    <button 
+                                                        onClick={() => handleQuantityChange(prod._id || item._id, item.quantity, 1)}
+                                                        className="w-6 h-6 rounded bg-white hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 border border-gray-100 shadow-sm transition-colors"
+                                                    >
+                                                        <FiPlus size={12} />
+                                                    </button>
+                                                </div>
+                                                <span className="font-black text-gray-900 text-sm">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Right Column: Order Summary */}
@@ -302,7 +381,7 @@ const B2BCheckout = () => {
                                 <div className="flex justify-between items-end bg-orange-50 p-3 rounded-lg border border-orange-100">
                                     <div>
                                         <span className="text-[11px] font-black text-primary-600 uppercase tracking-widest block">Advance Payable Now</span>
-                                        <span className="text-[10px] text-gray-500 font-bold">₹200 × {numberOfOrders} Vendor(s)</span>
+                                        <span className="text-[10px] text-gray-500 font-bold">₹{advancePerOrder} × {numberOfOrders} Vendor(s)</span>
                                     </div>
                                     <span className="text-xl font-black text-primary-600 tracking-tight">₹{totalAdvance.toLocaleString('en-IN')}</span>
                                 </div>

@@ -14,6 +14,7 @@ import {
   FiCheck,
   FiMapPin,
   FiVideo,
+  FiUser,
 } from "react-icons/fi";
 import B2BHeader from "../components/Layout/B2BHeader";
 import B2BBottomNav from "../components/Layout/B2BBottomNav";
@@ -146,16 +147,16 @@ const ProductCatalog = () => {
     useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const mainCategoryDropdownRef = useRef(null);
-  const [isBusinessTypeDropdownOpen, setIsBusinessTypeDropdownOpen] =
-    useState(false);
-  const businessTypeDropdownRef = useRef(null);
+
+  const [isGenderDropdownOpen, setIsGenderDropdownOpen] = useState(false);
+  const genderDropdownRef = useRef(null);
   const [mobileExpandedBusinessType, setMobileExpandedBusinessType] =
     useState(null);
   const [showMobileSubcategoryCard, setShowMobileSubcategoryCard] = useState(false);
 
   // Lock scroll when any mobile overlay (downsheet) is open on mobile screens
   useScrollLock(
-    (isCityDropdownOpen || isMainCategoryDropdownOpen || isBusinessTypeDropdownOpen || isMobileFilterOpen) && 
+    (isCityDropdownOpen || isMainCategoryDropdownOpen || isMobileFilterOpen) && 
     window.innerWidth < 1024
   );
 
@@ -201,7 +202,6 @@ const ProductCatalog = () => {
     setSearchParams(newParams, { replace: true });
 
     if (openParam === "categories") {
-      setIsBusinessTypeDropdownOpen(false);
       setIsCityDropdownOpen(false);
       setIsMobileFilterOpen(false);
       setIsMainCategoryDropdownOpen(true);
@@ -210,7 +210,6 @@ const ProductCatalog = () => {
       setIsCityDropdownOpen(false);
       setIsMobileFilterOpen(false);
       setShowMobileSubcategoryCard(false);
-      setIsBusinessTypeDropdownOpen(true);
     }
   }, [searchParams, businessTypes?.length]);
 
@@ -330,7 +329,6 @@ const ProductCatalog = () => {
 
   const closeMobileOverlays = () => {
     setIsMainCategoryDropdownOpen(false);
-    setIsBusinessTypeDropdownOpen(false);
     setIsCityDropdownOpen(false);
     setIsMobileFilterOpen(false);
     setShowMobileSubcategoryCard(false);
@@ -346,7 +344,6 @@ const ProductCatalog = () => {
 
   const openOverlay = (name) => {
     setIsMainCategoryDropdownOpen(name === 'categories');
-    setIsBusinessTypeDropdownOpen(name === 'business');
     setIsCityDropdownOpen(name === 'city');
     setIsMobileFilterOpen(name === 'filters');
   };
@@ -366,20 +363,20 @@ const ProductCatalog = () => {
     }
   };
 
-  // Click outside handler for Business Type and Sort dropdowns
+  // Click outside handler for Sort dropdowns
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        businessTypeDropdownRef.current &&
-        !businessTypeDropdownRef.current.contains(event.target)
-      ) {
-        setIsBusinessTypeDropdownOpen(false);
-      }
       if (
         sortDropdownRef.current &&
         !sortDropdownRef.current.contains(event.target)
       ) {
         setIsSortDropdownOpen(false);
+      }
+      if (
+        genderDropdownRef.current &&
+        !genderDropdownRef.current.contains(event.target)
+      ) {
+        setIsGenderDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -389,271 +386,49 @@ const ProductCatalog = () => {
   const renderFilters = () => {
     return (
       <div className="space-y-6">
-        {/* Browse Categories Filter */}
-        {(!isBigTextilePlayer || selectedItemType === "lotslot") && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" ref={mainCategoryDropdownRef}>
-            <button
-              onClick={toggleMainCategory}
-              className="w-full bg-gray-50/50 px-5 py-4 border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <FiGrid className={selectedCategory !== "All" ? "text-primary-600" : "text-gray-400"} />
-                <h3 className="font-black text-xs uppercase tracking-wider text-gray-700">
-                  {selectedCategory === "All" ? "Browse Categories" : selectedCategory}
-                </h3>
-              </div>
-              <FiChevronDown className={`text-gray-400 transition-transform ${openFilters.mainCategory ? "rotate-180" : ""}`} />
-            </button>
-            <AnimatePresence>
-              {openFilters.mainCategory && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="p-3 border-b border-gray-50">
-                    <div className="relative">
-                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]" />
-                      <input
-                        type="text"
-                        placeholder="Search categories or varieties..."
-                        className="w-full pl-8 pr-4 py-2 bg-gray-50 border-none rounded-lg text-[10px] font-bold focus:ring-1 focus:ring-primary-500 outline-none"
-                        value={categorySearchQuery}
-                        onChange={(e) => setCategorySearchQuery(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="p-4 space-y-2 max-h-80 overflow-y-auto custom-scrollbar">
-                    <button
-                      onClick={() => {
-                        setSelectedCategory("All");
-                        setExpandedCategory(null);
-                        setSelectedSubcategory(null);
-                        setIsMainCategoryDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all ${selectedCategory === "All" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}
-                    >
-                      ALL CATEGORIES
-                    </button>
-                    {categories
-                      .filter(cat => {
-                        if (cat.name === "All") return false;
-                        const q = categorySearchQuery.toLowerCase();
-                        if (!q) return true;
-                        const matchCat = cat.name.toLowerCase().includes(q);
-                        const matchSub = (cat.subcategories || []).some(sub => 
-                          (typeof sub === "string" ? sub : sub?.name || "").toLowerCase().includes(q)
-                        );
-                        return matchCat || matchSub;
-                      })
-                      .map((cat) => (
-                        <button
-                          key={cat.id || cat.name}
-                          onClick={() => {
-                            handleCategoryClick(cat.name);
-                            setIsMainCategoryDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between group ${selectedCategory === cat.name ? "bg-primary-50 text-primary-600" : "text-gray-700 hover:bg-gray-50"}`}
-                        >
-                          <span>{cat.name.toUpperCase()}</span>
-                          {cat.subcategories?.length > 0 && (
-                            <span className="text-[9px] bg-gray-100 px-2 py-0.5 rounded-full text-gray-400">
-                              {cat.subcategories.length}
-                            </span>
-                          )}
-                        </button>
-                      ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Subcategory Filter */}
-        {(!isBigTextilePlayer || selectedItemType === "lotslot") && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <button
-              onClick={() => toggleFilter("subcategory")}
-              className="w-full bg-gray-50/50 px-5 py-4 border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors">
-              <h3 className="font-black text-xs uppercase tracking-wider text-gray-700">
-                Subcategory
-              </h3>
-              <div className="flex items-center gap-2">
-                {selectedSubcategory && (
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedSubcategory(null);
-                    }}
-                    className="text-[10px] font-bold text-primary-600 hover:text-primary-700 mr-2">
-                    RESET
-                  </span>
-                )}
-                <FiChevronDown
-                  className={`text-gray-400 transition-transform ${openFilters.subcategory ? "rotate-180" : ""}`}
-                />
-              </div>
-            </button>
-            <AnimatePresence>
-              {openFilters.subcategory && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden">
-                  <div className="p-4 border-b border-gray-50">
-                    <div className="relative">
-                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]" />
-                      <input
-                        type="text"
-                        placeholder="Search subcategory..."
-                        className="w-full pl-8 pr-4 py-2 bg-gray-50 border-none rounded-lg text-[10px] font-bold focus:ring-1 focus:ring-primary-500 outline-none"
-                        value={subcategorySearchQuery}
-                        onChange={(e) =>
-                          setSubcategorySearchQuery(e.target.value)
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="p-5 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                    {subcategoriesForFilter
-                      .filter((sub) =>
-                        sub
-                          .toLowerCase()
-                          .includes(subcategorySearchQuery.toLowerCase()),
-                      )
-                      .map((sub) => (
-                        <label
-                          key={sub}
-                          data-prevent-category-collapse
-                          className="flex items-center gap-3 cursor-pointer group">
-                          <div className="relative">
-                            <input
-                              type="radio"
-                              name="subcategory"
-                              className="peer sr-only"
-                              checked={selectedSubcategory === sub}
-                              onChange={() => {
-                                setSelectedSubcategory(sub);
-                                setSearchQuery("");
-                                if (isMobileFilterOpen)
-                                  setIsMobileFilterOpen(false);
-                              }}
-                            />
-                            <div className="w-4 h-4 border-2 border-gray-300 rounded-full peer-checked:border-primary-600 peer-checked:bg-primary-600 transition-all"></div>
-                          </div>
-                          <span
-                            className={`text-xs font-bold transition-colors ${selectedSubcategory === sub ? "text-primary-700" : "text-gray-500 group-hover:text-gray-700"}`}>
-                            {sub}
-                          </span>
-                        </label>
-                      ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Price Filter Block */}
+        {/* Gender Filter for Mobile */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <button
-            onClick={() => toggleFilter("price")}
-            className="w-full bg-gray-50/50 px-5 py-4 border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors">
-            <h3 className="font-black text-xs uppercase tracking-wider text-gray-700">
-              Price
-            </h3>
+            onClick={() => toggleFilter("gender")}
+            className="w-full bg-gray-50/50 px-5 py-4 border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <h3 className="font-black text-xs uppercase tracking-wider text-gray-700">Gender</h3>
             <div className="flex items-center gap-2">
-              {(selectedPriceRange ||
-                customPriceRange.min ||
-                customPriceRange.max) && (
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedPriceRange(null);
-                      setCustomPriceRange({ min: "", max: "" });
-                      setPriceInputs({ min: "", max: "" });
-                    }}
-                    className="text-[10px] font-bold text-primary-600 hover:text-primary-700 mr-2">
-                    RESET
-                  </span>
-                )}
+              {selectedGender !== "All" && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedGender("All");
+                  }}
+                  className="text-[10px] font-bold text-primary-600 hover:text-primary-700 mr-2"
+                >
+                  RESET
+                </span>
+              )}
               <FiChevronDown
-                className={`text-gray-400 transition-transform ${openFilters.price ? "rotate-180" : ""}`}
+                className={`text-gray-400 transition-transform ${openFilters["gender"] ? "rotate-180" : ""}`}
               />
             </div>
           </button>
           <AnimatePresence>
-            {openFilters.price && (
+            {openFilters["gender"] && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden p-5 space-y-3">
-                {[
-                  { label: "Below ₹100", min: 0, max: 100 },
-                  { label: "₹101 - ₹200", min: 101, max: 200 },
-                  { label: "₹201 - ₹500", min: 201, max: 500 },
-                  { label: "Above ₹501", min: 501, max: null },
-                ].map((range) => (
-                  <button
-                    key={range.label}
-                    onClick={() => {
-                      setSelectedPriceRange(range);
-                      setCustomPriceRange({ min: "", max: "" });
-                      setPriceInputs({ min: "", max: "" });
-                      if (isMobileFilterOpen) setIsMobileFilterOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all ${selectedPriceRange?.label === range.label
-                      ? "bg-primary-50 text-primary-600"
-                      : "text-gray-500 hover:bg-gray-50"
-                      }`}>
-                    {range.label}
-                  </button>
-                ))}
-
-                <div className="pt-4 mt-4 border-t border-gray-50">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <input
-                        type="number"
-                        placeholder="₹ min"
-                        value={priceInputs.min}
-                        onChange={(e) => {
-                          setPriceInputs((prev) => ({
-                            ...prev,
-                            min: e.target.value,
-                          }));
-                        }}
-                        className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold focus:ring-1 focus:ring-primary-500 outline-none"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <input
-                        type="number"
-                        placeholder="₹ max"
-                        value={priceInputs.max}
-                        onChange={(e) => {
-                          setPriceInputs((prev) => ({
-                            ...prev,
-                            max: e.target.value,
-                          }));
-                        }}
-                        className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold focus:ring-1 focus:ring-primary-500 outline-none"
-                      />
-                    </div>
+                className="overflow-hidden"
+              >
+                <div className="p-4 space-y-2">
+                  {["All", "Men", "Women", "Kids", "Unisex"].map((g) => (
                     <button
-                      onClick={() => {
-                        setCustomPriceRange(priceInputs);
-                        setSelectedPriceRange(null);
-                        if (isMobileFilterOpen) setIsMobileFilterOpen(false);
-                      }}
-                      className="p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-                      GO
+                      key={g}
+                      onClick={() => setSelectedGender(g)}
+                      className={`w-full text-left px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-between ${selectedGender === g ? "bg-primary-50 text-primary-600" : "bg-gray-50 text-gray-600"}`}
+                    >
+                      <span>{g === "All" ? "All Genders" : g}</span>
+                      {selectedGender === g && <FiCheck className="text-primary-600" />}
                     </button>
-                  </div>
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -1927,108 +1702,8 @@ const ProductCatalog = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, selectedSubcategory, expandedCategory]);
 
-  const headerBusinessTypeDropdown = (
-    <div className="relative" ref={businessTypeDropdownRef}>
-      <button
-        onClick={() =>
-          setIsBusinessTypeDropdownOpen(!isBusinessTypeDropdownOpen)
-        }
-        className={`px-2 xl:px-3 py-2 text-[9px] xl:text-[11px] font-black transition-all flex items-center gap-1.5 xl:gap-2 whitespace-nowrap uppercase tracking-widest border rounded-xl ${selectedBusinessType ? "bg-primary-50 text-primary-600 border-primary-200" : "text-gray-700 hover:text-primary-600 hover:bg-white border-gray-100"}`}>
-        <FiBriefcase size={16} />
-        {selectedBusinessType || "Business Type"}
-        <FiChevronDown
-          className={`transition-transform duration-200 ${isBusinessTypeDropdownOpen ? "rotate-180" : ""}`}
-        />
-      </button>
-      <AnimatePresence>
-        {isBusinessTypeDropdownOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
-            <div className="p-3 border-b border-gray-50 bg-gray-50/50">
-              <div className="relative">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="SEARCH BUSINESS TYPE..."
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-100 rounded-lg text-[10px] font-black uppercase tracking-wider focus:ring-1 focus:ring-primary-500 outline-none"
-                  value={businessTypeSearchQuery}
-                  onChange={(e) => setBusinessTypeSearchQuery(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            </div>
-            <div className="p-2 space-y-1 max-h-80 overflow-y-auto custom-scrollbar">
-              <button
-                onClick={() => {
-                  setSelectedBusinessType(null);
-                  setSelectedBusinessSubType(null);
-                  setIsBusinessTypeDropdownOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-between group ${!selectedBusinessType ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
-                <span>ALL BUSINESS TYPES</span>
-                {!selectedBusinessType && (
-                  <FiCheck className="text-primary-600" />
-                )}
-              </button>
-
-              {businessTypes
-                .filter((type) => {
-                  const name = (type.name || "").toUpperCase().trim();
-                  // Hide Developer/Property Broker from this catalog
-                  if (name === "DEVELOPER" || name === "PROPERTY BROKER")
-                    return false;
-
-                  // Hide Packing Material specifically for Lot/Slot section
-                  if (
-                    selectedItemType === "lotslot" &&
-                    name === "PACKING MATERIAL"
-                  )
-                    return false;
-
-                  // Apply search filter
-                  if (businessTypeSearchQuery.trim()) {
-                    return name.includes(businessTypeSearchQuery.toUpperCase());
-                  }
-
-                  return true;
-                })
-                .map((type) => (
-                  <div key={type._id}>
-                    <button
-                      onClick={() => {
-                        setSelectedBusinessType(type.name);
-                        setSelectedBusinessSubType(null);
-                        if (!type.subTypes || type.subTypes.length === 0) {
-                          setIsBusinessTypeDropdownOpen(false);
-                        }
-                      }}
-                      className={`w-full text-left px-3 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-between group ${selectedBusinessType === type.name ? "bg-primary-50 text-primary-600" : "text-gray-700 hover:bg-gray-50"}`}>
-                      <span>{type.name}</span>
-                      {selectedBusinessType === type.name && (
-                        <FiCheck className="text-primary-600" />
-                      )}
-                    </button>
-
-
-                  </div>
-                ))}
-
-              {businessTypes.filter((type) => {
-                const name = (type.name || "").toUpperCase().trim();
-                return name !== "DEVELOPER" && name !== "PROPERTY BROKER";
-              }).length === 0 && (
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center py-4">
-                    No types available
-                  </p>
-                )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+  const headerFilters = (
+    <div className="flex items-center gap-3">
     </div>
   );
 
@@ -2039,7 +1714,7 @@ const ProductCatalog = () => {
         onSearchChange={handleHeaderSearchChange}
         onSearchSubmit={handleHeaderSearchSubmit}
         hideSearch={false}
-        customNav={headerBusinessTypeDropdown}
+        customNav={headerFilters}
       />
 
       {/* Mobile: Search bar sticks under white header */}
@@ -2209,88 +1884,6 @@ const ProductCatalog = () => {
           </div>
         </div>
       )}
-      {isBusinessTypeDropdownOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-[70] bg-black/40"
-          onClick={closeMobileOverlays}>
-          <div
-            className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 max-h-[70vh] overflow-hidden shadow-2xl"
-            onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                Business Type
-              </span>
-              <button
-                onClick={closeMobileOverlays}
-                className="text-xs font-bold text-gray-400">
-                Close
-              </button>
-            </div>
-            <div className="max-h-[60vh] overflow-y-auto custom-scrollbar pr-1 space-y-2 pb-28">
-              <button
-                className={`w-full px-4 py-2 text-left text-[10px] font-black rounded-lg transition-colors ${!selectedBusinessType ? "bg-primary-50 text-primary-600" : "bg-gray-50 text-gray-700"}`}
-                onClick={() => {
-                  setSelectedBusinessType(null);
-                  setSelectedBusinessSubType(null);
-                  setIsBusinessTypeDropdownOpen(false);
-                  setMobileExpandedBusinessType(null);
-                }}>
-                ALL BUSINESS TYPES
-              </button>
-              {businessTypes
-                .filter((type) => {
-                  const name = (type.name || "").toUpperCase().trim();
-                  if (name === "DEVELOPER" || name === "PROPERTY BROKER")
-                    return false;
-                  if (
-                    selectedItemType === "lotslot" &&
-                    name === "PACKING MATERIAL"
-                  )
-                    return false;
-                  return true;
-                })
-                .map((type) => (
-                  <div
-                    key={type._id}
-                    className="bg-gray-50 rounded-xl border border-gray-100 overflow-hidden">
-                    <button
-                      className={`w-full flex items-center justify-between px-4 py-2 text-[10px] font-black uppercase tracking-wider ${mobileExpandedBusinessType === type.name ? "bg-primary-50 text-primary-600" : "text-gray-700"}`}
-                      onClick={() => {
-                        setSelectedBusinessType(type.name);
-                        setSelectedBusinessSubType(null);
-                        setMobileExpandedBusinessType((prev) =>
-                          prev === type.name ? null : type.name,
-                        );
-                      }}>
-                      <span>{type.name}</span>
-                      <FiChevronRight
-                        className={`text-gray-400 transition-transform ${mobileExpandedBusinessType === type.name ? "rotate-90" : ""}`}
-                      />
-                    </button>
-                    {mobileExpandedBusinessType === type.name &&
-                      type.subTypes &&
-                      type.subTypes.length > 0 && (
-                        <div className="px-3 pb-3 pt-1 grid grid-cols-2 gap-2">
-                          {type.subTypes.map((sub, idx) => (
-                            <button
-                              key={`${type._id}-${idx}`}
-                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border ${selectedBusinessSubType === sub ? "bg-primary-600 text-white border-primary-600" : "bg-white text-gray-700 border-gray-200"}`}
-                              onClick={() => {
-                                setSelectedBusinessSubType(sub);
-                                setIsBusinessTypeDropdownOpen(false);
-                                setMobileExpandedBusinessType(null);
-                              }}>
-                              {sub}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       <main className=" mx-auto px-4 py-4 md:py-8">
         {/* Dynamic Category Strip */}
@@ -2336,18 +1929,85 @@ const ProductCatalog = () => {
           </div>
         </div>
 
-        {/* Gender Filter Row */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {["All", "Men", "Women", "Kids"].map(gender => (
+        {/* Gender Dropdown */}
+        <div className="flex gap-2 mb-4 relative z-20">
+          <div className="relative" ref={genderDropdownRef}>
             <button
-              key={gender}
-              onClick={() => setSelectedGender(gender)}
-              className={`px-4 py-1.5 rounded-full text-[11px] font-bold transition-all border ${selectedGender === gender ? "bg-primary-600 text-white border-primary-600 shadow-sm" : "bg-white text-gray-600 border-gray-200 hover:border-primary-200 hover:bg-gray-50"}`}
-            >
-              {gender}
+              onClick={() => setIsGenderDropdownOpen(!isGenderDropdownOpen)}
+              className={`px-4 py-2 text-[11px] font-black transition-all flex items-center gap-2 whitespace-nowrap uppercase tracking-widest border rounded-xl ${selectedGender !== "All" ? "bg-primary-50 text-primary-600 border-primary-200 shadow-sm" : "bg-white text-gray-700 hover:text-primary-600 hover:bg-gray-50 border-gray-200 shadow-sm"}`}>
+              <FiUser size={16} />
+              {selectedGender === "All" ? "Gender" : selectedGender}
+              <FiChevronDown
+                className={`transition-transform duration-200 ${isGenderDropdownOpen ? "rotate-180" : ""}`}
+              />
             </button>
-          ))}
+            <AnimatePresence>
+              {isGenderDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
+                  <div className="p-2 space-y-1">
+                    {["All", "Men", "Women", "Kids", "Unisex"].map((g) => (
+                      <button
+                        key={g}
+                        onClick={() => {
+                          setSelectedGender(g);
+                          setIsGenderDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-between group ${selectedGender === g ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
+                        <span>{g === "All" ? "All Genders" : g}</span>
+                        {selectedGender === g && <FiCheck className="text-primary-600" />}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
+
+        {/* Subcategory Filter Row */}
+        {selectedCategory !== "All" && allCategories.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            <button
+              onClick={() => setSelectedSubcategory(null)}
+              className={`px-4 py-1.5 rounded-full text-[11px] font-bold transition-all border ${!selectedSubcategory ? "bg-primary-600 text-white border-primary-600 shadow-sm" : "bg-white text-gray-600 border-gray-200 hover:border-primary-200 hover:bg-gray-50"}`}
+            >
+              All
+            </button>
+            {(() => {
+              const rootCat = allCategories.find((c) => c.name === selectedCategory);
+              if (!rootCat || !rootCat.subcategories) return null;
+              
+              // We flatten both level 2 and level 3 subcategories so they are all clickable as pills
+              const allSubNames = [];
+              rootCat.subcategories.forEach(sub => {
+                const subName = typeof sub === 'string' ? sub : sub.name;
+                if (subName) allSubNames.push(subName);
+                
+                // If this subcategory has its own subcategories (level 3)
+                if (typeof sub === 'object' && sub.subcategories) {
+                   sub.subcategories.forEach(subSub => {
+                     const subSubName = typeof subSub === 'string' ? subSub : subSub.name;
+                     if (subSubName) allSubNames.push(subSubName);
+                   });
+                }
+              });
+              
+              return allSubNames.map(subName => (
+                <button
+                  key={subName}
+                  onClick={() => setSelectedSubcategory(subName)}
+                  className={`px-4 py-1.5 rounded-full text-[11px] font-bold transition-all border ${selectedSubcategory === subName ? "bg-primary-600 text-white border-primary-600 shadow-sm" : "bg-white text-gray-600 border-gray-200 hover:border-primary-200 hover:bg-gray-50"}`}
+                >
+                  {subName}
+                </button>
+              ));
+            })()}
+          </div>
+        )}
 
         {/* Search & Filter Bar max-w-7xl */}
         <div className="space-y-4 md:space-y-6 mb-2">
@@ -2458,14 +2118,9 @@ const ProductCatalog = () => {
           </AnimatePresence>
         </div>
 
-        <div className="mt-2 flex flex-col lg:flex-row lg:items-start gap-8">
-          {/* IndiaMart Style Sidebar */}
-          <aside className="hidden lg:block w-72 flex-shrink-0 space-y-6 lg:sticky lg:top-28 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto pr-1">
-            {renderFilters()}
-          </aside>
-
-          {/* Product Listing Area */}
-          <div className="flex-1 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-1">
+        <div className="mt-2">
+          {/* Product Listing Area - Full Width */}
+          <div className="w-full">
             {/* Active Filters Pill Bar */}
             {selectedCategory !== "All" && (
               <div className="flex flex-wrap items-center gap-2 mb-6">

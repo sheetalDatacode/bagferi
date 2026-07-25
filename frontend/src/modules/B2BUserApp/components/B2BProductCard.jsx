@@ -9,6 +9,7 @@ import { useAuthStore } from '../../../shared/store/authStore';
 import StarRating from '../../../shared/components/StarRating';
 import { getRatingSummary } from '../../../shared/services/ratingService';
 import { useWishlistStore } from '../../../shared/store/wishlistStore';
+import { useCartStore } from '../../../shared/store/cartStore';
 
 const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemType, requireAuthForActions = false, showSecureDeal = false }) => {
     const navigate = useNavigate();
@@ -16,6 +17,7 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, ratingCount: 0, type: 'product' });
     const { wishlistItems, toggleWishlist } = useWishlistStore();
+    const { addToCart } = useCartStore();
     const isWishlisted = wishlistItems.includes(product._id);
 
     React.useEffect(() => {
@@ -66,6 +68,14 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
     };
     const videoLink = product.videoLink || (product.formType === 'shop-listing' ? product.items?.[0]?.videoLink : null);
     const ytId = getYouTubeId(videoLink);
+
+    const getVideoPoster = (url) => {
+        if (!url) return '';
+        if (url.includes('cloudinary.com') && url.match(/\.(mp4|webm|mov)$/i)) {
+            return url.replace(/\.(mp4|webm|mov)$/i, '.jpg');
+        }
+        return '';
+    };
 
     const handleNextImage = (e) => {
         e.stopPropagation();
@@ -127,6 +137,38 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
         category: getCategoryName()
     });
 
+    const handleWishlist = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isAuthenticated) {
+            toast.error('Please login to use wishlist');
+            return navigate('/b2b/login');
+        }
+        toggleWishlist(product._id);
+    };
+
+    const handleAddToCart = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isAuthenticated) {
+            toast.error('Please login first');
+            return navigate('/b2b/login');
+        }
+        await addToCart(product._id, 1);
+        toast.success('Added to cart');
+    };
+
+    const handleBuyNow = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isAuthenticated) {
+            toast.error('Please login first');
+            return navigate('/b2b/login');
+        }
+        await addToCart(product._id, 1);
+        navigate('/b2b/checkout');
+    };
+
     return (
         <motion.div
             layout
@@ -176,6 +218,16 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
                             </div>
                         </div>
                     </div>
+                ) : videoLink ? (
+                    <video 
+                        src={videoLink}
+                        poster={getVideoPoster(videoLink)}
+                        className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                        muted
+                        playsInline
+                        autoPlay
+                        loop
+                    />
                 ) : (
                     <div className="w-full h-full bg-slate-50 flex items-center justify-center p-4">
                         <img
@@ -219,18 +271,26 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
                     </div>
                 )}
 
-                <div className="absolute top-2 left-0 pl-2 pr-3 py-1 bg-gradient-to-r from-orange-500 to-orange-400 text-[10px] font-bold text-white shadow-sm z-20 pointer-events-none rounded-r-full">
-                    Bagferi Trusted
-                </div>
+
+                {/* Wishlist Button */}
+                <button
+                    onClick={handleWishlist}
+                    className="absolute top-2 right-2 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-all z-20"
+                >
+                    <FiHeart className={`text-sm ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+                </button>
             </div>
 
             {/* Content Body - Ultra Compact */}
             <div className={`p-3 flex flex-col gap-1.5 ${viewMode === 'list' ? 'flex-1 justify-center' : 'flex-1'}`}>
-                <h3 className="text-[13px] text-gray-600 line-clamp-1 group-hover:text-primary-600 transition-colors leading-tight">
+                <h3 className="text-[13px] text-gray-900 font-bold line-clamp-1 group-hover:text-primary-600 transition-colors leading-tight">
                     {product.formType === 'shop-listing' && product.items?.length > 0
                         ? (product.items[0].itemName || product.items[0].name || 'Item')
                         : product.name}
                 </h3>
+                <p className="text-[10px] text-gray-500 lowercase truncate">
+                    {shopDisplayName}
+                </p>
                 
                 <div className="flex items-baseline gap-1 mt-0.5">
                     <span className="text-lg font-bold text-gray-900">
@@ -260,8 +320,24 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
                     </span>
                 </div>
 
-                <div className="mt-1 flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-2 py-0.5 w-fit">
+                <div className="mt-1 flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-2 py-0.5 w-fit mb-2">
                     <span className="text-[9px] font-medium text-gray-600">Free Delivery</span>
+                </div>
+
+                {/* Add to Cart / Buy Now Buttons */}
+                <div className="mt-auto flex gap-2 w-full pb-1">
+                    <button 
+                        onClick={handleAddToCart}
+                        className="flex-1 py-1.5 border border-primary-600 text-primary-600 rounded-lg text-xs font-bold transition-colors hover:bg-primary-50 flex items-center justify-center gap-1"
+                    >
+                        ADD
+                    </button>
+                    <button 
+                        onClick={handleBuyNow}
+                        className="flex-1 py-1.5 bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors hover:bg-primary-700"
+                    >
+                        BUY NOW
+                    </button>
                 </div>
             </div>
         </motion.div>

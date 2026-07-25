@@ -68,8 +68,8 @@ const B2BWallet = () => {
             <FiArrowLeft className="text-xl" />
           </button>
           <div>
-            <h1 className="lg:hidden text-2xl font-black text-gray-900">B2B Banner Payments</h1>
-            <p className="text-gray-500 text-sm font-medium">Manage and track all B2B Banner booking transactions</p>
+            <h1 className="lg:hidden text-2xl font-black text-gray-900">B2B Financial Ledger</h1>
+            <p className="text-gray-500 text-sm font-medium">Manage and track all B2B Banner and Advance payments</p>
           </div>
         </div>
       </div>
@@ -84,7 +84,7 @@ const B2BWallet = () => {
           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform duration-500">
             <FiCreditCard size={120} />
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Total B2B Banner Revenue</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Total B2B Ledger Revenue</p>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-black text-gray-900">
               {loading ? (
@@ -210,7 +210,9 @@ const B2BWallet = () => {
                             <FiArrowDownLeft className="text-lg" />
                           </div>
                           <div>
-                            <p className="font-black text-gray-900 text-sm">B2B Banner Booking Payment</p>
+                            <p className="font-black text-gray-900 text-sm">
+                              {txn.type === 'advance' ? 'B2B Advance Payment' : 'B2B Banner Booking Payment'}
+                            </p>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] font-mono font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded uppercase tracking-tighter">{txn.id}</span>
                               <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
@@ -243,8 +245,11 @@ const B2BWallet = () => {
                           <p className="text-lg font-black text-green-600">
                             +{formatPrice(txn.amount)}
                           </p>
-                          {txn.bookingId && (
+                          {txn.bookingId && txn.type !== 'advance' && (
                             <span className="text-[9px] font-bold text-blue-500 uppercase tracking-tighter">ID: {txn.bookingId}</span>
+                          )}
+                          {txn.type === 'advance' && (
+                            <span className="text-[9px] font-bold text-purple-500 uppercase tracking-tighter">Order ID: {txn.bookingId}</span>
                           )}
                         </div>
                       </td>

@@ -1,6 +1,7 @@
 import BannerSlot from '../models/BannerSlot.model.js';
 import BannerBooking from '../models/BannerBooking.model.js';
 import Vendor from '../models/Vendor.model.js';
+import PlatformLedger from '../models/PlatformLedger.model.js';
 
 import { uploadToCloudinary } from '../utils/cloudinary.util.js';
 import { asyncHandler } from '../middleware/errorHandler.middleware.js';
@@ -1186,9 +1187,16 @@ export const getBannerRevenueStats = asyncHandler(async (req, res) => {
         { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
+    // Fetch Advance Payments (Order Advances)
+    const advancePayments = await PlatformLedger.aggregate([
+        { $match: { entryType: 'credit', transactionType: 'PAYMENT_RECEIVED', 'metadata.type': 'order_advance' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+    const totalAdvances = advancePayments[0]?.total || 0;
+
     const subscriptionRevenue = uniqueVendors[1]?.[0]?.total || 0;
     const bannerRevenue = bannerRevenueResult[0]?.total || 0;
-    const totalRevenue = bannerRevenue + subscriptionRevenue;
+    const totalRevenue = bannerRevenue + subscriptionRevenue + totalAdvances;
     const currentRev = currentMonthRevenue[0]?.total || 0;
     const lastRev = lastMonthRevenue[0]?.total || 0;
 
@@ -1213,9 +1221,9 @@ export const getBannerRevenueStats = asyncHandler(async (req, res) => {
             activeBookingsLast30Days,
             uniqueVendorsCount: uniqueVendors.length,
             totalPaidBookings: await BannerBooking.countDocuments({ bannerType, paymentStatus: 'paid' }),
-            totalCollections: totalCollections[0]?.total || 0,
+            totalCollections: (totalCollections[0]?.total || 0) + totalAdvances,
             totalRefunds: totalRefunds[0]?.total || 0,
-            netCollections: (totalCollections[0]?.total || 0) - (totalRefunds[0]?.total || 0),
+            netCollections: (totalCollections[0]?.total || 0) + totalAdvances - (totalRefunds[0]?.total || 0),
         }
     });
 });
@@ -1235,7 +1243,7 @@ export const getBannerTransactions = asyncHandler(async (req, res) => {
         .limit(parseInt(limit));
 
     // Map to a more friendly format for the frontend wallet
-    const formattedTransactions = transactions.map(txn => {
+    let formattedTransactions = transactions.map(txn => {
         const vendorName = txn.vendorId?.storeName || txn.vendorId?.name || 'Unknown B2B Vendor';
         return {
             id: txn.referenceId || txn._id,
@@ -1246,9 +1254,37 @@ export const getBannerTransactions = asyncHandler(async (req, res) => {
             date: txn.createdAt,
             status: txn.paymentStatus === 'paid' ? 'success' : 'pending',
             method: txn.paymentMethod || 'Razorpay',
-            bannerType: txn.bannerType
+            bannerType: txn.bannerType,
+            type: 'banner'
         };
     });
+
+    // Also fetch advance payments from PlatformLedger
+    const advanceLedgers = await PlatformLedger.find({
+        entryType: 'credit',
+        transactionType: 'PAYMENT_RECEIVED',
+        'metadata.type': 'order_advance'
+    }).populate('vendorId', 'name storeName email').limit(parseInt(limit)).sort({ createdAt: -1 });
+
+    const formattedAdvances = advanceLedgers.map(adv => {
+        const vendorName = adv.vendorId?.storeName || adv.vendorId?.name || 'Unknown B2B Vendor';
+        return {
+            id: adv.referenceId || adv._id,
+            transactionId: `ADV-${adv._id}`,
+            bookingId: adv._id, // Used as key sometimes
+            vendor: vendorName,
+            amount: adv.amount,
+            date: adv.createdAt,
+            status: 'success',
+            method: adv.paymentMethod || 'Online',
+            bannerType: bannerType, // Keep same to fit the UI
+            type: 'advance'
+        };
+    });
+
+    formattedTransactions = [...formattedTransactions, ...formattedAdvances]
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, parseInt(limit));
 
     res.status(200).json({
         success: true,

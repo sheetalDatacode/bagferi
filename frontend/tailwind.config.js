@@ -9,17 +9,17 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a855f7', // Using a nice purple for Bagferi
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+          50: '#f0f4ff',
+          100: '#e5edff',
+          200: '#cddbfe',
+          300: '#a5bffd',
+          400: '#7799fc',
+          500: '#4a6df9',
+          600: '#0937c7', // Logo blue
+          700: '#1b3cb3',
+          800: '#1c3491',
+          900: '#1b2f73',
+          950: '#111e47',
         }
       }
     },

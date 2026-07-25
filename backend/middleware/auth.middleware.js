@@ -116,7 +116,10 @@ export const authenticate = async (req, res, next) => {
 
         if (!vendor.isActive) {
           console.warn(`[Auth Middleware] Vendor inactive: ${vendorId} (${vendor.email})`);
-          return res.status(401).json({
+          // Use 403 (Forbidden) not 401 (Unauthorized) — the token is valid,
+          // but the account is inactive. 401 would cause the frontend to
+          // clear the token and redirect to login, which is wrong here.
+          return res.status(403).json({
             success: false,
             message: 'Vendor account is inactive',
           });

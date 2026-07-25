@@ -69,31 +69,59 @@ export const getPublicProducts = async (filters) => {
 
         // Category
         if (categoryId) {
-            try {
-                // Try to resolve category ID to name, or use as string
-                const cat = await B2BCategory.findById(categoryId);
-                const catName = cat ? cat.name : categoryId;
-                
-                // Allow flexible whitespace around slashes in category name regex
-                const flexibleName = String(catName).trim()
-                    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                    .replace(/\//g, '\\s*/\\s*');
-                
-                query.category = { $regex: new RegExp(`^\\s*${flexibleName}\\s*$`, 'i') };
-            } catch (e) {
-                const flexibleId = String(categoryId).trim()
-                    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                    .replace(/\//g, '\\s*/\\s*');
-                query.category = { $regex: new RegExp(`^\\s*${flexibleId}\\s*$`, 'i') };
+            let catObjIds = [];
+            if (mongoose.Types.ObjectId.isValid(categoryId)) {
+                catObjIds.push(new mongoose.Types.ObjectId(categoryId));
+            }
+            
+            const allCats = await B2BCategory.find().select('_id name').lean();
+            const searchName = String(categoryId).toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            allCats.forEach(c => {
+                const dbName = (c.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (dbName === searchName && !catObjIds.some(id => id.equals(c._id))) {
+                    catObjIds.push(c._id);
+                }
+            });
+
+            if (catObjIds.length > 0) {
+                query.category = { $in: catObjIds };
+            } else {
+                query.category = null; // No match
             }
         }
 
         // Subcategory
         if (subcategoryId) {
-            const flexibleSub = String(subcategoryId).trim()
-                .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                .replace(/\//g, '\\s*/\\s*');
-            query.subcategory = { $regex: new RegExp(`^\\s*${flexibleSub}\\s*$`, 'i') };
+            let subCatObjIds = [];
+            if (mongoose.Types.ObjectId.isValid(subcategoryId)) {
+                subCatObjIds.push(new mongoose.Types.ObjectId(subcategoryId));
+            }
+            
+            const allCats = await B2BCategory.find().lean();
+            const searchSubName = String(subcategoryId).toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            allCats.forEach(c => {
+                const dbName = (c.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                let hasMatch = dbName === searchSubName;
+                
+                if (!hasMatch && c.subcategories) {
+                    hasMatch = c.subcategories.some(sub => {
+                        const subName = typeof sub === 'string' ? sub : (sub.name || '');
+                        return subName.toLowerCase().replace(/[^a-z0-9]/g, '') === searchSubName;
+                    });
+                }
+                
+                if (hasMatch && !subCatObjIds.some(id => id.equals(c._id))) {
+                    subCatObjIds.push(c._id);
+                }
+            });
+
+            if (subCatObjIds.length > 0) {
+                query.subcategory = { $in: subCatObjIds };
+            } else {
+                query.subcategory = null;
+            }
         }
 
         // Brand
@@ -218,7 +246,7 @@ export const getPublicProducts = async (filters) => {
             }
         }
 
-        if (vendorId) {
+        if (vendorId && mongoose.Types.ObjectId.isValid(vendorId)) {
             if (effectiveVendorIds) {
                 // Intersection
                 if (effectiveVendorIds.some(id => id.toString() === vendorId.toString())) {
@@ -436,15 +464,29 @@ export const getPublicProductById = async (id) => {
         .lean();
 
     let isLotSlot = false;
+
     if (!item) {
-        item = await null
-            .populate('vendorId', 'name storeName description logo phone address mfgOfWork')
-            .populate('shopUnitId')
-            .lean();
-        isLotSlot = true;
+        // Fallback to lotslots collection since there is no Mongoose model for it
+        item = await mongoose.connection.db.collection('lotslots').findOne({ _id: new mongoose.Types.ObjectId(id) });
+        if (item) {
+            isLotSlot = true;
+            // Need to mock populate since it's raw MongoDB document
+            if (item.vendorId) {
+                const vendor = await Vendor.findById(item.vendorId).select('name storeName description logo phone address mfgOfWork').lean();
+                if (vendor) item.vendorId = vendor;
+            }
+            if (item.shopUnitId) {
+                const shop = await ShopUnit.findById(item.shopUnitId).lean();
+                if (shop) item.shopUnitId = shop;
+            }
+        }
     }
 
-    if (!item) throw new Error('Product not found');
+    if (!item) {
+        const error = new Error('Product not found');
+        error.status = 404;
+        throw error;
+    }
 
     // Tag it - with .lean(), item is already a plain object
     let taggedItem = { ...item, itemType: isLotSlot ? 'lotslot' : 'product' };
@@ -498,7 +540,7 @@ export const getB2BSearchSuggestions = async (query, vendorFilterId) => {
             name: searchRegex,
             isActive: true
         }).limit(100).select('name image vendorId formType'),
-        [].select('name image vendorId'),
+        Promise.resolve([]),
         Vendor.find({
             storeName: searchRegex,
             status: 'approved',

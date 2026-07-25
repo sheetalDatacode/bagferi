@@ -4,8 +4,14 @@ const orderItemSchema = new mongoose.Schema(
   {
     product: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product',
       required: true,
+      refPath: 'items.productModel',
+    },
+    productModel: {
+      type: String,
+      required: true,
+      enum: ['Product', 'GroceryProduct'],
+      default: 'Product',
     },
     quantity: {
       type: Number,
@@ -26,6 +32,11 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+    },
+    module: {
+      type: String,
+      enum: ['fashion', 'grocery'],
+      default: 'fashion',
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -84,6 +95,10 @@ const orderSchema = new mongoose.Schema(
     },
     razorpayPaymentId: {
       type: String,
+    },
+    deliveryOtp: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true }

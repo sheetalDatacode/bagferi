@@ -1,12 +1,13 @@
 import Product from '../models/Product.model.js';
 import BannerBooking from '../models/BannerBooking.model.js';
-
 import Notification from '../models/Notification.model.js';
 import Vendor from '../models/Vendor.model.js';
 import ShopUnit from '../models/ShopUnit.model.js';
 import SecureDeal from '../models/SecureDeal.model.js';
 import VendorWallet from '../models/VendorWallet.model.js';
 import Reel from '../models/Reel.model.js';
+import Order from '../models/Order.model.js';
+
 /**
  * Get B2B Vendor Dashboard Data
  * GET /api/vendor/dashboard
@@ -17,9 +18,6 @@ export const getDashboardData = async (req, res, next) => {
 
         // 1. Get List Statistics (Counts) & Financial Data
         const [
-            totalProducts, approvedProducts,
-            totalProperties, approvedProperties,
-            totalLotSlots, approvedLotSlots,
             activeBanners,
             subscriptions,
             notifications,
@@ -28,14 +26,8 @@ export const getDashboardData = async (req, res, next) => {
             pendingSecureDeals,
             wallet,
             totalReels, approvedReels,
-            totalJobs, approvedJobs
+            vendorOrders
         ] = await Promise.all([
-            Product.countDocuments({ vendorId }),
-            Product.countDocuments({ vendorId, isActive: true }),
-            0,
-            0,
-            0,
-            0,
             BannerBooking.find({ vendorId, status: 'active' }).populate('slotId').lean(),
             [],
             Notification.find({ recipient: vendorId, recipientType: 'vendor' }).sort({ createdAt: -1 }).limit(5).lean(),
@@ -45,9 +37,72 @@ export const getDashboardData = async (req, res, next) => {
             VendorWallet.findOne({ vendorId }).select('balance').lean(),
             Reel.countDocuments({ uploaderId: vendorId, uploaderType: 'vendor' }),
             Reel.countDocuments({ uploaderId: vendorId, uploaderType: 'vendor', status: 'approved' }),
-            0,
-            0
+            Order.find({ vendor: vendorId })
+                .populate('items.product', 'name images image')
+                .populate('user', 'name phone')
+                .sort({ createdAt: -1 })
+                .lean()
         ]);
+
+        // 2. Fetch and classify products by category
+        const products = await Product.find({ vendorId }).populate('category', 'name').lean();
+        
+        let groceryCount = 0;
+        let fashionCount = 0;
+        let standardProductCount = 0;
+
+        products.forEach(p => {
+            const catName = p.category?.name || '';
+            const catNameLower = catName.toLowerCase();
+            if (catNameLower.includes('grocery')) {
+                groceryCount++;
+            } else if (
+                catNameLower.includes('fashion') ||
+                catNameLower.includes('wear') ||
+                catNameLower.includes('clothing') ||
+                catNameLower.includes('saree') ||
+                catNameLower.includes('shirt') ||
+                catNameLower.includes('pant') ||
+                catNameLower.includes('garment') ||
+                catNameLower.includes('footwear') ||
+                catNameLower.includes('shoe') ||
+                catNameLower.includes('dress')
+            ) {
+                fashionCount++;
+            } else {
+                standardProductCount++;
+            }
+        });
+
+        // 3. Growth Data (last 7 days order growth)
+        const last7Days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+            last7Days.push({
+                date: dateStr,
+                dateObj: d,
+                orders: 0,
+                revenue: 0
+            });
+        }
+
+        vendorOrders.forEach(order => {
+            const orderDate = new Date(order.createdAt);
+            last7Days.forEach(day => {
+                if (orderDate.toDateString() === day.dateObj.toDateString()) {
+                    day.orders++;
+                    day.revenue += order.totalAmount || 0;
+                }
+            });
+        });
+
+        const growthData = last7Days.map(d => ({
+            date: d.date,
+            orders: d.orders,
+            revenue: d.revenue
+        }));
 
         // Format Data for Frontend
         const dashboardData = {
@@ -61,19 +116,18 @@ export const getDashboardData = async (req, res, next) => {
             },
             counts: {
                 products: {
-                    total: totalProducts,
-                    approved: approvedProducts,
-                    pending: totalProducts - approvedProducts
+                    total: products.length,
+                    approved: products.filter(p => p.isActive).length,
+                    pending: products.filter(p => !p.isActive).length
                 },
-                properties: {
-                    total: totalProperties,
-                    approved: approvedProperties,
-                    pending: totalProperties - approvedProperties
+                grocery: {
+                    total: groceryCount
                 },
-                lotSlot: {
-                    total: totalLotSlots,
-                    approved: approvedLotSlots,
-                    pending: totalLotSlots - approvedLotSlots
+                fashion: {
+                    total: fashionCount
+                },
+                standard: {
+                    total: standardProductCount
                 },
                 secureDeals: {
                     pending: pendingSecureDeals
@@ -82,13 +136,12 @@ export const getDashboardData = async (req, res, next) => {
                     total: totalReels,
                     approved: approvedReels,
                     pending: totalReels - approvedReels
-                },
-                jobs: {
-                    total: totalJobs,
-                    approved: approvedJobs,
-                    pending: totalJobs - approvedJobs
                 }
             },
+            totalOrders: vendorOrders.length,
+            totalRevenue: vendorOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
+            recentOrders: vendorOrders.slice(0, 5),
+            growthData,
             subscriptions: subscriptions.map(sub => ({
                 type: sub.planId?.businessType || 'unknown',
                 name: sub.planId?.name || 'Active Plan',

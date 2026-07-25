@@ -366,6 +366,20 @@ const Profile = () => {
                                                     <span className="font-bold text-gray-500">Advance Paid</span>
                                                     <span className="font-black text-green-600">₹{order.advancePayment?.toLocaleString('en-IN') || 0}</span>
                                                 </div>
+
+                                                {order.status === 'Dispatched' && order.deliveryOtp && (
+                                                    <div className="mt-4 pt-3 border-t border-dashed border-gray-300">
+                                                        <div className="bg-blue-50 p-3 rounded-lg flex items-center justify-between border border-blue-100">
+                                                            <div>
+                                                                <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-0.5">Delivery OTP</p>
+                                                                <p className="text-xs text-blue-600 font-medium">Share this with delivery partner</p>
+                                                            </div>
+                                                            <div className="bg-white px-3 py-1.5 rounded shadow-sm border border-blue-200">
+                                                                <span className="text-lg font-black text-blue-700 tracking-[0.2em]">{order.deliveryOtp}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

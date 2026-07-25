@@ -7,7 +7,8 @@ import {
   getAllB2BPlans,
   getB2BSubscriptionDetails,
   getB2BAnalytics,
-  manualOverride
+  manualOverride,
+  getBillingHistory
 } from '../controllers/SubscriptionCtrl.js';
 import VendorSubscriptionCtrl from '../controllers/vendorSubscription.controller.js';
 
@@ -37,6 +38,9 @@ router.post('/verifyB2BPayment', authorize('vendor', 'admin'), (req, res, next) 
 
 // Get current vendor's B2B subscriptions
 router.get('/getB2BSubscription', authorize('vendor', 'admin'), getB2BSubscription);
+
+// Get vendor billing history
+router.get('/billing-history', authorize('vendor', 'admin'), getBillingHistory);
 
 // Get all B2B subscriptions (admin only)
 router.get('/getAllB2BSubscriptions', authorize('admin'), getAllB2BSubscriptions);

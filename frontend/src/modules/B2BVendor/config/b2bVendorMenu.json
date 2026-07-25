@@ -18,6 +18,14 @@
         ]
     },
     {
+        "title": "Grocery Products",
+        "route": "/b2b-vendor/grocery-products",
+        "children": [
+            "Manage Grocery",
+            "Add Grocery"
+        ]
+    },
+    {
         "title": "Shop Listing",
         "route": "/b2b-vendor/shop-listing",
         "children": []

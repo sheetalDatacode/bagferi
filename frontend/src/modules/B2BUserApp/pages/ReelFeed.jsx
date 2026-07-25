@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiHeart, FiVideo, FiVideoOff, FiShare2, FiEye, FiCopy, FiX, FiFilter, FiChevronDown, FiVolume2, FiVolumeX, FiFlag, FiPlay, FiPause, FiSkipBack, FiSkipForward } from "react-icons/fi";
+import { FiHeart, FiVideo, FiVideoOff, FiShare2, FiEye, FiCopy, FiX, FiFilter, FiChevronDown, FiVolume2, FiVolumeX, FiFlag, FiPlay, FiPause, FiSkipBack, FiSkipForward, FiShoppingBag } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import toast from "react-hot-toast";
 import api from "../../../shared/utils/api";
@@ -9,6 +9,7 @@ import B2BHeader from "../components/Layout/B2BHeader";
 import B2BBottomNav from "../components/Layout/B2BBottomNav";
 import { useAuthStore } from "../../../shared/store/authStore";
 import { useB2BCategoryStore } from "../../../shared/store/b2bCategoryStore";
+import { useCartStore } from "../../../shared/store/cartStore";
 import { getWhatsAppUserDetailsSuffix } from "../../../shared/utils/helpers";
 import { handleShare } from "../../../shared/utils/share";
 
@@ -17,6 +18,7 @@ export default function ReelFeed() {
   const { reelId: reelIdFromUrl } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuthStore();
+  const { addToCart } = useCartStore();
 
   const [reels, setReels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -933,7 +935,18 @@ export default function ReelFeed() {
                       {(currentReel || initialMetadata)?.uploaderName} • {(currentReel || initialMetadata)?.viewCount ?? 0} views
                     </p>
                   </div>
-                  {(currentReel || initialMetadata)?.vendorId && (
+                  {(currentReel || initialMetadata)?.productId ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCart((currentReel || initialMetadata).productId, 1);
+                      }}
+                      className="shrink-0 px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold hover:bg-primary-700 pointer-events-auto shadow-lg shadow-primary-500/30"
+                    >
+                      Add to Cart
+                    </button>
+                  ) : (currentReel || initialMetadata)?.vendorId ? (
                     <button
                       type="button"
                       onClick={() => navigate(`/b2b/vendor/${(currentReel || initialMetadata).vendorId}`, { state: { fromReel: true } })}
@@ -941,7 +954,7 @@ export default function ReelFeed() {
                     >
                       Visit Store
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -982,24 +995,14 @@ export default function ReelFeed() {
                   <FiFlag className="text-3xl" />
                   <span className="text-xs">Report</span>
                 </button>
-                {(currentReel || initialMetadata)?.vendorPhone && (
-                  <div className="flex flex-col items-center">
-                    <button
-                      onClick={handleWhatsApp}
-                      disabled={currentReel?.enquiryStatus && !currentReel.enquiryStatus.canAcceptEnquiries}
-                      className={`flex flex-col items-center transition-all ${currentReel?.enquiryStatus && !currentReel.enquiryStatus.canAcceptEnquiries
-                        ? "grayscale opacity-50 cursor-not-allowed pointer-events-none"
-                        : "text-[#25D366] hover:scale-110 active:scale-95 pointer-events-auto"
-                        }`}
-                    >
-                      <FaWhatsapp className="text-5xl shadow-glow-green" />
-                    </button>
-                    {currentReel?.enquiryStatus && !currentReel.enquiryStatus.canAcceptEnquiries && (
-                      <p className="text-[7px] text-white/40 font-bold uppercase tracking-tighter mt-1 text-center bg-black/40 px-1 rounded">
-                        Gated
-                      </p>
-                    )}
-                  </div>
+                {(currentReel || initialMetadata)?.productId && (
+                  <button
+                    onClick={() => navigate(`/b2b/product/${(currentReel || initialMetadata).productId}`)}
+                    className="flex flex-col items-center text-white hover:text-primary-500 transition-colors pointer-events-auto"
+                  >
+                    <FiShoppingBag className="text-3xl text-primary-500" />
+                    <span className="text-[10px] font-bold mt-1 text-center whitespace-nowrap">View Product</span>
+                  </button>
                 )}
               </div>
             </div>

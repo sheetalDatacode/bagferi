@@ -44,6 +44,7 @@ const AdminHeader = ({ onMenuClick }) => {
       if (pathname.includes('/manage')) return 'Manage B2B Vendors';
       if (pathname.includes('/analytics')) return 'B2B Analytics';
       if (pathname.includes('/wallet')) return 'B2B Wallet';
+      if (pathname.includes('/orders')) return 'Platform Orders';
       if (pathname.includes('/subscriptions')) return 'B2B Subscriptions';
       if (pathname.includes('/categories')) return 'B2B Categories';
       if (pathname.includes('/product-listings') || pathname.includes('/products')) return 'B2B Products';

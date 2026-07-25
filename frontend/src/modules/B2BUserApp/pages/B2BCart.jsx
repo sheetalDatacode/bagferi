@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiTrash2, FiMinus, FiPlus, FiArrowRight, FiShoppingBag, FiShield, FiTruck } from 'react-icons/fi';
 import { useCartStore } from '../../../shared/store/cartStore';
@@ -9,6 +9,7 @@ const B2BCart = () => {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuthStore();
     const { cart, loading, fetchCart, updateQuantity, removeFromCart } = useCartStore();
+    const [updatingItemId, setUpdatingItemId] = useState(null);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -21,11 +22,15 @@ const B2BCart = () => {
     const handleQuantityChange = async (productId, currentQty, change) => {
         const newQty = currentQty + change;
         if (newQty < 1) return;
+        setUpdatingItemId(productId);
         await updateQuantity(productId, newQty);
+        setUpdatingItemId(null);
     };
 
     const handleRemoveItem = async (productId) => {
+        setUpdatingItemId(productId);
         await removeFromCart(productId);
+        setUpdatingItemId(null);
     };
 
     const cartItems = cart?.items || [];
@@ -95,12 +100,12 @@ const B2BCart = () => {
                                     <div className="divide-y divide-gray-100">
                                         {group.items.map((item) => (
                                             <div key={item.product._id || item.product} className="p-4 md:p-6 flex flex-row gap-4 md:gap-6 group/item relative">
-                                                {loading && <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10" />}
+                                                {updatingItemId === (item.product._id || item.product) && <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10" />}
                                                 
                                                 {/* Product Image */}
-                                                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50 cursor-pointer" onClick={() => navigate(`/b2b/products/${item.product._id}`)}>
-                                                    {(item.product.images && item.product.images.length > 0) || item.product.image ? (
-                                                        <img src={item.product.images?.length > 0 ? item.product.images[0] : item.product.image} alt={item.product.name} className="w-full h-full object-cover mix-blend-multiply" />
+                                                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50 cursor-pointer" onClick={() => navigate(item.module === 'grocery' ? `/b2b/grocery/product/${item.product._id || item.product}` : `/b2b/product/${item.product._id || item.product}`)}>
+                                                    {(item.product.images && item.product.images.length > 0) || item.product.image || item.product.media ? (
+                                                        <img src={item.product.images?.length > 0 ? item.product.images[0] : (item.product.image || item.product.media?.[0]?.url)} alt={item.product.name || item.product.title} className="w-full h-full object-cover mix-blend-multiply" />
                                                     ) : (
                                                         <div className="w-full h-full flex items-center justify-center text-gray-300">
                                                             <FiShoppingBag size={24} />
@@ -113,9 +118,9 @@ const B2BCart = () => {
                                                     <div className="flex justify-between items-start gap-4 mb-2">
                                                         <h3 
                                                             className="text-sm md:text-base font-bold text-gray-900 leading-tight hover:text-primary-600 cursor-pointer line-clamp-2"
-                                                            onClick={() => navigate(`/b2b/products/${item.product._id}`)}
+                                                            onClick={() => navigate(item.module === 'grocery' ? `/b2b/grocery/product/${item.product._id || item.product}` : `/b2b/product/${item.product._id || item.product}`)}
                                                         >
-                                                            {item.product.name}
+                                                            {item.product.name || item.product.title}
                                                         </h3>
                                                         <button 
                                                             onClick={() => handleRemoveItem(item.product._id || item.product)}

@@ -7,7 +7,6 @@ import api from "../../../../shared/utils/api";
 
 const BusinessTypeConfiguration = () => {
     const [businessSettings, setBusinessSettings] = useState([]);
-    const [allPlans, setAllPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [editingSettings, setEditingSettings] = useState(null);
     const [isAddingNew, setIsAddingNew] = useState(false);
@@ -26,7 +25,6 @@ const BusinessTypeConfiguration = () => {
     useEffect(() => {
         if (!fetchedRef.current) {
             fetchSettings();
-            fetchPlans();
             fetchReferralSettings();
             fetchedRef.current = true;
         }
@@ -45,17 +43,6 @@ const BusinessTypeConfiguration = () => {
             document.body.classList.remove('no-scroll');
         };
     }, [editingSettings, isAddingNew]);
-
-    const fetchPlans = async () => {
-        try {
-            const response = await api.get('/admin/b2b-subscription-plans');
-            if (response.success) {
-                setAllPlans(response.data);
-            }
-        } catch (error) {
-            console.error('Error fetching plans:', error);
-        }
-    };
 
     const fetchSettings = async () => {
         try {
@@ -111,8 +98,6 @@ const BusinessTypeConfiguration = () => {
         setEditingSettings({
             ...settings,
             dashboardWidgets: Array.isArray(settings.dashboardWidgets) ? settings.dashboardWidgets : [],
-            allowedPlans: Array.isArray(settings.allowedPlans) ? settings.allowedPlans : [],
-            
             propertyForms: Array.isArray(settings.propertyForms) ? settings.propertyForms : []
         });
     };
@@ -163,8 +148,6 @@ const BusinessTypeConfiguration = () => {
                 features: editingSettings.features || {},
                 isActive: editingSettings.isActive,
                 dashboardWidgets: Array.isArray(editingSettings.dashboardWidgets) ? editingSettings.dashboardWidgets : [],
-                allowedPlans: Array.isArray(editingSettings.allowedPlans) ? editingSettings.allowedPlans : [],
-                
                 productFormType: editingSettings.productFormType,
                 enableShopListing: editingSettings.enableShopListing,
                 propertyForms: Array.isArray(editingSettings.propertyForms) ? editingSettings.propertyForms : [],
@@ -199,15 +182,6 @@ const BusinessTypeConfiguration = () => {
             : [...currentWidgets, widget];
 
         setEditingSettings({ ...editingSettings, dashboardWidgets: newWidgets });
-    };
-
-    const togglePlan = (planId) => {
-        const currentPlans = editingSettings.allowedPlans || [];
-        const newPlans = currentPlans.includes(planId)
-            ? currentPlans.filter(p => p !== planId)
-            : [...currentPlans, planId];
-
-        setEditingSettings({ ...editingSettings, allowedPlans: newPlans });
     };
 
     const togglePropertyForm = (formType) => {
@@ -665,52 +639,7 @@ const BusinessTypeConfiguration = () => {
                                 </div>
                             </div>
 
-                            {/* Allowed Subscriptions */}
-                            <div>
-                                <div className="flex items-center justify-between mb-4">
-                                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">Allowed Subscription Plans</label>
-                                    <button 
-                                        type="button"
-                                        onClick={() => {
-                                            const allIds = allPlans.map(p => p._id);
-                                            const current = editingSettings.allowedPlans || [];
-                                            const next = current.length === allIds.length ? [] : allIds;
-                                            setEditingSettings({ ...editingSettings, allowedPlans: next });
-                                        }}
-                                        className="text-[10px] font-black text-primary-600 uppercase tracking-widest hover:underline"
-                                    >
-                                        {(editingSettings.allowedPlans?.length === allPlans.length && allPlans.length > 0) ? 'Deselect All' : 'Select All'}
-                                    </button>
-                                </div>
-                                <div className="space-y-3">
-                                    {allPlans.length > 0 ? (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {allPlans.map(plan => (
-                                                <button
-                                                    key={plan._id}
-                                                    onClick={() => togglePlan(plan._id)}
-                                                    className={`px-5 py-4 rounded-2xl text-left transition-all border-2 ${editingSettings.allowedPlans?.includes(plan._id)
-                                                        ? 'bg-emerald-50 border-emerald-500 text-emerald-900'
-                                                        : 'bg-slate-50 border-slate-100 text-slate-500 opacity-60'
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <p className="font-black text-sm uppercase tracking-tight">{plan.name}</p>
-                                                            <p className="text-[10px] font-bold opacity-70">₹{plan.price} • {plan.duration} Mos</p>
-                                                        </div>
-                                                        {editingSettings.allowedPlans?.includes(plan._id) && <FiCheckCircle className="text-emerald-600" size={20} />}
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="p-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center">
-                                            <p className="text-xs font-bold text-slate-400 uppercase">No active plans found</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            {/* Allowed Subscriptions section removed */}
 
                             {/* Features Toggle */}
                             <div>

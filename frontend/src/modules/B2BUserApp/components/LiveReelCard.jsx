@@ -19,10 +19,12 @@ const LiveReelCard = ({ reel }) => {
     const thumbnailUrl = reel?.thumbnailUrl || reel?.thumbnail || (ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : 'https://placehold.co/300x500/f8fafc/94a3b8?text=Product+Video');
     const title = reel?.title || reel?.description || 'Featured Product Video';
     const discount = reel?.discount || 'Watch Now';
+    const productId = reel?.productId?._id || reel?.productId?.id || reel?.productId;
+    const targetPath = productId ? `/b2b/product/${productId}` : (reel?._id ? `/b2b/reels/${reel._id}` : '#');
 
     return (
         <Link 
-            to={reel?._id ? `/b2b/reels/${reel._id}` : '#'} 
+            to={targetPath} 
             className="block relative w-36 md:w-44 h-56 md:h-64 rounded-xl overflow-hidden shrink-0 group hover:shadow-lg transition-all"
         >
             {/* Background Image/Video Thumbnail */}

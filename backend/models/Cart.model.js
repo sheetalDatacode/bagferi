@@ -4,8 +4,14 @@ const cartItemSchema = new mongoose.Schema(
   {
     product: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product',
       required: true,
+      refPath: 'items.productModel',
+    },
+    productModel: {
+      type: String,
+      required: true,
+      enum: ['Product', 'GroceryProduct'],
+      default: 'Product',
     },
     vendor: {
       type: mongoose.Schema.Types.ObjectId,

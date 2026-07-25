@@ -72,13 +72,18 @@ const Wishlist = () => {
                             // Ensure product hasn't been deleted
                             if (!product) return null;
 
+                            const getYouTubeId = (url) => {
+                                if (!url) return null;
+                                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                                const match = url.match(regExp);
+                                return (match && match[2].length === 11) ? match[2] : null;
+                            };
+                            const videoLink = product.videoLink || product.videoUrl;
+                            const ytId = getYouTubeId(videoLink);
+                            const isDirectVideo = videoLink && (videoLink.match(/\.(mp4|webm|mov|ogg)$/i) || videoLink.includes('cloudinary.com'));
+                            
                             const pImages = product.media?.map(m => m.url) || product.images || [product.image];
                             const validImages = Array.isArray(pImages) ? pImages.filter(Boolean) : [];
-                            const pImg = validImages.length > 0 
-                                ? validImages[0] 
-                                : product.videoLink 
-                                    ? `https://img.youtube.com/vi/${product.videoLink.split('v=')[1]?.split('&')[0] || product.videoLink.split('/').pop()}/hqdefault.jpg`
-                                    : 'https://placehold.co/300x300/f8fafc/94a3b8?text=No+Image';
 
                             const price = product.pricing?.b2b?.price || product.price || 0;
                             const mrp = product.pricing?.b2b?.mrp || product.mrp || 0;
@@ -103,7 +108,15 @@ const Wishlist = () => {
                                     </button>
 
                                     <Link to={`/b2b/product/${product._id}`} className="block relative aspect-square bg-gray-50 rounded-lg overflow-hidden mb-3">
-                                        <img src={pImg} alt={product.name} className="w-full h-full object-cover mix-blend-multiply" />
+                                        {validImages.length > 0 ? (
+                                            <img src={validImages[0]} alt={product.name} className="w-full h-full object-cover mix-blend-multiply" />
+                                        ) : isDirectVideo ? (
+                                            <video src={videoLink} muted loop playsInline autoPlay className="w-full h-full object-cover" />
+                                        ) : ytId ? (
+                                            <img src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`} alt={product.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <img src='https://placehold.co/300x300/f8fafc/94a3b8?text=No+Image' alt={product.name} className="w-full h-full object-cover mix-blend-multiply" />
+                                        )}
                                         {discount > 0 && (
                                             <span className="absolute top-2 left-2 bg-green-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm">
                                                 {discount}% OFF
@@ -118,9 +131,9 @@ const Wishlist = () => {
 
                                     <div className="mt-auto">
                                         <div className="flex items-end gap-2 mb-3">
-                                            <span className="text-lg font-black text-slate-900">₹{formatPrice(price)}</span>
+                                            <span className="text-lg font-black text-slate-900">{formatPrice(price)}</span>
                                             {mrp > price && (
-                                                <span className="text-xs font-bold text-gray-400 line-through pb-0.5">₹{formatPrice(mrp)}</span>
+                                                <span className="text-xs font-bold text-gray-400 line-through pb-0.5">{formatPrice(mrp)}</span>
                                             )}
                                         </div>
                                         

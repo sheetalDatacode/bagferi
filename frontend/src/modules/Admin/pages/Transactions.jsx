@@ -167,9 +167,7 @@ const TransactionDetailModal = ({ txn, onClose }) => {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const TABS = [
   { key: 'all', label: 'All Transactions', icon: FiGrid },
-  { key: 'subscription', label: 'Subscriptions', icon: FiCreditCard },
   { key: 'banner', label: 'Banner Bookings', icon: FiImage },
-  { key: 'addon', label: 'Add-on Plans', icon: FiPackage },
   { key: 'recharge', label: 'Wallet Recharges', icon: FiTrendingUp },
 ];
 
@@ -240,12 +238,10 @@ const AdminTransactions = () => {
     <div className="space-y-8 p-4 lg:p-8 bg-gray-50/30 min-h-screen">
       {/* Revenue Summary Cards */}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
-          { label: 'Total Revenue', value: revenue.grand, icon: FiTrendingUp, color: 'emerald', sub: `${(revenue.subscription?.count || 0) + (revenue.banner?.count || 0) + (revenue.addon?.count || 0) + (revenue.wallet?.count || 0)} transactions` },
-          { label: 'Subscriptions', value: revenue.subscription?.total || 0, icon: FiCreditCard, color: 'indigo', sub: `${revenue.subscription?.count || 0} plans sold` },
+          { label: 'Total Revenue', value: revenue.grand, icon: FiTrendingUp, color: 'emerald', sub: `${(revenue.banner?.count || 0) + (revenue.wallet?.count || 0)} transactions` },
           { label: 'Banner Bookings', value: revenue.banner?.total || 0, icon: FiImage, color: 'amber', sub: `${revenue.banner?.count || 0} bookings` },
-          { label: 'Add-on Packs', value: revenue.addon?.total || 0, icon: FiPackage, color: 'rose', sub: `${revenue.addon?.count || 0} packs sold` },
           { label: 'Wallet Topups', value: revenue.wallet?.total || 0, icon: FiDollarSign, color: 'emerald', sub: `${revenue.wallet?.count || 0} recharges` },
         ].map((card, i) => {
           const Icon = card.icon;
@@ -282,10 +278,8 @@ const AdminTransactions = () => {
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${activeTab === tab.key ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-500'
                     }`}>
                     {tab.key === 'all' ? total :
-                      tab.key === 'subscription' ? (revenue.subscription?.count || 0) :
-                        tab.key === 'banner' ? (revenue.banner?.count || 0) :
-                          tab.key === 'addon' ? (revenue.addon?.count || 0) :
-                            (revenue.wallet?.count || 0)}
+                      tab.key === 'banner' ? (revenue.banner?.count || 0) :
+                        (revenue.wallet?.count || 0)}
                   </span>
                 </button>
               );

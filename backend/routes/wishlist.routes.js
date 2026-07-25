@@ -7,7 +7,7 @@ const router = express.Router();
 
 // Wishlist routes are protected and available to both users and vendors (buyers)
 router.use(authenticate);
-router.use(authorize('user', 'vendor'));
+router.use(authorize('user', 'vendor', 'admin', 'superadmin'));
 
 router.get('/', getWishlist);
 router.post('/toggle', toggleWishlist);

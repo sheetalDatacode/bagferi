@@ -77,6 +77,7 @@ const B2BCategories = () => {
                 image: sub.image,
                 imagePreview: sub.image,
                 file: null,
+                fields: sub.fields || [],
                 subSubCategories: subSubs,
                 originalSubSubIds: subSubs.map(ss => ss.id)
             };
@@ -111,7 +112,7 @@ const B2BCategories = () => {
             ...prev,
             subCategories: [
                 ...prev.subCategories,
-                { uiId: Math.random().toString(), id: null, name: '', image: null, imagePreview: null, file: null, subSubCategories: [] }
+                { uiId: Math.random().toString(), id: null, name: '', image: null, imagePreview: null, file: null, fields: [], subSubCategories: [] }
             ]
         }));
     };
@@ -129,6 +130,38 @@ const B2BCategories = () => {
             const updated = [...prev.subCategories];
             updated[index][key] = value;
             return { ...prev, subCategories: updated };
+        });
+    };
+
+    const addSubField = (subIndex) => {
+        setTreeData(prev => {
+            const subs = [...prev.subCategories];
+            subs[subIndex].fields = [...(subs[subIndex].fields || []), { label: '', type: 'text', options: [] }];
+            return { ...prev, subCategories: subs };
+        });
+    };
+
+    const updateSubField = (subIndex, fieldIndex, key, value) => {
+        setTreeData(prev => {
+            const subs = [...prev.subCategories];
+            const fields = [...(subs[subIndex].fields || [])];
+            if (key === 'options') {
+                fields[fieldIndex].options = value.split(',').map(v => v.trim()).filter(Boolean);
+            } else {
+                fields[fieldIndex][key] = value;
+            }
+            subs[subIndex].fields = fields;
+            return { ...prev, subCategories: subs };
+        });
+    };
+
+    const removeSubField = (subIndex, fieldIndex) => {
+        setTreeData(prev => {
+            const subs = [...prev.subCategories];
+            const fields = [...(subs[subIndex].fields || [])];
+            fields.splice(fieldIndex, 1);
+            subs[subIndex].fields = fields;
+            return { ...prev, subCategories: subs };
         });
     };
 
@@ -239,6 +272,9 @@ const B2BCategories = () => {
                 subData.append('name', sub.name.trim());
                 subData.append('level', 2);
                 subData.append('parent', rootId);
+                if (sub.fields && sub.fields.length > 0) {
+                    subData.append('fields', JSON.stringify(sub.fields));
+                }
                 if (sub.file) subData.append('image', sub.file);
 
                 if (!subId) {
@@ -269,6 +305,18 @@ const B2BCategories = () => {
                     } else {
                         await api.put(`/admin/b2b-categories/${ss.id}`, ssData);
                     }
+                }
+
+                // Auto-save any pending sub-subcategory that was typed but not "Added"
+                const pendingSubSubIndex = treeData.subCategories.indexOf(sub);
+                const pendingSubSub = subSubInput[pendingSubSubIndex];
+                if (pendingSubSub && pendingSubSub.name && pendingSubSub.name.trim()) {
+                    const ssData = new FormData();
+                    ssData.append('name', pendingSubSub.name.trim());
+                    ssData.append('level', 3);
+                    ssData.append('parent', subId);
+                    if (pendingSubSub.file) ssData.append('image', pendingSubSub.file);
+                    await api.post('/admin/b2b-categories', ssData);
                 }
             }
 
@@ -323,6 +371,11 @@ const B2BCategories = () => {
     };
 
     const rootCategories = categories; // The backend already returns only root categories
+    const [selectedCategory, setSelectedCategory] = useState(null);
+
+    const toggleCategory = (category) => {
+        setSelectedCategory(prev => prev?.id === category.id ? null : category);
+    };
 
     return (
         <div className="p-6 space-y-6">
@@ -364,41 +417,112 @@ const B2BCategories = () => {
                                 <p className="text-gray-500 mb-6 font-medium">Start by adding a root category.</p>
                             </div>
                         ) : (
-                            <div className="space-y-3">
-                                {rootCategories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(category => (
-                                    <div key={category.id} className="flex items-center justify-between p-4 bg-white border border-gray-200 shadow-sm rounded-xl hover:border-blue-300 transition-all">
-                                        <div className="flex items-center gap-4">
-                                            {category.image ? (
-                                                <img src={category.image} alt={category.name} className="w-12 h-12 rounded-lg object-cover bg-gray-100 border" />
-                                            ) : (
-                                                <div className="w-12 h-12 rounded-lg bg-gray-50 border flex items-center justify-center text-gray-400">
-                                                    <FiImage />
+                            <div className="space-y-2">
+                                {rootCategories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(category => {
+                                    const isExpanded = selectedCategory?.id === category.id;
+                                    const subs = category.subcategories || [];
+                                    return (
+                                        <div key={category.id}>
+                                            {/* Category Row */}
+                                            <div
+                                                onClick={() => toggleCategory(category)}
+                                                className={`flex items-center justify-between p-4 bg-white border shadow-sm rounded-xl cursor-pointer transition-all select-none ${
+                                                    isExpanded ? 'border-blue-400 ring-2 ring-blue-100 rounded-b-none' : 'border-gray-200 hover:border-blue-300'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    {category.image ? (
+                                                        <img src={category.image} alt={category.name} className="w-12 h-12 rounded-lg object-cover bg-gray-100 border" />
+                                                    ) : (
+                                                        <div className="w-12 h-12 rounded-lg bg-gray-50 border flex items-center justify-center text-gray-400">
+                                                            <FiImage />
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <h3 className="font-bold text-gray-800 text-lg">{category.name}</h3>
+                                                        <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md font-semibold">
+                                                            {subs.length} Subcategories
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); openEditor(category); }}
+                                                        className="px-4 py-2 bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 rounded-lg flex items-center gap-2"
+                                                    >
+                                                        <FiEdit2 className="text-sm" /> Manage
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteRoot(category); }}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                                    >
+                                                        <FiTrash2 className="text-sm" />
+                                                    </button>
+                                                    <span className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                                                        ▾
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Expanded Subcategory Panel */}
+                                            {isExpanded && (
+                                                <div className="border border-t-0 border-blue-400 rounded-b-xl bg-gray-50 p-5 ring-2 ring-blue-100 ring-t-0">
+                                                    {subs.length === 0 ? (
+                                                        <div className="text-center py-8">
+                                                            <p className="text-gray-400 font-medium">No subcategories yet. Click <strong>Manage</strong> to add some.</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                            {subs.map((sub, idx) => {
+                                                                const subSubs = sub.subcategories || [];
+                                                                return (
+                                                                    <div key={sub._id || idx} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                                                                        <div className="flex items-start justify-between mb-2">
+                                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                                {sub.image && (
+                                                                                    <img src={sub.image} alt={sub.name} className="w-8 h-8 rounded-lg object-cover border flex-shrink-0" />
+                                                                                )}
+                                                                                <h4 className="font-bold text-gray-800 text-sm leading-tight truncate">{sub.name}</h4>
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); openEditor(category); }}
+                                                                                className="ml-2 p-1 text-blue-400 hover:text-blue-600 flex-shrink-0"
+                                                                                title="Edit"
+                                                                            >
+                                                                                <FiEdit2 className="w-3.5 h-3.5" />
+                                                                            </button>
+                                                                        </div>
+                                                                        {subSubs.length > 0 && (
+                                                                            <>
+                                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Sub-subcategories</p>
+                                                                                <div className="flex flex-wrap gap-1">
+                                                                                    {subSubs.slice(0, 4).map((ss, i) => (
+                                                                                        <span key={i} className="text-[11px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded font-semibold">
+                                                                                            {ss.name}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                    {subSubs.length > 4 && (
+                                                                                        <span className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-semibold">
+                                                                                            +{subSubs.length - 4} more
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </>
+                                                                        )}
+                                                                        {subSubs.length === 0 && (
+                                                                            <p className="text-xs text-gray-400 mt-1">No sub-subcategories</p>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
-                                            <div>
-                                                <h3 className="font-bold text-gray-800 text-lg">{category.name}</h3>
-                                                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md font-semibold">
-                                                    {(category.subcategories || []).length} Subcategories
-                                                </span>
-                                            </div>
                                         </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => openEditor(category)}
-                                                className="px-4 py-2 bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 rounded-lg flex items-center gap-2"
-                                            >
-                                                <FiEdit2 className="text-sm" /> Manage
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteRoot(category)}
-                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                                            >
-                                                <FiTrash2 className="text-sm" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -519,6 +643,67 @@ const B2BCategories = () => {
                                                     <img src={sub.imagePreview} alt="preview" className="w-12 h-12 rounded-xl object-cover border border-gray-200 shadow-sm" />
                                                 )}
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Subcategory Fields Section */}
+                                    <div className="mb-6 bg-purple-50/50 rounded-xl p-4 border border-purple-100">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="text-sm font-bold text-purple-900 uppercase tracking-wider">Subcategory Fields</h4>
+                                            <button 
+                                                onClick={() => addSubField(index)}
+                                                className="px-3 py-1.5 bg-purple-600 text-white rounded-full text-xs font-bold hover:bg-purple-700 transition-colors flex items-center gap-1"
+                                            >
+                                                <FiPlus /> Field
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="space-y-3">
+                                            {(sub.fields || []).length === 0 && (
+                                                <p className="text-xs text-purple-400 italic">No fields defined for this subcategory. Add fields to allow vendors to specify details like Size, Color, Material, etc.</p>
+                                            )}
+                                            {(sub.fields || []).map((field, fIdx) => (
+                                                <div key={fIdx} className="flex flex-wrap md:flex-nowrap items-start gap-3 bg-white p-3 rounded-xl border border-purple-100 shadow-sm relative pr-10">
+                                                    <button 
+                                                        onClick={() => removeSubField(index, fIdx)}
+                                                        className="absolute right-3 top-3 text-red-400 hover:text-red-600"
+                                                    >
+                                                        <FiX />
+                                                    </button>
+                                                    <div className="flex-1 min-w-[200px]">
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Label (e.g. Size)" 
+                                                            value={field.label}
+                                                            onChange={(e) => updateSubField(index, fIdx, 'label', e.target.value)}
+                                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-purple-500 outline-none"
+                                                        />
+                                                    </div>
+                                                    <div className="w-[120px]">
+                                                        <select 
+                                                            value={field.type}
+                                                            onChange={(e) => updateSubField(index, fIdx, 'type', e.target.value)}
+                                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-purple-500 outline-none"
+                                                        >
+                                                            <option value="text">Text</option>
+                                                            <option value="number">Number</option>
+                                                            <option value="select">Select</option>
+                                                            <option value="multi-select">Multi-Select</option>
+                                                        </select>
+                                                    </div>
+                                                    {(field.type === 'select' || field.type === 'multi-select') && (
+                                                        <div className="flex-[2] min-w-[250px]">
+                                                            <input 
+                                                                type="text" 
+                                                                placeholder="Options (comma separated)" 
+                                                                value={(field.options || []).join(', ')}
+                                                                onChange={(e) => updateSubField(index, fIdx, 'options', e.target.value)}
+                                                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-purple-500 outline-none"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
 

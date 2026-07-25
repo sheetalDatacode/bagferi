@@ -35,6 +35,7 @@ import publicB2BLocationRoutes from "./routes/publicB2BLocation.routes.js";
 
 
 import adminB2BSettingsRoutes from "./routes/adminB2BSettings.routes.js";
+import publicB2BSettingsRoutes from "./routes/publicB2BSettings.routes.js";
 import feedbackRoutes from "./routes/Feedback.routes.js";
 
 import b2bVendorProductsRoutes from "./routes/b2bVendorProducts.routes.js";
@@ -83,6 +84,7 @@ import adminTransactionsRoutes from "./routes/adminTransactions.routes.js";
 import vendorWalletRoutes from "./routes/vendorWallet.routes.js";
 import zoneRoutes from "./routes/zone.routes.js";
 import staffAuthRoutes from "./routes/staffAuth.routes.js";
+import staffRoutes from "./routes/staff.routes.js";
 
 // Initialize Express app
 const app = express();
@@ -263,6 +265,9 @@ app.get("/api/test-db", (req, res) => {
 
 
 
+import groceryRoutes from "./routes/grocery.routes.js";
+import adminOrderRoutes from './routes/adminOrder.routes.js';
+
 // Routes
 app.use("/api/auth/vendor", vendorAuthRoutes);
 app.use("/api/auth/admin", adminAuthRoutes);
@@ -273,6 +278,8 @@ app.use("/api/order", orderRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/user", userAuthRoutes);
 app.use("/api/staff/auth", staffAuthRoutes);
+app.use("/api/grocery", groceryRoutes);
+
 
 app.use("/api/vendors", publicVendorRoutes);
 app.use("/api/public/b2b-categories", publicB2BCategoryRoutes);
@@ -290,7 +297,11 @@ app.use("/api/admin/media", adminMediaRoutes);
 app.use("/api/admin/b2b-vendors", adminB2BVendorManagementRoutes);
 app.use("/api/admin/b2b-categories", adminB2BCategoryManagementRoutes);
 app.use("/api/admin/b2b-products", adminB2BProductManagementRoutes);
+app.use("/api/admin/orders", adminOrderRoutes);
 app.use("/api/vendor/dashboard", vendorDashboardRoutes);
+
+app.use("/api/staff", staffRoutes);
+app.use("/api/staff-auth", staffAuthRoutes);
 
 app.use("/api/admin/b2b-settings", adminB2BSettingsRoutes);
 app.use("/api/vendor/analytics", vendorAnalyticsRoutes);
@@ -307,6 +318,7 @@ app.use("/api/reels", reelRoutes);
 app.use("/api/admin/reels", adminReelRoutes);
 app.use("/api/follow", vendorFollowRoutes);
 app.use("/api/vendor/wallet", vendorWalletRoutes);
+// Removed vendorSubscriptionRoutes mount
 
 app.use("/api/music", musicRoutes);
 app.use("/api/zones", zoneRoutes);
@@ -314,6 +326,7 @@ app.use("/api/business-types", businessTypeRoutes);
 app.use("/api/admin/business-settings", adminBusinessSettingsRoutes);
 app.use("/api/vendor/business-settings", adminBusinessSettingsRoutes);
 
+app.use("/api/public/b2b-settings", publicB2BSettingsRoutes);
 app.use("/api/public/hero-banners", heroBannerPublicRoutes);
 app.use("/api/vendor/hero-banners", heroBannerVendorRoutes);
 app.use("/api/admin/hero-banners", heroBannerAdminRoutes);

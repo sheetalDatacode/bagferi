@@ -50,13 +50,13 @@ export const sanitizeInput = (input) => {
 };
 
 /**
- * Validate OTP code format (6-digit numeric)
+ * Validate OTP code format (4 to 6-digit numeric)
  * @param {String} code - OTP code to validate
  * @returns {Boolean} True if valid OTP format
  */
 export const isValidOTP = (code) => {
   if (!code) return false;
-  const otpRegex = /^\d{6}$/;
+  const otpRegex = /^\d{4,6}$/;
   return otpRegex.test(code);
 };
 

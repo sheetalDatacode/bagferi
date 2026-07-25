@@ -26,8 +26,7 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
   }
 
   // ── Revenue Totals ─────────────────────────────────────────
-  const [subRev, bannerRev, addonRev, walletRev] = await Promise.all([
-    [],
+  const [bannerRev, walletRev] = await Promise.all([
     BannerBooking.aggregate([
       { $match: { 
         paymentStatus: 'paid',
@@ -35,7 +34,6 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
       } },
       { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
     ]),
-    [],
     VendorWalletTransaction.aggregate([
       { $match: { 
         referenceType: 'recharge',
@@ -51,44 +49,18 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
   ]);
 
   const revenueSummary = {
-    subscription: { total: subRev[0]?.total || 0, count: subRev[0]?.count || 0 },
+    subscription: { total: 0, count: 0 },
     banner:       { total: bannerRev[0]?.total || 0, count: bannerRev[0]?.count || 0 },
-    addon:        { total: addonRev[0]?.total || 0, count: addonRev[0]?.count || 0 },
+    addon:        { total: 0, count: 0 },
     wallet:       { total: walletRev[0]?.total || 0, count: walletRev[0]?.count || 0 },
-    grand:        (subRev[0]?.total || 0) + (bannerRev[0]?.total || 0) + (addonRev[0]?.total || 0) + (walletRev[0]?.total || 0)
+    grand:        (bannerRev[0]?.total || 0) + (walletRev[0]?.total || 0)
   };
 
   // ── Fetch records by type ──────────────────────────────────
   let transactions = [];
 
   const fetchSubs = async () => {
-    const query = { status: { $in: ['active', 'expired'] }, totalAmount: { $gt: 0 } };
-    if (vendorIds.length > 0 || businessType && businessType !== 'All Business Types') {
-      query.vendorId = { $in: vendorIds };
-    }
-    const docs = [];
-
-    return docs.map(s => ({
-      _id: s._id,
-      amount: s.totalAmount,
-      baseAmount: s.basePrice,
-      gstAmount: s.gstAmount,
-      unusedCredit: s.unusedCredit || 0,
-      type: 'subscription',
-      label: s.planId?.name || 'Subscription Plan',
-      method: s.paymentMethod || 'Razorpay',
-      date: s.lastPaymentDate || s.createdAt,
-      status: 'completed',
-      vendorName: s.vendorId?.storeName || s.vendorId?.name || 'Vendor',
-      vendorEmail: s.vendorId?.email,
-      vendorPhone: s.vendorId?.phone,
-      vendorGst: s.vendorId?.gstNumber,
-      razorpayOrderId: s.razorpayOrderId,
-      razorpayPaymentId: s.razorpayPaymentId,
-      zohoInvoiceId: s.zohoInvoiceId,
-      isUpgrade: s.unusedCredit > 0,
-      planDuration: s.planId?.duration
-    }));
+    return [];
   };
 
   const fetchBanners = async () => {
@@ -125,36 +97,7 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
   };
 
   const fetchAddons = async () => {
-    const query = { status: { $ne: 'failed' }, totalAmount: { $gt: 0 } };
-    if (vendorIds.length > 0 || businessType && businessType !== 'All Business Types') {
-      query.vendorId = { $in: vendorIds };
-    }
-    const docs = await []
-      .sort({ createdAt: -1 })
-      .populate('vendorId', 'name storeName email phone gstNumber')
-      .populate('addonPlanId', 'name price quantity featureType')
-      .lean();
-
-    return docs.map(a => ({
-      _id: a._id,
-      amount: a.totalAmount,
-      baseAmount: a.baseAmount || a.totalAmount,
-      gstAmount: a.gstAmount || 0,
-      type: 'addon',
-      label: a.addonPlanId?.name || `Add-on (${a.featureType})`,
-      featureType: a.featureType,
-      quantity: a.addonPlanId?.quantity,
-      method: a.paymentMethod || 'Razorpay',
-      date: a.purchaseDate || a.createdAt,
-      status: 'completed',
-      vendorName: a.vendorId?.storeName || a.vendorId?.name || 'Vendor',
-      vendorEmail: a.vendorId?.email,
-      vendorPhone: a.vendorId?.phone,
-      vendorGst: a.vendorId?.gstNumber,
-      razorpayOrderId: a.razorpayOrderId,
-      razorpayPaymentId: a.razorpayPaymentId,
-      zohoInvoiceId: a.zohoInvoiceId
-    }));
+    return [];
   };
 
   const fetchRecharges = async () => {

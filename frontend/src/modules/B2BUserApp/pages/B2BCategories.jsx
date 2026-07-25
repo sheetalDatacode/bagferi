@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FiSearch, FiHeart, FiShoppingCart, FiArrowLeft } from 'react-icons/fi';
 import { useB2BCategoryStore } from '../../../shared/store/b2bCategoryStore';
 import B2BBottomNav from '../components/Layout/B2BBottomNav';
@@ -7,6 +7,7 @@ import B2BBottomNav from '../components/Layout/B2BBottomNav';
 const B2BCategories = () => {
     const navigate = useNavigate();
     const { categories: rootCategories, initialize, isLoading } = useB2BCategoryStore();
+    const [searchParams] = useSearchParams();
     const [selectedRootId, setSelectedRootId] = useState(null);
     const [selectedSubcategory, setSelectedSubcategory] = useState(null);
 
@@ -20,9 +21,17 @@ const B2BCategories = () => {
 
     useEffect(() => {
         if (rootCategories && rootCategories.length > 0 && !selectedRootId) {
-            setSelectedRootId(rootCategories[0].id);
+            const catQuery = searchParams.get('category');
+            if (catQuery) {
+                const found = rootCategories.find(c => c.id === catQuery || c._id === catQuery || c.name.toLowerCase() === catQuery.toLowerCase());
+                if (found) {
+                    setSelectedRootId(found.id || found._id);
+                    return;
+                }
+            }
+            setSelectedRootId(rootCategories[0].id || rootCategories[0]._id);
         }
-    }, [rootCategories, selectedRootId]);
+    }, [rootCategories, selectedRootId, searchParams]);
 
     const selectedRoot = rootCategories?.find(cat => cat.id === selectedRootId) || null;
 

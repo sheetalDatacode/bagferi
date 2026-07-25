@@ -64,11 +64,9 @@ const Dashboard = () => {
               { label: 'Total Users', value: apiData.totalCustomers || 0, trend: '+15%', trendType: 'up', icon: 'FiUserPlus', color: 'indigo', link: '/admin/users' },
               { label: 'Total Vendors', value: apiData.totalVendors, trend: '+12%', trendType: 'up', icon: 'FiUsers', color: 'blue', link: '/admin/b2b-vendors/manage' },
               { label: 'Active Vendors', value: apiData.activeVendors, trend: '+5%', trendType: 'up', icon: 'FiUserCheck', color: 'green', link: '/admin/b2b-vendors/manage' },
-              { label: 'Total Products', value: apiData.totalProducts, trend: '+18%', trendType: 'up', icon: 'FiPackage', color: 'purple', link: '/admin/b2b-vendors/products' },
-              { label: 'Total Properties', value: apiData.totalProperties, trend: '+8%', trendType: 'up', icon: 'FiHome', color: 'orange', link: '/admin/b2b-vendors/properties' },
-              { label: 'Lot Slots', value: apiData.totalLotSlots || 0, trend: '+15%', trendType: 'up', icon: 'FiZap', color: 'indigo', link: '/admin/b2b-vendors/lot-slots' },
+              { label: 'Fashion Products', value: apiData.totalProducts, trend: '+18%', trendType: 'up', icon: 'FiPackage', color: 'purple', link: '/admin/b2b-vendors/products' },
+              { label: 'Grocery Products', value: apiData.totalGroceryProducts || 0, trend: '+10%', trendType: 'up', icon: 'FiPackage', color: 'amber', link: '/admin/b2b-vendors/products' },
               { label: 'Total Reels', value: apiData.totalReels || 0, trend: '+10%', trendType: 'up', icon: 'FiVideo', color: 'rose', link: '/admin/reels' },
-              { label: 'Total Jobs', value: apiData.totalJobs || 0, trend: '+12%', trendType: 'up', icon: 'FiBriefcase', color: 'teal', link: '/admin/b2b-vendors/job-listings' },
               { label: 'Live Banners', value: apiData.activeBanners, trend: '-3%', trendType: 'down', icon: 'FiImage', color: 'pink', link: '/admin/b2b-vendors/banner-bookings' }
             ],
             vendorDistribution: vendorDist || [],
@@ -82,6 +80,7 @@ const Dashboard = () => {
             },
             listingHealth: {
               products: { total: apiData.totalProducts, approved: apiData.activeProducts, pending: apiData.totalProducts - apiData.activeProducts, disabled: 0 },
+              grocery: { total: apiData.totalGroceryProducts || 0, approved: apiData.activeGroceryProducts || 0, pending: (apiData.totalGroceryProducts || 0) - (apiData.activeGroceryProducts || 0), disabled: 0 },
               properties: { total: apiData.totalProperties, approved: apiData.activeProperties, pending: apiData.totalProperties - apiData.activeProperties, disabled: 0 },
               lotSlots: { total: apiData.totalLotSlots || 0, approved: apiData.activeLotSlots || 0, pending: (apiData.totalLotSlots || 0) - (apiData.activeLotSlots || 0), disabled: 0 },
               reels: { total: apiData.totalReels || 0, approved: apiData.activeReels || 0, pending: (apiData.totalReels || 0) - (apiData.activeReels || 0), disabled: 0 }
@@ -164,46 +163,11 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Section 2: Vendor Distribution */}
-        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 lg:col-span-1">
-          <h3 className="text-lg font-black text-gray-900 mb-6">Vendor Distribution</h3>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={vendorDistribution}
-                  innerRadius={70}
-                  outerRadius={90}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {vendorDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-            <div className="grid grid-cols-2 gap-3 mt-4 max-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
-            {vendorDistribution.map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color || COLORS[i % COLORS.length] }}></div>
-                <span className="text-xs font-bold text-gray-600 truncate">{item.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 gap-6">
         {/* Section 3: Subscription Overview */}
-        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             { title: 'Products', data: subscriptions.product, icon: <FiPackage />, color: 'blue' },
-            { title: 'Properties', data: subscriptions.property, icon: <FiHome />, color: 'orange' },
-            { title: 'Lot Slots', data: subscriptions.lotSlot, icon: <FiZap />, color: 'purple' },
             { title: 'Banners', data: subscriptions.banner, icon: <FiImage />, color: 'pink' },
           ].map((sub, i) => (
             <div key={i} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col justify-between">
@@ -231,19 +195,19 @@ const Dashboard = () => {
         {/* Section 4: Listing Health */}
         <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 col-span-full">
           <h3 className="text-xl font-black text-gray-900 mb-8 border-b border-gray-50 pb-4">Listing Health Metrics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            {/* Products */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+            {/* Fashion Products */}
             <div className="space-y-6">
               <h4 
                 onClick={() => navigate('/admin/b2b-vendors/products')}
-                className="flex items-center gap-2 text-primary-600 font-black uppercase text-xs tracking-widest cursor-pointer hover:underline"
+                className="flex items-center gap-2 text-purple-600 font-black uppercase text-xs tracking-widest cursor-pointer hover:underline"
               >
-                <FiPackage /> Products
+                <FiPackage /> Fashion Products
               </h4>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-3xl bg-blue-50/50 border border-blue-100">
-                  <div className="text-blue-600 text-xs font-bold uppercase mb-1">Items</div>
-                  <div className="text-xl font-black text-blue-900">{listingHealth.products.total.toLocaleString()}</div>
+                <div className="p-4 rounded-3xl bg-purple-50/50 border border-purple-100">
+                  <div className="text-purple-600 text-xs font-bold uppercase mb-1">Items</div>
+                  <div className="text-xl font-black text-purple-900">{listingHealth.products.total.toLocaleString()}</div>
                 </div>
                 <div className="p-4 rounded-3xl bg-green-50/50 border border-green-100">
                   <div className="text-green-600 text-xs font-bold uppercase mb-1">Live</div>
@@ -251,44 +215,27 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-            {/* Properties */}
+
+            {/* Grocery Products */}
             <div className="space-y-6">
               <h4 
-                onClick={() => navigate('/admin/b2b-vendors/properties')}
-                className="flex items-center gap-2 text-indigo-600 font-black uppercase text-xs tracking-widest cursor-pointer hover:underline"
+                onClick={() => navigate('/admin/b2b-vendors/products')}
+                className="flex items-center gap-2 text-amber-600 font-black uppercase text-xs tracking-widest cursor-pointer hover:underline"
               >
-                <FiHome /> Properties
+                <FiPackage /> Grocery Products
               </h4>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-3xl bg-indigo-50/50 border border-indigo-100">
-                  <div className="text-indigo-600 text-xs font-bold uppercase mb-1">Assets</div>
-                  <div className="text-xl font-black text-indigo-900">{listingHealth.properties.total.toLocaleString()}</div>
+                <div className="p-4 rounded-3xl bg-amber-50/50 border border-amber-100">
+                  <div className="text-amber-600 text-xs font-bold uppercase mb-1">Items</div>
+                  <div className="text-xl font-black text-amber-900">{listingHealth.grocery.total.toLocaleString()}</div>
                 </div>
                 <div className="p-4 rounded-3xl bg-green-50/50 border border-green-100">
                   <div className="text-green-600 text-xs font-bold uppercase mb-1">Live</div>
-                  <div className="text-xl font-black text-green-900">{listingHealth.properties.approved.toLocaleString()}</div>
+                  <div className="text-xl font-black text-green-900">{listingHealth.grocery.approved.toLocaleString()}</div>
                 </div>
               </div>
             </div>
-            {/* Lot Slots */}
-            <div className="space-y-6">
-              <h4 
-                onClick={() => navigate('/admin/b2b-vendors/lot-slots')}
-                className="flex items-center gap-2 text-purple-600 font-black uppercase text-xs tracking-widest cursor-pointer hover:underline"
-              >
-                <FiZap /> Lot Slots
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-3xl bg-purple-50/50 border border-purple-100">
-                  <div className="text-purple-600 text-xs font-bold uppercase mb-1">Listings</div>
-                  <div className="text-xl font-black text-purple-900">{listingHealth.lotSlots.total.toLocaleString()}</div>
-                </div>
-                <div className="p-4 rounded-3xl bg-green-50/50 border border-green-100">
-                  <div className="text-green-600 text-xs font-bold uppercase mb-1">Live</div>
-                  <div className="text-xl font-black text-green-900">{listingHealth.lotSlots.approved.toLocaleString()}</div>
-                </div>
-              </div>
-            </div>
+
             {/* Reels */}
             <div className="space-y-6">
               <h4 
@@ -328,19 +275,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100">
-          <h3 className="text-lg font-black text-gray-900 mb-6">Top Property Locations</h3>
-          <div className="h-[200px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={performance.topLocations} layout="vertical">
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                <Tooltip cursor={{ fill: '#F9FAFB' }} />
-                <Bar dataKey="views" fill="#8B5CF6" radius={[0, 10, 10, 0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+
 
         {/* Revenue Performance Chart */}
         <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 col-span-full">

@@ -633,8 +633,8 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 availability: formData.availability || "In Stock",
                 unit: formData.unit || "Pcs",
                 videoLink: formData.videoLink || "",
-                sizes: formData.sizes || [],
-                colors: formData.colors || [],
+                sizes: (typeof formData.sizes === 'string' ? formData.sizes.split(',') : (formData.sizes || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean),
+                colors: (typeof formData.colors === 'string' ? formData.colors.split(',') : (formData.colors || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean),
                 stockQuantity: formData.stockQuantity !== "" ? parseInt(formData.stockQuantity) : "",
             };
 
@@ -1095,10 +1095,11 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                     onChange={handleChange}
                                     className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
                                 >
-                                    <option value="All">All / Unisex</option>
+                                    <option value="All">All Genders</option>
                                     <option value="Men">Men</option>
                                     <option value="Women">Women</option>
                                     <option value="Kids">Kids</option>
+                                    <option value="Unisex">Unisex</option>
                                 </select>
                             </div>
 
@@ -1106,8 +1107,8 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Sizes (Comma separated)</label>
                                 <input
                                     type="text"
-                                    value={(formData.sizes || []).join(', ')}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, sizes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                                    value={Array.isArray(formData.sizes) ? formData.sizes.join(', ') : (formData.sizes || '')}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, sizes: e.target.value }))}
                                     className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
                                     placeholder="e.g. S, M, L, XL"
                                 />
@@ -1117,8 +1118,8 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Colors (Comma separated)</label>
                                 <input
                                     type="text"
-                                    value={(formData.colors || []).join(', ')}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, colors: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                                    value={Array.isArray(formData.colors) ? formData.colors.join(', ') : (formData.colors || '')}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, colors: e.target.value }))}
                                     className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
                                     placeholder="e.g. Red, Blue, Green"
                                 />

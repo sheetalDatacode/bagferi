@@ -277,13 +277,26 @@ const B2BProductDetail = () => {
 
     const safeSelectedImage = Math.min(selectedImage, Math.max(0, productImages.length - 1));
 
+    const fixLegacyDynamicUrl = (url) => {
+        if (!url || !url.includes('cloudinary.com')) return url;
+        if (!url.includes('/e_mute/') && !url.includes('/ac_none/') && !url.includes('l_video:') && !url.includes('l_audio:')) {
+            return url;
+        }
+        return url
+            .replace(/\/e_mute\//g, '/ac_none/')
+            .replace(/l_audio:/g, 'l_video:')
+            .replace(/:upload:video:/g, ':')
+            .replace(/:upload:/g, ':');
+    };
+
     const getYouTubeId = (url) => {
         if (!url) return null;
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
     };
-    const ytId = getYouTubeId(product.videoLink);
+    const videoLink = fixLegacyDynamicUrl(product.videoLink);
+    const ytId = getYouTubeId(videoLink);
 
     const getCategoryName = () => {
         if (product.formType === 'shop-listing') return 'Shop Listing';
@@ -393,6 +406,16 @@ const B2BProductDetail = () => {
                                     allowFullScreen
                                     className="rounded-xl"
                                 ></iframe>
+                            ) : (!ytId && videoLink && productImages.length === 0) ? (
+                                <video 
+                                    src={videoLink} 
+                                    className="w-full h-full object-cover rounded-xl"
+                                    autoPlay
+                                    muted 
+                                    loop
+                                    playsInline
+                                    controls 
+                                />
                             ) : (
                                 <img
                                     src={productImages[safeSelectedImage]}
@@ -442,19 +465,31 @@ const B2BProductDetail = () => {
                             </div>
                         )}
                         
-                        {ytId && productImages.length > 0 && (
+                        {videoLink && productImages.length > 0 && (
                             <div className="mt-4">
                                 <h4 className="text-sm font-bold text-gray-800 mb-2">Product Video</h4>
                                 <div className="aspect-video rounded-xl overflow-hidden shadow-sm">
-                                    <iframe 
-                                        width="100%" 
-                                        height="100%" 
-                                        src={`https://www.youtube.com/embed/${ytId}`} 
-                                        title="YouTube video player" 
-                                        frameBorder="0" 
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                        allowFullScreen
-                                    ></iframe>
+                                    {ytId ? (
+                                        <iframe 
+                                            width="100%" 
+                                            height="100%" 
+                                            src={`https://www.youtube.com/embed/${ytId}`} 
+                                            title="YouTube video player" 
+                                            frameBorder="0" 
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                            allowFullScreen
+                                        ></iframe>
+                                    ) : (
+                                        <video 
+                                            src={videoLink} 
+                                            className="w-full h-full object-cover" 
+                                            autoPlay
+                                            muted
+                                            loop
+                                            controls 
+                                            playsInline 
+                                        />
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -793,7 +828,10 @@ const B2BProductDetail = () => {
                                 const videoLink = rp.videoLink || (rp.formType === 'shop-listing' ? rp.items?.[0]?.videoLink : null);
                                 const ytId = getYouTubeId(videoLink);
 
-                                let rawImages = rp.media?.map(m => m.url) || rp.images || [rp.image];
+                                let rawImages = [];
+                                if (rp.media && rp.media.length > 0) rawImages = rp.media.map(m => m.url);
+                                else rawImages = [rp.image, ...(rp.images || [])];
+
                                 if (rp.formType === 'shop-listing' && rp.items?.[0]?.images?.length > 0) {
                                     rawImages = rp.items[0].images;
                                 } else if (rp.formType === 'shop-listing' && rp.items?.[0]?.image) {
@@ -809,8 +847,20 @@ const B2BProductDetail = () => {
                                         : 'https://placehold.co/300x300/f8fafc/94a3b8?text=No+Image';
                                 
                                 const pPrice = rp.pricing?.b2b?.price || rp.price || 0;
-                                const formCat = rp.formType === 'shop-listing' ? rp.items?.[0]?.category : rp.category;
-                                const pCat = typeof formCat === 'object' ? formCat?.name : formCat;
+                                
+                                let pCat = 'Product';
+                                if (rp.formType === 'shop-listing' && rp.items?.[0]?.category) {
+                                    pCat = typeof rp.items[0].category === 'object' ? rp.items[0].category?.name : rp.items[0].category;
+                                } else if (rp.category) {
+                                    if (typeof rp.category === 'object' && rp.category.name) {
+                                        pCat = rp.category.name;
+                                    } else if (typeof rp.category === 'string' && rp.category.length !== 24) {
+                                        pCat = rp.category;
+                                    } else {
+                                        const catAttr = rp.attributes?.find(a => a.name === 'category' || a.attributeName === 'category');
+                                        if (catAttr) pCat = catAttr.value;
+                                    }
+                                }
                                 const pName = rp.formType === 'shop-listing' && rp.items?.[0] ? (rp.items[0].itemName || rp.name) : rp.name;
                                 const isRpWishlisted = wishlistItems.includes(rp._id);
 
@@ -848,7 +898,7 @@ const B2BProductDetail = () => {
                                         <span className="text-xs text-gray-400 mb-2 truncate">{pCat || 'Product'}</span>
                                         <div className="flex items-end justify-between mt-auto">
                                             <div>
-                                                <div className="font-black text-slate-900 text-lg">₹{formatPrice(pPrice)}</div>
+                                                <div className="font-black text-slate-900 text-lg">{formatPrice(pPrice)}</div>
                                                 <div className="text-[9px] text-gray-400">Incl. GST</div>
                                             </div>
                                             <button className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded flex items-center gap-1.5 text-xs font-bold transition-colors" onClick={(e) => { e.preventDefault(); toast.success('Added to Cart!'); }}>

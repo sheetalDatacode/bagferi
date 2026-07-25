@@ -33,8 +33,8 @@ export const generateOTP = async (identifier, type) => {
       await redisService.incr(rateKey);
     }
 
-    // 3. Generate 6-digit OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // 3. Generate static 4-digit OTP
+    const code = "1234";
 
     // 4. Store in Redis
     const success = await redisService.set(otpKey, { code, isUsed: false }, OTP_EXPIRY_SECONDS);

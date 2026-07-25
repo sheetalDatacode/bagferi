@@ -46,6 +46,9 @@ const iconMap = {
     "Add Villa / Row House": FiPlus,
     "Add Plot": FiPlus,
     "Lot/Slot Listings": FiPlus,
+    "Grocery Products": FiPackage,
+    "Manage Grocery": FiPackage,
+    "Add Grocery": FiPlus,
     Subscription: FiCreditCard,
     "Banner Booking": FiImage,
     "Notifications": FiBell,
@@ -69,6 +72,10 @@ const getChildRoute = (parentRoute, childName) => {
         "/b2b-vendor/products": {
             "Manage Products": "/b2b-vendor/products/manage-products",
             "Add Product": "/b2b-vendor/products/add-product"
+        },
+        "/b2b-vendor/grocery-products": {
+            "Manage Grocery": "/b2b-vendor/grocery-products/manage-grocery",
+            "Add Grocery": "/b2b-vendor/grocery-products/add-grocery"
         },
         "/b2b-vendor/properties": {
             "Manage Properties": "/b2b-vendor/properties/manage-properties",
@@ -163,7 +170,7 @@ const B2BVendorSidebar = ({ isOpen, onClose }) => {
 
         if (item.title === "Dashboard" || item.title === "Orders") return true;
 
-        const alwaysVisible = ["Billing & Invoices", "My Wallet", "Banner Booking", "Notifications", "Account Settings", "Product Listings", "Shop Listing", "Reels"];
+        const alwaysVisible = ["Billing & Invoices", "My Wallet", "Banner Booking", "Notifications", "Account Settings", "Product Listings", "Grocery Products", "Shop Listing", "Reels"];
         if (alwaysVisible.includes(item.title)) return true;
 
         if (!settings || !settings.enabledModules) return false;

@@ -52,9 +52,13 @@ const AdminB2BVendors = lazyWithRetry(
 const AdminManageB2BVendors = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/ManageB2BVendors"),
 );
+const AdminOrders = lazyWithRetry(
+  () => import("./modules/Admin/pages/AdminOrders"),
+);
 const AdminB2BVendorPendingApprovals = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/PendingApprovals"),
 );
+
 const AdminB2BVendorProductListings = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/ProductListings"),
 );
@@ -74,6 +78,12 @@ const B2BWallet = lazyWithRetry(
 const AdminB2BCategories = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/Categories"),
 );
+const AdminGroceryCategories = lazyWithRetry(
+  () => import("./modules/Admin/pages/b2b-vendors/GroceryCategories"),
+);
+const AdminGroceryProducts = lazyWithRetry(
+  () => import("./modules/Admin/pages/b2b-vendors/GroceryProducts"),
+);
 const AdminB2BBannerManagement = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/B2BBannerManagement"),
 );
@@ -88,6 +98,9 @@ const AdminBusinessTypeConfiguration = lazyWithRetry(
 );
 const AdminVendorDashboardView = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/AdminVendorDashboardView"),
+);
+const AdminB2BHomeSettings = lazyWithRetry(
+  () => import("./modules/Admin/pages/B2BHomeSettings"),
 );
 const SupportSettings = lazyWithRetry(
   () => import("./modules/Admin/pages/SupportSettings"),
@@ -157,6 +170,12 @@ const B2BVendorAddProduct = lazyWithRetry(
 const B2BVendorEditProduct = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/products/EditProduct"),
 );
+const B2BVendorManageGrocery = lazyWithRetry(
+  () => import("./modules/B2BVendor/pages/grocery-products/ManageGrocery"),
+);
+const B2BVendorAddGrocery = lazyWithRetry(
+  () => import("./modules/B2BVendor/pages/grocery-products/AddGrocery"),
+);
 const B2BVendorSettings = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/Settings"),
 );
@@ -221,6 +240,32 @@ const B2BUserForgotPassword = lazyWithRetry(
 );
 const B2BProductCatalog = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/ProductCatalog"),
+);
+const B2BGroceryCatalog = lazyWithRetry(
+  () => import("./modules/B2BUserApp/pages/GroceryCatalog"),
+);
+const B2BGroceryCategoryView = lazyWithRetry(
+  () => import("./modules/B2BUserApp/pages/B2BGroceryCategoryView"),
+);
+const B2BGroceryProductDetail = lazyWithRetry(
+  () => import("./modules/B2BUserApp/pages/GroceryProductDetail"),
+);
+
+// Staff App Imports
+const StaffLogin = lazyWithRetry(
+  () => import("./modules/Staff/pages/StaffLogin")
+);
+const StaffDashboard = lazyWithRetry(
+  () => import("./modules/Staff/pages/StaffDashboard")
+);
+const StaffLayout = lazyWithRetry(
+  () => import("./modules/Staff/components/StaffLayout")
+);
+const StaffProtectedRoute = lazyWithRetry(
+  () => import("./modules/Staff/components/StaffProtectedRoute")
+);
+const B2BProductDetails = lazyWithRetry(
+  () => import("./modules/B2BUserApp/pages/Profile"),
 );
 const B2BUserProfile = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/Profile"),
@@ -406,8 +451,12 @@ const AppRoutes = () => {
           <Route path="music-library" element={<AdminMusicLibrary />} />
           <Route path="support-settings" element={<SupportSettings />} />
           <Route path="transactions" element={<AdminTransactions />} />
+          <Route path="orders" element={<AdminOrders />} />
           <Route path="feedbacks" element={<AdminFeedbacks />} />
           <Route path="zones" element={<AdminZones />} />
+          <Route path="b2b-home-features" element={<AdminB2BHomeSettings />} />
+          <Route path="grocery-categories" element={<AdminGroceryCategories />} />
+          <Route path="grocery-products" element={<AdminGroceryProducts />} />
         </Route>
         {/* B2B User App Routes */}
         <Route path="/register" element={<RegisterRedirect />} />
@@ -434,6 +483,18 @@ const AppRoutes = () => {
         <Route
           path="/b2b/catalog"
           element={<B2BProductCatalog />}
+        />
+        <Route
+          path="/b2b/grocery"
+          element={<B2BGroceryCatalog />}
+        />
+        <Route
+          path="/b2b/grocery/category/:id"
+          element={<B2BGroceryCategoryView />}
+        />
+        <Route
+          path="/b2b/grocery/product/:id"
+          element={<B2BGroceryProductDetail />}
         />
         <Route
           path="/b2b/profile"
@@ -507,6 +568,19 @@ const AppRoutes = () => {
           path="/b2b/vendor/:id"
           element={<B2BVendorStore />}
         />
+        {/* Staff Routes */}
+        <Route path="/staff/login" element={<StaffLogin />} />
+        <Route
+          path="/staff"
+          element={
+            <StaffProtectedRoute>
+              <StaffLayout />
+            </StaffProtectedRoute>
+          }>
+          <Route index element={<Navigate to="/staff/dashboard" replace />} />
+          <Route path="dashboard" element={<StaffDashboard />} />
+        </Route>
+
         {/* B2B Vendor Routes */}
         <Route path="/b2b-vendor/login" element={<B2BVendorLogin />} />
         <Route path="/b2b-vendor/register" element={<B2BVendorRegister />} />
@@ -533,13 +607,18 @@ const AppRoutes = () => {
           <Route path="dashboard" element={<B2BVendorDashboard />} />
           <Route path="orders" element={<VendorOrders />} />
           <Route path="products">
-            <Route index element={<B2BVendorProducts />} />
+            <Route index element={<Navigate to="manage-products" replace />} />
             <Route
               path="manage-products"
               element={<B2BVendorManageProducts />}
             />
             <Route path="add-product" element={<B2BVendorAddProduct />} />
             <Route path="edit/:id" element={<B2BVendorEditProduct />} />
+          </Route>
+          <Route path="grocery-products">
+            <Route index element={<Navigate to="manage-grocery" replace />} />
+            <Route path="manage-grocery" element={<B2BVendorManageGrocery />} />
+            <Route path="add-grocery" element={<B2BVendorAddGrocery />} />
           </Route>
           <Route path="shop-listing" element={<B2BVendorShopListing />} />
           <Route path="settings" element={<B2BVendorSettings />} />

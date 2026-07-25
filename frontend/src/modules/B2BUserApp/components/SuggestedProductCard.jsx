@@ -1,10 +1,21 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { FiStar } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiStar, FiHeart, FiShoppingCart } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 import { formatPrice } from '../../../shared/utils/helpers';
 import { getRatingSummary } from '../../../shared/services/ratingService';
+import { useWishlistStore } from '../../../shared/store/wishlistStore';
+import { useCartStore } from '../../../shared/store/cartStore';
+import { useAuthStore } from '../../../shared/store/authStore';
 
-const SuggestedProductCard = ({ product }) => {
+const SuggestedProductCard = ({ product, linkPrefix = '/b2b/product/' }) => {
+    const navigate = useNavigate();
+    const { isAuthenticated } = useAuthStore();
+    const { wishlistItems, toggleWishlist } = useWishlistStore();
+    const { addToCart } = useCartStore();
+
+    const isWishlisted = product ? wishlistItems.includes(product._id) : false;
+
     // Safely extract properties with fallbacks
     const name = product?.name || 'Product';
     const storeName = product?.vendorId?.storeName || product?.name || 'Vendor';
@@ -54,6 +65,14 @@ const SuggestedProductCard = ({ product }) => {
     const videoLink = product?.videoLink || (product?.formType === 'shop-listing' ? product?.items?.[0]?.videoLink : null);
     const ytId = getYouTubeId(videoLink);
 
+    const getVideoPoster = (url) => {
+        if (!url) return '';
+        if (url.includes('cloudinary.com') && url.match(/\.(mp4|webm|mov)$/i)) {
+            return url.replace(/\.(mp4|webm|mov)$/i, '.jpg');
+        }
+        return '';
+    };
+
     const imageUrl = productImages.length > 0 
         ? productImages[0] 
         : ytId 
@@ -63,21 +82,70 @@ const SuggestedProductCard = ({ product }) => {
     const discountAmount = Math.max(Math.floor(price * 0.05), 35);
     const upiPrice = Math.max(price - discountAmount, 0);
 
+    const handleWishlist = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isAuthenticated) {
+            toast.error('Please login to use wishlist');
+            return navigate('/b2b/login');
+        }
+        toggleWishlist(product._id);
+    };
+
+    const handleAddToCart = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isAuthenticated) {
+            toast.error('Please login first');
+            return navigate('/b2b/login');
+        }
+        await addToCart(product._id, 1);
+        toast.success('Added to cart');
+    };
+
+    const handleBuyNow = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isAuthenticated) {
+            toast.error('Please login first');
+            return navigate('/b2b/login');
+        }
+        await addToCart(product._id, 1);
+        navigate('/b2b/checkout');
+    };
+
     return (
-        <Link to={`/b2b/product/${product?._id}`} className="block group w-full text-left bg-white transition-transform hover:-translate-y-1">
-            <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 mb-3 border border-gray-100">
-                <img 
-                    src={imageUrl} 
-                    alt={name} 
-                    className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${ytId && productImages.length === 0 ? 'opacity-80' : ''}`}
-                />
-                
-                {ytId && productImages.length === 0 && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center pl-1 shadow-[0_0_15px_rgba(220,38,38,0.5)] text-white">
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+        <div className="block group w-full text-left bg-white transition-transform hover:-translate-y-1 relative h-full flex flex-col">
+            <Link to={`${linkPrefix}${product?._id}`} className="block relative aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 mb-3 border border-gray-100 shrink-0">
+                {productImages.length === 0 && ytId ? (
+                    <>
+                        <img 
+                            src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`} 
+                            alt={name} 
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105 opacity-80"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center pl-1 shadow-[0_0_15px_rgba(220,38,38,0.5)] text-white">
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                            </div>
                         </div>
-                    </div>
+                    </>
+                ) : productImages.length === 0 && videoLink ? (
+                    <video 
+                        src={videoLink} 
+                        poster={getVideoPoster(videoLink)}
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        muted 
+                        playsInline 
+                        autoPlay 
+                        loop
+                    />
+                ) : (
+                    <img 
+                        src={productImages.length > 0 ? productImages[0] : 'https://placehold.co/300x400/f8fafc/94a3b8?text=No+Image'} 
+                        alt={name} 
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
                 )}
                 
                 {/* Rating Badge Overlay */}
@@ -87,21 +155,45 @@ const SuggestedProductCard = ({ product }) => {
                         <FiStar className="text-green-600 fill-green-600 text-[10px]" />
                     </div>
                 )}
-            </div>
+            </Link>
+            
+            {/* Wishlist Button (Absolute positioned on top of image) */}
+            <button
+                onClick={handleWishlist}
+                className="absolute top-2 right-2 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-all z-10"
+            >
+                <FiHeart className={`text-sm ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+            </button>
 
-            <div className="px-1">
-                <h3 className="font-bold text-slate-900 text-sm truncate mb-1">{storeName}</h3>
+            <Link to={`${linkPrefix}${product?._id}`} className="px-1 flex-1 flex flex-col">
+                <h3 className="font-bold text-slate-900 text-sm line-clamp-2 min-h-[40px]">{name}</h3>
+                <p className="text-[10px] text-gray-500 lowercase truncate mb-1">{storeName}</p>
                 
                 <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-gray-400 line-through">₹{formatPrice(mrp)}</span>
-                    <span className="text-sm font-black text-slate-900">₹{formatPrice(price)}</span>
+                    <span className="text-xs text-gray-400 line-through">{formatPrice(mrp)}</span>
+                    <span className="text-sm font-black text-slate-900">{formatPrice(price)}</span>
                 </div>
                 
-                <div className="text-[11px] font-bold text-blue-600 truncate">
-                    ₹{formatPrice(upiPrice)} <span className="font-medium text-blue-500">with UPI offer</span>
+                <div className="text-[11px] font-bold text-blue-600 truncate mb-2">
+                    {formatPrice(upiPrice)} <span className="font-medium text-blue-500">with UPI offer</span>
                 </div>
+            </Link>
+
+            <div className="px-1 mt-auto pb-2 flex gap-2">
+                <button 
+                    onClick={handleAddToCart}
+                    className="flex-1 py-1.5 border border-primary-600 text-primary-600 rounded-lg text-xs font-bold transition-colors hover:bg-primary-50 flex items-center justify-center gap-1"
+                >
+                    ADD
+                </button>
+                <button 
+                    onClick={handleBuyNow}
+                    className="flex-1 py-1.5 bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors hover:bg-primary-700"
+                >
+                    BUY NOW
+                </button>
             </div>
-        </Link>
+        </div>
     );
 };
 

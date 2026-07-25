@@ -12,7 +12,23 @@ class AdminB2BSettingsController {
             
             if (!settings) {
                 // Initialize with defaults if not exists
-                settings = await B2BSettings.create({ defaultEnquiryPrice: 1 });
+                settings = await B2BSettings.create({ 
+                    defaultEnquiryPrice: 1,
+                    advancePaymentAmount: 200,
+                    advancePaymentCommissionPercentage: 0,
+                    homeFeatures: [
+                        { title: 'Advance payment 200 fix', subtitle: '', iconName: 'FiCreditCard', isActive: true },
+                        { title: 'Only exchange', subtitle: 'Exchange Shop pr hoga Platform pr nhi', iconName: 'FiRefreshCw', isActive: true },
+                        { title: 'Free delivery', subtitle: '', iconName: 'FiPackage', isActive: true }
+                    ]
+                });
+            } else if (!settings.homeFeatures || settings.homeFeatures.length === 0) {
+                settings.homeFeatures = [
+                    { title: 'Advance payment 200 fix', subtitle: '', iconName: 'FiCreditCard', isActive: true },
+                    { title: 'Only exchange', subtitle: 'Exchange Shop pr hoga Platform pr nhi', iconName: 'FiRefreshCw', isActive: true },
+                    { title: 'Free delivery', subtitle: '', iconName: 'FiPackage', isActive: true }
+                ];
+                await settings.save();
             }
 
             res.status(200).json({
@@ -35,11 +51,14 @@ class AdminB2BSettingsController {
     async updateSettings(req, res) {
         try {
             const adminId = req.userDoc?._id || req.user?.adminId || req.user?.id;
-            const { defaultEnquiryPrice, enableVideoFileUpload } = req.body;
+            const { defaultEnquiryPrice, enableVideoFileUpload, homeFeatures, advancePaymentAmount, advancePaymentCommissionPercentage } = req.body;
 
             const update = {};
             if (defaultEnquiryPrice !== undefined) update.defaultEnquiryPrice = defaultEnquiryPrice;
+            if (advancePaymentAmount !== undefined) update.advancePaymentAmount = advancePaymentAmount;
+            if (advancePaymentCommissionPercentage !== undefined) update.advancePaymentCommissionPercentage = advancePaymentCommissionPercentage;
             if (enableVideoFileUpload !== undefined) update.enableVideoFileUpload = enableVideoFileUpload;
+            if (homeFeatures !== undefined) update.homeFeatures = homeFeatures;
             update.updatedBy = adminId;
 
             const settings = await B2BSettings.findOneAndUpdate(

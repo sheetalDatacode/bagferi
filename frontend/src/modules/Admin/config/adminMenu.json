@@ -40,13 +40,23 @@
     "children": []
   },
   {
-    "title": "Subscriptions",
-    "route": "/admin/b2b-vendors/subscriptions",
+    "title": "Orders",
+    "route": "/admin/orders",
     "children": []
   },
   {
     "title": "Categories",
     "route": "/admin/b2b-vendors/categories",
+    "children": []
+  },
+  {
+    "title": "Grocery Categories",
+    "route": "/admin/grocery-categories",
+    "children": []
+  },
+  {
+    "title": "Grocery Products",
+    "route": "/admin/grocery-products",
     "children": []
   },
   {
@@ -62,6 +72,11 @@
   {
     "title": "Business Config",
     "route": "/admin/b2b-vendors/business-type-config",
+    "children": []
+  },
+  {
+    "title": "B2B Settings",
+    "route": "/admin/b2b-home-features",
     "children": []
   },
   {

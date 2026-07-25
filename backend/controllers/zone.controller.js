@@ -7,7 +7,7 @@ import Zone from '../models/Zone.model.js';
  */
 export const createZone = async (req, res) => {
     try {
-        const { name, city, pincode, area, market, isActive } = req.body;
+        const { name, city, pincodes, isActive } = req.body;
 
         // Check if a zone with the same name already exists
         const existingZone = await Zone.findOne({ name });
@@ -21,9 +21,7 @@ export const createZone = async (req, res) => {
         const zone = await Zone.create({
             name,
             city: city || 'Surat',
-            pincode,
-            area,
-            market,
+            pincodes: pincodes || [],
             isActive: isActive !== undefined ? isActive : true
         });
 
@@ -91,7 +89,7 @@ export const getActiveZones = async (req, res) => {
  */
 export const updateZone = async (req, res) => {
     try {
-        const { name, city, pincode, area, market, isActive } = req.body;
+        const { name, city, pincodes, isActive } = req.body;
 
         let zone = await Zone.findById(req.params.id);
         if (!zone) {
@@ -114,9 +112,9 @@ export const updateZone = async (req, res) => {
 
         zone.name = name || zone.name;
         zone.city = city || zone.city;
-        zone.pincode = pincode || zone.pincode;
-        zone.area = area || zone.area;
-        zone.market = market || zone.market;
+        if (pincodes !== undefined) {
+            zone.pincodes = pincodes;
+        }
         if (isActive !== undefined) {
             zone.isActive = isActive;
         }
