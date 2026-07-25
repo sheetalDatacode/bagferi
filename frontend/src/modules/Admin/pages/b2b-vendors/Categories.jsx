@@ -11,8 +11,9 @@ const B2BCategories = () => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     
-    // View state: 'list' or 'edit'
+    // View state: 'list', 'edit', or 'detail'
     const [view, setView] = useState('list');
+    const [activeCategory, setActiveCategory] = useState(null);
     
     // Editor State
     const [treeData, setTreeData] = useState({
@@ -373,9 +374,7 @@ const B2BCategories = () => {
     const rootCategories = categories; // The backend already returns only root categories
     const [selectedCategory, setSelectedCategory] = useState(null);
 
-    const toggleCategory = (category) => {
-        setSelectedCategory(prev => prev?.id === category.id ? null : category);
-    };
+
 
     return (
         <div className="p-6 space-y-6">
@@ -419,16 +418,13 @@ const B2BCategories = () => {
                         ) : (
                             <div className="space-y-2">
                                 {rootCategories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(category => {
-                                    const isExpanded = selectedCategory?.id === category.id;
                                     const subs = category.subcategories || [];
                                     return (
                                         <div key={category.id}>
                                             {/* Category Row */}
                                             <div
-                                                onClick={() => toggleCategory(category)}
-                                                className={`flex items-center justify-between p-4 bg-white border shadow-sm rounded-xl cursor-pointer transition-all select-none ${
-                                                    isExpanded ? 'border-blue-400 ring-2 ring-blue-100 rounded-b-none' : 'border-gray-200 hover:border-blue-300'
-                                                }`}
+                                                onClick={() => { setActiveCategory(category); setView('detail'); }}
+                                                className={`flex items-center justify-between p-4 bg-white border border-gray-200 shadow-sm rounded-xl cursor-pointer transition-all select-none hover:border-blue-300 hover:shadow-md group`}
                                             >
                                                 <div className="flex items-center gap-4">
                                                     {category.image ? (
@@ -439,7 +435,7 @@ const B2BCategories = () => {
                                                         </div>
                                                     )}
                                                     <div>
-                                                        <h3 className="font-bold text-gray-800 text-lg">{category.name}</h3>
+                                                        <h3 className="font-bold text-gray-800 text-lg group-hover:text-blue-600 transition-colors">{category.name}</h3>
                                                         <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md font-semibold">
                                                             {subs.length} Subcategories
                                                         </span>
@@ -459,67 +455,8 @@ const B2BCategories = () => {
                                                     >
                                                         <FiTrash2 className="text-sm" />
                                                     </button>
-                                                    <span className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
-                                                        ▾
-                                                    </span>
                                                 </div>
                                             </div>
-
-                                            {/* Expanded Subcategory Panel */}
-                                            {isExpanded && (
-                                                <div className="border border-t-0 border-blue-400 rounded-b-xl bg-gray-50 p-5 ring-2 ring-blue-100 ring-t-0">
-                                                    {subs.length === 0 ? (
-                                                        <div className="text-center py-8">
-                                                            <p className="text-gray-400 font-medium">No subcategories yet. Click <strong>Manage</strong> to add some.</p>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                            {subs.map((sub, idx) => {
-                                                                const subSubs = sub.subcategories || [];
-                                                                return (
-                                                                    <div key={sub._id || idx} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                                                                        <div className="flex items-start justify-between mb-2">
-                                                                            <div className="flex items-center gap-2 min-w-0">
-                                                                                {sub.image && (
-                                                                                    <img src={sub.image} alt={sub.name} className="w-8 h-8 rounded-lg object-cover border flex-shrink-0" />
-                                                                                )}
-                                                                                <h4 className="font-bold text-gray-800 text-sm leading-tight truncate">{sub.name}</h4>
-                                                                            </div>
-                                                                            <button
-                                                                                onClick={(e) => { e.stopPropagation(); openEditor(category); }}
-                                                                                className="ml-2 p-1 text-blue-400 hover:text-blue-600 flex-shrink-0"
-                                                                                title="Edit"
-                                                                            >
-                                                                                <FiEdit2 className="w-3.5 h-3.5" />
-                                                                            </button>
-                                                                        </div>
-                                                                        {subSubs.length > 0 && (
-                                                                            <>
-                                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Sub-subcategories</p>
-                                                                                <div className="flex flex-wrap gap-1">
-                                                                                    {subSubs.slice(0, 4).map((ss, i) => (
-                                                                                        <span key={i} className="text-[11px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded font-semibold">
-                                                                                            {ss.name}
-                                                                                        </span>
-                                                                                    ))}
-                                                                                    {subSubs.length > 4 && (
-                                                                                        <span className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-semibold">
-                                                                                            +{subSubs.length - 4} more
-                                                                                        </span>
-                                                                                    )}
-                                                                                </div>
-                                                                            </>
-                                                                        )}
-                                                                        {subSubs.length === 0 && (
-                                                                            <p className="text-xs text-gray-400 mt-1">No sub-subcategories</p>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
                                         </div>
                                     );
                                 })}
@@ -527,6 +464,87 @@ const B2BCategories = () => {
                         )}
                     </div>
                 </>
+            )}
+
+            {view === 'detail' && activeCategory && (
+                <div className="space-y-6 animate-fade-in">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div>
+                            <button onClick={() => setView('list')} className="flex items-center gap-2 text-gray-500 font-bold hover:text-gray-900 mb-2">
+                                <FiArrowLeft /> Back to Categories
+                            </button>
+                            <h1 className="text-2xl font-black text-gray-900">{activeCategory.name}</h1>
+                            <p className="text-gray-500 font-medium text-sm">Welcome back! Here's your business overview.</p>
+                        </div>
+                        <button
+                            onClick={() => openEditor(activeCategory)}
+                            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-sm"
+                        >
+                            <FiEdit2 className="inline mr-2" /> Manage Category
+                        </button>
+                    </div>
+
+                    <div className="flex overflow-x-auto gap-6 pb-4 no-scrollbar items-start min-h-[50vh]">
+                        {(activeCategory.subcategories || []).map((sub, idx) => {
+                            const subSubs = sub.subcategories || [];
+                            const fields = sub.fields || [];
+                            return (
+                                <div key={sub._id || idx} className="w-[320px] flex-shrink-0 bg-gray-50/50 rounded-2xl p-5 border border-gray-200 shadow-sm">
+                                    <div className="flex items-start justify-between mb-6">
+                                        <h3 className="text-lg font-black text-gray-800 tracking-tight">{sub.name}</h3>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => openEditor(activeCategory)} className="text-blue-500 hover:text-blue-700"><FiEdit2 size={14} /></button>
+                                            <button onClick={() => openEditor(activeCategory)} className="text-red-500 hover:text-red-700"><FiTrash2 size={14} /></button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Subcategories</span>
+                                        <button onClick={() => openEditor(activeCategory)} className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"><FiPlus size={12} /> Add</button>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {subSubs.length === 0 ? (
+                                            <p className="text-sm text-gray-400 font-medium">No subcategories defined.</p>
+                                        ) : (
+                                            subSubs.map((ss, i) => (
+                                                <div key={i} className="space-y-2">
+                                                    <h4 className="font-bold text-gray-800 text-sm">{ss.name}</h4>
+                                                    {fields.length > 0 ? (
+                                                        <>
+                                                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{fields.length} fields defined</p>
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {fields.slice(0, 4).map((f, fi) => (
+                                                                    <span key={fi} className="text-[10px] px-2 py-1 bg-white border border-gray-200 rounded text-gray-700 font-black uppercase tracking-wider shadow-sm">
+                                                                        {f.label}
+                                                                    </span>
+                                                                ))}
+                                                                {fields.length > 4 && (
+                                                                    <span className="text-[10px] text-gray-500 font-bold px-1 py-1">
+                                                                        +{fields.length - 4} more
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">No fields defined</p>
+                                                    )}
+                                                    {i !== subSubs.length - 1 && <div className="border-b border-gray-200 pt-2 border-dashed"></div>}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {(activeCategory.subcategories || []).length === 0 && (
+                            <div className="w-full text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                <p className="text-gray-500 font-bold">No subcategories yet. Click "Manage Category" to add some.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
 
             {view === 'edit' && (

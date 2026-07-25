@@ -374,7 +374,7 @@ body::-webkit-scrollbar {
   }
 
   .pt-safe {
-    padding-top: env(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   /* Some devices might need a fallback or min value */
@@ -383,7 +383,7 @@ body::-webkit-scrollbar {
   }
 
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .h-safe-area {
