@@ -100,6 +100,25 @@ api.interceptors.request.use(
       }
     }
 
+    // Inject deliveryArea param based on user's selected address (Buyer only)
+    if (!isAdminRoute && !isB2BRoute && (url.includes('/products') || url.includes('/vendors') || url.includes('/grocery/products')) && config.method?.toLowerCase() === 'get') {
+        try {
+            const storedAuth = localStorage.getItem('auth-storage');
+            if (storedAuth) {
+                const parsedAuth = JSON.parse(storedAuth);
+                const user = parsedAuth?.state?.user;
+                if (user?.role === 'user' && user?.addresses?.length > 0) {
+                    const defaultAddress = user.addresses.find(a => a.isDefault) || user.addresses[0];
+                    if (defaultAddress && defaultAddress.pincode && defaultAddress.areaName) {
+                        const deliveryArea = `${defaultAddress.pincode}|${defaultAddress.areaName}`;
+                        config.params = { ...config.params, deliveryArea };
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error parsing deliveryArea from auth store', e);
+        }
+    }
 
 
     if (token) {

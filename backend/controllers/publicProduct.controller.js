@@ -29,7 +29,8 @@ export const getProducts = async (req, res, next) => {
       businessCategory,
       gender,
       strict,
-      dynamicFilters
+      dynamicFilters,
+      deliveryArea
     } = req.query;
 
     const result = await getPublicProducts({
@@ -55,7 +56,8 @@ export const getProducts = async (req, res, next) => {
       businessCategory,
       gender,
       strict,
-      dynamicFilters
+      dynamicFilters,
+      deliveryArea
     });
 
     // Enrich products with vendor enquiry status

@@ -13,6 +13,7 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
     const [formData, setFormData] = useState(initialData || {
         title: "",
         description: "",
+        mrp: "",
         price: "",
         stock: "",
         category: "",
@@ -30,6 +31,12 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
     const [subSubcategories, setSubSubcategories] = useState([]);
     const [images, setImages] = useState([]); // UI state for new images
     const [existingImages, setExistingImages] = useState(initialData?.media || []); // Already uploaded
+    const [dynamicFields, setDynamicFields] = useState([]);
+    const [dynamicValues, setDynamicValues] = useState(initialData?.attributes ? 
+        initialData.attributes.reduce((acc, attr) => ({ ...acc, [attr.attributeName || attr.name]: attr.value }), {}) 
+        : {}
+    );
+    const [customMultiInputs, setCustomMultiInputs] = useState({});
 
     const fileInputRef = useRef(null);
 
@@ -55,6 +62,26 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
         }
     }, [formData.subcategory, subcategories]);
 
+    useEffect(() => {
+        let fields = [];
+        let cat, sub, subSub;
+        
+        if (categories.length > 0 && formData.category) {
+            cat = categories.find(c => c.name === formData.category || c._id === formData.category);
+            fields = cat?.fields || [];
+        }
+        if (cat && formData.subcategory) {
+            sub = cat.subcategories?.find(s => s.name === formData.subcategory || s._id === formData.subcategory);
+            if (sub?.fields?.length > 0) fields = sub.fields;
+        }
+        if (sub && formData.subsubcategory) {
+            subSub = sub.subcategories?.find(s => s.name === formData.subsubcategory || s._id === formData.subsubcategory);
+            if (subSub?.fields?.length > 0) fields = subSub.fields;
+        }
+
+        setDynamicFields(fields);
+    }, [formData.category, formData.subcategory, formData.subsubcategory, categories]);
+
     const fetchCategories = async () => {
         try {
             const res = await api.get('/grocery/categories');
@@ -79,6 +106,21 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
         setExistingImages(prev => prev.filter((_, i) => i !== idx));
     };
 
+    const handleDynamicChange = (label, value) => {
+        setDynamicValues(prev => ({ ...prev, [label]: value }));
+    };
+
+    const handleDynamicMultiSelectChange = (label, value) => {
+        setDynamicValues(prev => {
+            const current = Array.isArray(prev[label]) ? prev[label] : [];
+            if (current.includes(value)) {
+                return { ...prev, [label]: current.filter(v => v !== value) };
+            } else {
+                return { ...prev, [label]: [...current, value] };
+            }
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -86,7 +128,15 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
         try {
             const data = new FormData();
             Object.keys(formData).forEach(key => {
-                data.append(key, formData[key]);
+                // Prevent duplicate appends by skipping these mapped keys
+                if (!['name', 'title', 'stockQuantity', 'stock', 'attributes', 'images', 'media', 'createdAt', 'updatedAt', '__v', '_id', 'vendorId', 'reviews'].includes(key)) {
+                    // Check if value is array, append as string or loop through if needed, but for now just standard append
+                    if (Array.isArray(formData[key])) {
+                        formData[key].forEach(val => data.append(key, val));
+                    } else if (formData[key] !== null && formData[key] !== undefined) {
+                        data.append(key, formData[key]);
+                    }
+                }
             });
 
             // Append new images
@@ -95,8 +145,16 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                 data.append('image', images[0]);
             }
             // Map frontend fields to backend expected fields
-            data.append('name', formData.title);
-            data.append('stockQuantity', formData.stock);
+            data.append('name', formData.title || formData.name);
+            data.append('stockQuantity', formData.stock || formData.stockQuantity);
+
+            // Append dynamic attributes
+            const attributesPayload = Object.keys(dynamicValues).map(key => ({
+                attributeName: key,
+                name: key,
+                value: dynamicValues[key]
+            })).filter(attr => attr.value !== undefined && attr.value !== '');
+            data.append('attributes', JSON.stringify(attributesPayload));
 
             // If editing, handle existing images (may require backend support for keeping them or we skip this complexity for now)
             
@@ -151,9 +209,13 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                 <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
                     <FiDollarSign className="text-primary-600" /> Pricing & Inventory
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-4">
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-700 uppercase">Price (₹) *</label>
+                        <label className="text-xs font-bold text-gray-700 uppercase">MRP (₹)</label>
+                        <input type="number" min="0" value={formData.mrp} onChange={e => setFormData({...formData, mrp: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="0.00" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-700 uppercase">Selling Price (₹) *</label>
                         <input required type="number" min="0" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="0.00" />
                     </div>
                     <div className="space-y-1">
@@ -210,6 +272,72 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Dynamic Custom Fields */}
+            {dynamicFields.length > 0 && (
+                <div>
+                    <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                        <FiList className="text-primary-600" /> Attributes & Specifications
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                        {dynamicFields.map((f, i) => (
+                            <div key={`df-${i}`} className="space-y-1">
+                                <label className="text-xs font-bold text-gray-700 uppercase">
+                                    {f.label} {f.required && <span className="text-red-500">*</span>}
+                                </label>
+
+                                {f.type === 'select' ? (
+                                    <select
+                                        required={f.required}
+                                        value={dynamicValues[f.label] || ''}
+                                        onChange={e => handleDynamicChange(f.label, e.target.value)}
+                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                    >
+                                        <option value="">Select {f.label}</option>
+                                        {f.options?.map((opt, oi) => (
+                                            <option key={oi} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                ) : f.type === 'multi-select' ? (
+                                    <div className="space-y-2">
+                                        <div className="flex flex-wrap gap-2 mb-2">
+                                            {(dynamicValues[f.label] || []).map((val, vi) => (
+                                                <span key={vi} className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-bold flex items-center gap-1">
+                                                    {val}
+                                                    <button type="button" onClick={() => handleDynamicMultiSelectChange(f.label, val)} className="hover:text-primary-900">
+                                                        <FiX size={12} />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <select
+                                            value=""
+                                            onChange={e => {
+                                                if (e.target.value) handleDynamicMultiSelectChange(f.label, e.target.value);
+                                            }}
+                                            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                        >
+                                            <option value="">Add {f.label}...</option>
+                                            {f.options?.filter(o => !(dynamicValues[f.label] || []).includes(o)).map((opt, oi) => (
+                                                <option key={oi} value={opt}>{opt}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <input
+                                        type={f.type === 'number' ? 'number' : 'text'}
+                                        required={f.required}
+                                        value={dynamicValues[f.label] || ''}
+                                        onChange={e => handleDynamicChange(f.label, e.target.value)}
+                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                        placeholder={`Enter ${f.label}`}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div>
                 <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">

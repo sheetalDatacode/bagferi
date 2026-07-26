@@ -74,7 +74,9 @@ const userSchema = new mongoose.Schema(
             country: { type: String, default: 'India' },
             isDefault: { type: Boolean, default: false },
             addressType: { type: String, enum: ['Home', 'Work', 'Warehouse', 'Other'], default: 'Work' },
-            phone: { type: String }
+            phone: { type: String },
+            zoneId: { type: mongoose.Schema.Types.ObjectId, ref: 'Zone' },
+            areaName: { type: String, trim: true }
         }],
         fcmTokens: {
             type: [String],

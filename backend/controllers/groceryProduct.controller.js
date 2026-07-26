@@ -90,7 +90,7 @@ export const createGroceryProduct = async (req, res, next) => {
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
 
-    let { name, price, stockQuantity, category, subcategory, subSubcategory, description, expiryDate } = req.body;
+    let { name, mrp, price, stockQuantity, category, subcategory, subSubcategory, description, expiryDate } = req.body;
     let image = null, imagePublicId = null;
 
     if (req.file) {
@@ -106,7 +106,7 @@ export const createGroceryProduct = async (req, res, next) => {
     const sku = 'GROC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
 
     const product = await GroceryProduct.create({
-      name, price, stockQuantity, category, subcategory, subSubcategory, description,
+      name, mrp, price, stockQuantity, category, subcategory, subSubcategory, description,
       expiryDate, vendorId, vendorName: vendor.storeName, image, imagePublicId, sku,
       images: image ? [image] : [], imagesPublicIds: imagePublicId ? [imagePublicId] : []
     });

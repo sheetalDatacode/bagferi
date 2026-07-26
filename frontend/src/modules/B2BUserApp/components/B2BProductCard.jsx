@@ -15,33 +15,14 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
     const navigate = useNavigate();
     const { isAuthenticated, user } = useAuthStore();
     const [activeImageIndex, setActiveImageIndex] = useState(0);
-    const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, ratingCount: 0, type: 'product' });
+    const [ratingSummary, setRatingSummary] = useState({ 
+        averageRating: product.averageRating || 0, 
+        ratingCount: product.ratingCount || 0, 
+        type: 'product' 
+    });
     const { wishlistItems, toggleWishlist } = useWishlistStore();
     const { addToCart } = useCartStore();
     const isWishlisted = wishlistItems.includes(product._id);
-
-    React.useEffect(() => {
-        const fetchRating = async () => {
-            if (product._id) {
-                const type = product.itemType === 'lotslot' ? 'lotslot' : 'product';
-                const pSummary = await getRatingSummary(type, product._id);
-                if (pSummary && pSummary.ratingCount > 0) {
-                    setRatingSummary({ ...pSummary, type: 'product' });
-                } else {
-                    const vid = product.vendorId?._id || product.vendorId?.id || product.vendorIdRef || product.vendorId;
-                    if (vid) {
-                        const sSummary = await getRatingSummary('shop', vid);
-                        if (sSummary && sSummary.ratingCount > 0) {
-                            setRatingSummary({ ...sSummary, type: 'shop' });
-                        } else {
-                            setRatingSummary({ averageRating: 0, ratingCount: 0, type: 'product' });
-                        }
-                    }
-                }
-            }
-        };
-        fetchRating();
-    }, [product._id, product.itemType, product.formType, product.vendorId]);
 
     let allImages = [];
     if (product.formType === 'shop-listing' && product.items?.length > 0) {
@@ -298,9 +279,11 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
                             ? product.items[0].price
                             : product.price}
                     </span>
-                    <span className="text-[10px] text-gray-500 line-through">
-                        ₹{product.price * 1.5}
-                    </span>
+                    {product.mrp && product.mrp > product.price && (
+                        <span className="text-[10px] text-gray-500 line-through">
+                            ₹{product.mrp}
+                        </span>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2 mt-1">

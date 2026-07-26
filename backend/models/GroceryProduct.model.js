@@ -15,6 +15,7 @@ const groceryProductSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    mrp: { type: Number, min: 0 },
     price: { type: Number, required: true, min: 0 },
     unit: {
       type: String,
@@ -59,11 +60,7 @@ const groceryProductSchema = new mongoose.Schema(
       min: 0,
       default: 0,
     },
-    minimumOrderQuantity: {
-      type: Number,
-      min: 1,
-      default: 1,
-    },
+
     brandName: {
       type: String,
       trim: true,
@@ -84,13 +81,7 @@ const groceryProductSchema = new mongoose.Schema(
       ref: 'GroceryCategory',
       index: true,
     },
-    bulkPricing: {
-      type: [{
-        minQty: { type: Number, required: true },
-        price: { type: Number, required: true }
-      }],
-      default: []
-    },
+
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Vendor',

@@ -31,9 +31,10 @@ export const getPublicProducts = async (filters) => {
         businessType,
         businessCategory,
         gender,
-        excludeBusinessTypes, // Added excludeBusinessTypes to destructuring
+        excludeBusinessTypes,
         dynamicFilters,
-        strict
+        strict,
+        deliveryArea
     } = filters;
 
     // --- Helper to build match query ---
@@ -189,7 +190,18 @@ export const getPublicProducts = async (filters) => {
 
     // --- Resolve Vendor IDs from Location Filters ---
     let locationVendorIds = null;
+    let hasLocationFilter = false;
+
+    if (deliveryArea) {
+        hasLocationFilter = true;
+        const shopUnits = await ShopUnit.find({
+            deliveryZones: deliveryArea // Expects format 'Pincode|AreaName'
+        }).select('vendorId').lean();
+        locationVendorIds = shopUnits.map(s => s.vendorId).filter(Boolean);
+    }
+
     if (state || city || area || market || businessType || excludeBusinessTypes) {
+        hasLocationFilter = true;
         const vendorQuery = { isActive: true };
 
         const normalizedState = state ? normalizeState(state) : null;
@@ -225,7 +237,15 @@ export const getPublicProducts = async (filters) => {
 
 
         const matchingVendors = await Vendor.find(vendorQuery).select('_id').lean();
-        locationVendorIds = matchingVendors.map(v => v._id);
+        const foundIds = matchingVendors.map(v => v._id);
+        
+        if (locationVendorIds !== null) {
+            // Intersect with deliveryArea vendor IDs if both are present
+            const set = new Set(locationVendorIds.map(id => id.toString()));
+            locationVendorIds = foundIds.filter(id => set.has(id.toString()));
+        } else {
+            locationVendorIds = foundIds;
+        }
 
         // If market filter is applied but no vendors found, return empty results
         if (market && locationVendorIds.length === 0) {

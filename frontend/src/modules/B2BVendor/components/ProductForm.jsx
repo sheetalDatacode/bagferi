@@ -65,15 +65,14 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
         category: "",
         subcategory: "",
         subSubcategory: "",
-        moq: 1,
+        mrp: "",
         price: "", 
         description: "",
         images: [],
         specifications: [{ name: "", value: "" }],
-        bulkPricing: [{ minQty: "", price: "" }],
         brand: "",
         availability: "In Stock",
-        unit: "",
+        unit: "pieces", // Fix: initialize to a valid option to match UI and pass validation
         videoLink: "",
         sizes: [],
         colors: [],
@@ -367,25 +366,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
         });
     };
 
-    const addBulkTier = () => {
-        setFormData(prev => ({
-            ...prev,
-            bulkPricing: [...prev.bulkPricing, { minQty: "", price: "" }]
-        }));
-    };
 
-    const removeBulkTier = (index) => {
-        setFormData(prev => ({
-            ...prev,
-            bulkPricing: prev.bulkPricing.filter((_, i) => i !== index)
-        }));
-    };
-
-    const updateBulkTier = (index, field, value) => {
-        const updated = [...formData.bulkPricing];
-        updated[index][field] = value;
-        setFormData(prev => ({ ...prev, bulkPricing: updated }));
-    };
 
     const { canCreateProduct, refreshStatus } = useSubscriptionStore();
     const productPermission = canCreateProduct();
@@ -541,7 +522,6 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
 
         if (!formData.category) newErrors.category = "Category is required";
         if (!formData.price) newErrors.price = "Base price is required";
-        if (!formData.moq) newErrors.moq = "Minimum order quantity is required";
         if (!formData.unit) newErrors.unit = "Unit is required";
 
         if (formData.images.length === 0 && !formData.videoLink?.trim()) {
@@ -623,12 +603,11 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 category: formData.category,
                 subcategory: formData.subcategory || "",
                 subSubcategory: formData.subSubcategory || "",
-                moq: parseInt(formData.moq) || 1,
+                mrp: formData.mrp || undefined,
                 price: parseFloat(formData.price),
                 description: formData.description || "",
                 images: formData.images,
                 specifications: finalSpecs,
-                bulkPricing: formData.bulkPricing.filter(tier => tier.minQty && tier.price),
                 brand: formData.brand || "",
                 availability: formData.availability || "In Stock",
                 unit: formData.unit || "Pcs",
@@ -689,7 +668,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 <input
                                     type="text"
                                     name="name"
-                                    value={formData.name}
+                                    value={formData.name || ""}
                                     onChange={handleChange}
                                     className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.name ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none`}
                                     placeholder="e.g. Industrial Grade Steel Pipes"
@@ -912,6 +891,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
 
                                     {f.type === "text" && (
                                         <input
+                                            id={f.label}
                                             type="text"
                                             value={dynamicValues[f.label] || ""}
                                             className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
@@ -922,6 +902,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
 
                                     {f.type === "number" && (
                                         <input
+                                            id={f.label}
                                             type="number"
                                             value={dynamicValues[f.label] || ""}
                                             className={`w-full px-4 py-2.5 bg-slate-50 border ${errors[f.label] ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none`}
@@ -1053,7 +1034,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 <input
                                     type="text"
                                     name="brand"
-                                    value={formData.brand}
+                                    value={formData.brand || ""}
                                     onChange={handleChange}
                                     className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.brand ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none`}
                                     placeholder="e.g. Tata Steel"
@@ -1065,7 +1046,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Availability Status</label>
                                 <select
                                     name="availability"
-                                    value={formData.availability}
+                                    value={formData.availability || ""}
                                     onChange={handleChange}
                                     className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
                                 >
@@ -1080,7 +1061,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 <input
                                     type="number"
                                     name="stockQuantity"
-                                    value={formData.stockQuantity}
+                                    value={formData.stockQuantity || ""}
                                     onChange={handleChange}
                                     className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
                                     placeholder="e.g. 100"
@@ -1138,7 +1119,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                         </div>
                         <textarea
                             name="description"
-                            value={formData.description}
+                            value={formData.description || ""}
                             onChange={handleChange}
                             rows={4}
                             className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all resize-none outline-none"
@@ -1185,7 +1166,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                     <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Attribute</label>
                                                     <input
                                                         type="text"
-                                                        value={spec.name}
+                                                        value={spec.name || ""}
                                                         onChange={(e) => {
                                                             updateSpec(index, 'name', e.target.value);
                                                             if (errors[`spec_name_${index}`]) setErrors(prev => ({ ...prev, [`spec_name_${index}`]: null }));
@@ -1198,7 +1179,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                     <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Value (Numbers only)</label>
                                                     <input
                                                         type="text"
-                                                        value={spec.value}
+                                                        value={spec.value || ""}
                                                         onChange={(e) => updateSpec(index, 'value', e.target.value)}
                                                         className="w-full bg-transparent border-none focus:ring-0 text-xs text-gray-600 outline-none p-0"
                                                         placeholder="100"
@@ -1320,7 +1301,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                             <input
                                 type="url"
                                 name="videoLink"
-                                value={formData.videoLink}
+                                value={formData.videoLink || ""}
                                 onChange={handleChange}
                                 className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
                                 placeholder="https://www.youtube.com/watch?v=..."
@@ -1342,19 +1323,35 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                             <div className="p-1.5 bg-green-50 text-green-600 rounded-lg text-sm">
                                 <FiDollarSign />
                             </div>
-                            <h3 className="text-lg font-bold text-gray-800">B2B Pricing</h3>
+                            <h3 className="text-lg font-bold text-gray-800">Pricing</h3>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Base Price <span className="text-red-500">*</span></label>
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">MRP (₹)</label>
+                                <div className="relative">
+                                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</div>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        name="mrp"
+                                        value={formData.mrp || ""}
+                                        onChange={handleChange}
+                                        className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                        placeholder="5000.00"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Selling Price (₹) <span className="text-red-500">*</span></label>
                                 <div className="relative">
                                     <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</div>
                                     <input
                                         type="number"
                                         step="any"
                                         name="price"
-                                        value={formData.price}
+                                        value={formData.price || ""}
                                         onChange={handleChange}
                                         className={`w-full pl-8 pr-4 py-2.5 bg-slate-50 border ${errors.price ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none`}
                                         placeholder="4500.50"
@@ -1364,184 +1361,23 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Min. Order (MOQ) <span className="text-red-500">*</span></label>
-                                <div className="flex gap-2 min-w-0">
-                                    <input
-                                        type="number"
-                                        name="moq"
-                                        value={formData.moq}
-                                        onChange={handleChange}
-                                        className={`min-w-0 flex-1 px-4 py-2.5 bg-slate-50 border ${errors.moq ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none`}
-                                        placeholder="100"
-                                    />
-                                    <div className="relative w-24 xs:w-28 shrink-0">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setIsUnitDropdownOpen(true);
-                                            }}
-                                            className={`w-full px-2 py-2.5 bg-slate-50 border ${errors.unit ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none font-bold text-gray-700 text-xs text-left flex items-center justify-between`}
-                                        >
-                                            <span className="truncate">{formData.unit || "Unit"}</span>
-                                            <div className="text-gray-400">
-                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </div>
-                                        </button>
-
-                                        {createPortal(
-                                            <AnimatePresence>
-                                                {isUnitDropdownOpen && (
-                                                    <div className="fixed inset-0 z-[9999] flex items-end justify-center">
-                                                        <motion.div
-                                                            initial={{ opacity: 0 }}
-                                                            animate={{ opacity: 1 }}
-                                                            exit={{ opacity: 0 }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setIsUnitDropdownOpen(false);
-                                                            }}
-                                                            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                                                        />
-                                                        <motion.div
-                                                            initial={{ y: "100%" }}
-                                                            animate={{ y: 0 }}
-                                                            exit={{ y: "100%" }}
-                                                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                                                            className="relative w-full max-w-lg bg-white rounded-t-[2.5rem] shadow-2xl overflow-hidden max-h-[85vh] flex flex-col"
-                                                        >
-                                                            <div className="w-full flex justify-center pt-4 pb-2">
-                                                                <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
-                                                            </div>
-                                                            <div className="px-8 py-4 border-b border-gray-50 flex items-center justify-between">
-                                                                <div>
-                                                                    <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Select Unit</h3>
-                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Choose the measurement unit</p>
-                                                                </div>
-                                                                <button 
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setIsUnitDropdownOpen(false);
-                                                                    }}
-                                                                    className="p-3 bg-gray-50 hover:bg-gray-100 rounded-full transition-all"
-                                                                >
-                                                                    <FiX size={20} className="text-gray-400" />
-                                                                </button>
-                                                            </div>
-                                                            <div className="overflow-y-auto px-4 py-6 custom-scrollbar grid grid-cols-2 gap-3">
-                                                                {[
-                                                                    "pieces", "pcs", "nos", "kg", "gram", "ton", "meter", "cm", "feet", "yard", "litre", "ml", "gallon", "box", "pack", "set", "pair", "dozen", "carton", "bundle", "roll", "sheet", "sqft", "sqm", "Night"
-                                                                ].map((u) => (
-                                                                    <button
-                                                                        key={u}
-                                                                        type="button"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setFormData(prev => ({ ...prev, unit: u }));
-                                                                            setIsUnitDropdownOpen(false);
-                                                                            if (errors.unit) setErrors(prev => ({ ...prev, unit: null }));
-                                                                        }}
-                                                                        className={`group relative overflow-hidden px-5 py-4 rounded-2xl text-left transition-all border-2 ${formData.unit === u
-                                                                            ? 'bg-primary-600 border-primary-600 shadow-lg shadow-primary-100'
-                                                                            : 'bg-slate-50 border-transparent hover:bg-white hover:border-primary-100'
-                                                                            }`}
-                                                                    >
-                                                                        <div className={`text-xs font-black uppercase tracking-wider ${formData.unit === u ? 'text-white' : 'text-gray-600'}`}>
-                                                                            {u}
-                                                                        </div>
-                                                                        {formData.unit === u && (
-                                                                            <motion.div
-                                                                                layoutId="activeUnit"
-                                                                                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center"
-                                                                            >
-                                                                                <FiCheck className="text-white" size={14} />
-                                                                            </motion.div>
-                                                                        )}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                            <div className="p-6 bg-gray-50/50 border-t border-gray-50">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setIsUnitDropdownOpen(false);
-                                                                    }}
-                                                                    className="w-full py-4 bg-white border-2 border-gray-100 text-gray-500 font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-gray-50 transition-all"
-                                                                >
-                                                                    Cancel
-                                                                </button>
-                                                            </div>
-                                                        </motion.div>
-                                                    </div>
-                                                )}
-                                            </AnimatePresence>,
-                                            document.body
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    {errors.moq && <p className="flex-1 text-[10px] text-red-500 font-bold mt-1 ml-1">{errors.moq}</p>}
-                                    {errors.unit && <p className="w-28 text-[10px] text-red-500 font-bold mt-1 ml-1">{errors.unit}</p>}
-                                </div>
-                            </div>
-
-                            <div className="pt-4 border-t border-gray-100">
-                                <div className="flex items-center justify-between mb-3">
-                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Volume Discounts</label>
-                                    <button
-                                        type="button"
-                                        onClick={addBulkTier}
-                                        className="text-[10px] font-bold text-primary-600 hover:underline flex items-center gap-1 uppercase tracking-wider"
-                                    >
-                                        <FiPlus /> Add Tier
-                                    </button>
-                                </div>
-
-                                <div className="space-y-2">
-                                    {formData.bulkPricing.map((tier, index) => (
-                                        <div key={index} className="flex items-center gap-2 group">
-                                            <div className="flex-1 grid grid-cols-2 gap-2 bg-slate-50 p-1.5 rounded-lg border border-gray-100 group-hover:bg-green-50/50 transition-all">
-                                                <div className="flex items-center gap-1 px-1">
-                                                    <span className="text-[8px] text-gray-400 font-bold">MIN</span>
-                                                    <input
-                                                        type="number"
-                                                        value={tier.minQty}
-                                                        onChange={(e) => updateBulkTier(index, 'minQty', e.target.value)}
-                                                        className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold outline-none"
-                                                        placeholder="1000"
-                                                    />
-                                                </div>
-                                                <div className="flex items-center gap-1 px-1 border-l border-gray-200">
-                                                    <span className="text-[8px] text-gray-400 font-bold">₹</span>
-                                                    <input
-                                                        type="number"
-                                                        step="any"
-                                                        value={tier.price}
-                                                        onChange={(e) => updateBulkTier(index, 'price', e.target.value)}
-                                                        className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold outline-none"
-                                                        placeholder="4200.00"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeBulkTier(index)}
-                                                className="p-1.5 text-red-400 hover:text-red-500"
-                                            >
-                                                <FiTrash2 size={14} />
-                                            </button>
-                                        </div>
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Unit of Measurement</label>
+                                <select
+                                    name="unit"
+                                    value={formData.unit || "pieces"}
+                                    onChange={handleChange}
+                                    className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.unit ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none`}
+                                >
+                                    {["pieces", "pcs", "nos", "kg", "gram", "ton", "meter", "cm", "feet", "yard", "litre", "ml", "gallon", "box", "pack", "set", "pair", "dozen", "carton", "bundle", "roll", "sheet", "sqft", "sqm", "Night"].map((u) => (
+                                        <option key={u} value={u}>{u}</option>
                                     ))}
-                                </div>
+                                </select>
+                                {errors.unit && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{errors.unit}</p>}
+                            </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
             {/* Sticky Footer */}
             <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-white/80 backdrop-blur-md border-t border-gray-200 p-4 z-40 flex justify-end gap-3 shadow-lg">

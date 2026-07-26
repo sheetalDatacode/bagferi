@@ -295,7 +295,12 @@ const B2BProductDetail = () => {
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
     };
-    const videoLink = fixLegacyDynamicUrl(product.videoLink);
+    let videoLink = fixLegacyDynamicUrl(product.videoLink);
+    if (videoLink && videoLink.includes('cloudinary.com') && !getYouTubeId(videoLink)) {
+        videoLink = videoLink.replace(/\/image\/upload\//, '/video/upload/');
+        videoLink = videoLink.replace(/\.(jpg|jpeg|png|webp|gif)$/i, '.mp4');
+        if (videoLink.startsWith('http://')) videoLink = videoLink.replace('http://', 'https://');
+    }
     const ytId = getYouTubeId(videoLink);
 
     const getCategoryName = () => {
@@ -359,24 +364,8 @@ const B2BProductDetail = () => {
         return [];
     };
 
-    const getBulkPricing = () => {
-        if (product.bulkPricing && Array.isArray(product.bulkPricing) && product.bulkPricing.length > 0) return product.bulkPricing;
-        const attr = product.attributes?.find(a => a.name === 'bulkPricing' || a.attributeName === 'bulkPricing');
-        if (attr && attr.value) {
-            try {
-                return typeof attr.value === 'string' ? JSON.parse(attr.value) : attr.value;
-            } catch (e) { return []; }
-        }
-        return [];
-    };
-
     const specifications = getSpecifications();
-    const bulkPricing = getBulkPricing();
-    const currentPrice = (() => {
-        if (!bulkPricing || bulkPricing.length === 0) return product.price || 0;
-        const tier = [...bulkPricing].sort((a, b) => (b.minQty || 0) - (a.minQty || 0)).find(t => quantity >= (t.minQty || 0));
-        return tier ? (tier.price || product.price || 0) : (product.price || 0);
-    })();
+    const currentPrice = product.price || 0;
 
     return (
         <div className="min-h-screen bg-white pb-24 font-sans text-gray-800">
@@ -408,14 +397,15 @@ const B2BProductDetail = () => {
                                 ></iframe>
                             ) : (!ytId && videoLink && productImages.length === 0) ? (
                                 <video 
-                                    src={videoLink} 
-                                    className="w-full h-full object-cover rounded-xl"
+                                    className="w-full h-full object-cover rounded-xl bg-black"
                                     autoPlay
                                     muted 
                                     loop
                                     playsInline
                                     controls 
-                                />
+                                >
+                                    <source src={videoLink} type="video/mp4" />
+                                </video>
                             ) : (
                                 <img
                                     src={productImages[safeSelectedImage]}
@@ -481,14 +471,15 @@ const B2BProductDetail = () => {
                                         ></iframe>
                                     ) : (
                                         <video 
-                                            src={videoLink} 
-                                            className="w-full h-full object-cover" 
+                                            className="w-full h-full object-cover bg-black" 
                                             autoPlay
                                             muted
                                             loop
                                             controls 
                                             playsInline 
-                                        />
+                                        >
+                                            <source src={videoLink} type="video/mp4" />
+                                        </video>
                                     )}
                                 </div>
                             </div>
@@ -521,6 +512,11 @@ const B2BProductDetail = () => {
                             <span className="text-3xl md:text-4xl font-black text-slate-900">
                                 ₹{currentPrice}
                             </span>
+                            {product.mrp && product.mrp > currentPrice && (
+                                <span className="text-xl font-medium text-slate-400 line-through ml-2">
+                                    ₹{product.mrp}
+                                </span>
+                            )}
                             <span className="text-sm font-medium text-slate-400">
                                 / {product.formType === 'shop-listing' && product.items?.[0] ? product.items[0].unit : (product.unit || 'piece')}
                             </span>

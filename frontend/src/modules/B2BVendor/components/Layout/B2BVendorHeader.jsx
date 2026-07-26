@@ -25,6 +25,9 @@ const B2BVendorHeader = ({ onMenuClick }) => {
     const [customTitle, setCustomTitle] = useState(null);
     const userMenuRef = useRef(null);
 
+    // Initialize global WebSocket for notifications
+    useNotifications({ enableSocket: true });
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {

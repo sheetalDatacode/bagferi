@@ -66,6 +66,7 @@ export const useAuthStore = create(
               role: user.role || 'user',
               currentMarketplace: user.currentMarketplace || 'b2b',
               businessInfo: user.businessInfo || null,
+              addresses: user.addresses || [],
             };
             set({ user: userData, isLoading: false });
             return { success: true, user: userData };
@@ -105,6 +106,7 @@ export const useAuthStore = create(
               role: user.role || 'user',
               currentMarketplace: user.currentMarketplace || 'b2b',
               businessInfo: user.businessInfo || null,
+              addresses: user.addresses || [],
             };
 
             set({
@@ -159,6 +161,7 @@ export const useAuthStore = create(
               role: user.role || 'user',
               currentMarketplace: user.currentMarketplace || 'b2b',
               businessInfo: user.businessInfo || null,
+              addresses: user.addresses || [],
             };
 
             set({
@@ -267,6 +270,7 @@ export const useAuthStore = create(
               role: user.role || 'user',
               currentMarketplace: user.currentMarketplace || 'b2b',
               businessInfo: user.businessInfo || null,
+              addresses: user.addresses || [],
             };
 
             set({
@@ -352,6 +356,7 @@ export const useAuthStore = create(
                 role: user.role || 'user',
                 currentMarketplace: user.currentMarketplace || 'b2b',
                 businessInfo: user.businessInfo || null,
+              addresses: user.addresses || [],
               };
               set({
                 user: userData,

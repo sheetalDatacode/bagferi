@@ -72,6 +72,18 @@ const vendorSchema = new mongoose.Schema(
       type: addressSchema,
       default: {},
     },
+    addresses: [{
+        streetAddress: { type: String, required: true },
+        city: { type: String, required: true },
+        state: { type: String, required: true },
+        pincode: { type: String, required: true },
+        country: { type: String, default: 'India' },
+        isDefault: { type: Boolean, default: false },
+        addressType: { type: String, enum: ['Home', 'Work', 'Warehouse', 'Other'], default: 'Work' },
+        phone: { type: String },
+        zoneId: { type: mongoose.Schema.Types.ObjectId, ref: 'Zone' },
+        areaName: { type: String, trim: true }
+    }],
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected'],

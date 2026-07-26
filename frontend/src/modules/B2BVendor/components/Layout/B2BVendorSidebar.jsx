@@ -148,9 +148,8 @@ const B2BVendorSidebar = ({ isOpen, onClose }) => {
         fetchPendingOrders();
         
         const interval = setInterval(() => {
-            fetchUnreadCount();
             fetchPendingOrders();
-        }, 15000); // Check every 15 seconds for orders
+        }, 60000); // Check every 60 seconds for orders
 
         // Fetch support config for social links
         const fetchSupport = async () => {

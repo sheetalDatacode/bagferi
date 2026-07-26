@@ -132,6 +132,9 @@ const ProtectedRoute = lazyWithRetry(
 const ErrorBoundary = lazyWithRetry(
   () => import("./shared/components/ErrorBoundary/ErrorBoundary"),
 );
+const DeliveryAddressModal = lazyWithRetry(
+  () => import("./shared/components/DeliveryAddressModal"),
+);
 const TermsAndConditions = lazyWithRetry(
   () => import("./shared/pages/TermsAndConditions"),
 );
@@ -175,6 +178,9 @@ const B2BVendorManageGrocery = lazyWithRetry(
 );
 const B2BVendorAddGrocery = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/grocery-products/AddGrocery"),
+);
+const B2BVendorEditGrocery = lazyWithRetry(
+  () => import("./modules/B2BVendor/pages/grocery-products/EditGrocery"),
 );
 const B2BVendorSettings = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/Settings"),
@@ -374,6 +380,7 @@ const AppRoutes = () => {
           </div>
         </div>
       }>
+      <DeliveryAddressModal />
       <Routes>
         <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="/user-privacy-policy" element={<PrivacyPolicy type="user" />} />
@@ -619,6 +626,7 @@ const AppRoutes = () => {
             <Route index element={<Navigate to="manage-grocery" replace />} />
             <Route path="manage-grocery" element={<B2BVendorManageGrocery />} />
             <Route path="add-grocery" element={<B2BVendorAddGrocery />} />
+            <Route path="edit/:id" element={<B2BVendorEditGrocery />} />
           </Route>
           <Route path="shop-listing" element={<B2BVendorShopListing />} />
           <Route path="settings" element={<B2BVendorSettings />} />

@@ -24,21 +24,9 @@ const EditProduct = () => {
                         // Standard Product Data transformation (existing logic)
                         const categoryAttr = productData.attributes?.find(attr => attr.name === 'category');
                         const subcategoryAttr = productData.attributes?.find(attr => attr.name === 'subcategory');
-                        const bulkPricingAttr = productData.attributes?.find(attr => attr.name === 'bulkPricing');
-
                         const specifications = productData.attributes?.filter(attr =>
-                            !['category', 'subcategory', 'bulkPricing', 'Color', 'color'].includes(attr.name)
+                            !['category', 'subcategory', 'Color', 'color'].includes(attr.name)
                         ) || [];
-
-                        let bulkPricing = [{ minQty: "", price: "" }];
-                        // Check productData.bulkPricing first, then attribute
-                        if (productData.bulkPricing && Array.isArray(productData.bulkPricing) && productData.bulkPricing.length > 0) {
-                            bulkPricing = productData.bulkPricing;
-                        } else if (bulkPricingAttr?.value) {
-                            try {
-                                bulkPricing = typeof bulkPricingAttr.value === 'string' ? JSON.parse(bulkPricingAttr.value) : bulkPricingAttr.value;
-                            } catch (e) { console.error('Failed to parse bulk pricing:', e); }
-                        }
 
                         let availability = "In Stock";
                         if (productData.stock === 'out_of_stock') availability = "Out of Stock";
@@ -53,8 +41,8 @@ const EditProduct = () => {
                             name: productData.name || "",
                             category: productData.category || categoryAttr?.value || "",
                             subcategory: productData.subcategory || subcategoryAttr?.value || "",
+                            mrp: productData.mrp || "",
                             price: productData.price || "",
-                            moq: productData.minimumOrderQuantity || 1,
                             brand: productData.brandName || "",
                             availability: availability,
                             description: productData.description || "",
@@ -63,7 +51,6 @@ const EditProduct = () => {
                             specifications: specifications.length > 0
                                 ? specifications.map(spec => ({ name: spec.name, value: spec.value }))
                                 : [{ name: "", value: "" }],
-                            bulkPricing: bulkPricing.length > 0 ? bulkPricing : [{ minQty: "", price: "" }],
                             unit: productData.unit || "Pcs",
                         });
                     }

@@ -184,16 +184,12 @@ export const getB2BVendorProductById = async (productId, vendorId) => {
 
     
 
-    // Normalize category/subcategory/bulkPricing for consistency if they were in attributes
+    // Normalize category/subcategory for consistency if they were in attributes
     if (!product.category) product.category = product.attributes?.find(a => a.name === 'category')?.value;
     else product.category = product.category?.name || product.category;
     if (!product.subcategory) product.subcategory = product.attributes?.find(a => a.name === 'subcategory')?.value;
     else product.subcategory = product.subcategory?.name || product.subcategory;
     if (product.subSubcategory) product.subSubcategory = product.subSubcategory?.name || product.subSubcategory;
-    if (!product.bulkPricing || product.bulkPricing.length === 0) {
-      const bpAttr = product.attributes?.find(a => a.name === 'bulkPricing')?.value;
-      if (bpAttr) product.bulkPricing = bpAttr;
-    }
 
     // Sanitize product images
     product.image = sanitizeImageUrl(product.image);
@@ -216,21 +212,20 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
   try {
     const {
       name,
+      mrp,
       price,
-      moq,
     } = productData;
 
     // Validate required fields for standard listing only
-    if (!name || !price || !moq) {
-      const err = new Error('Name, price, and MOQ are required for product listings');
+    if (!name || !price) {
+      const err = new Error('Name and price are required for product listings');
       err.status = 400;
       throw err;
     }
 
     // Parallelize all initial checks and generations for maximum speed
-    const [vendor, subscription, activeProductCount, sku] = await Promise.all([
+    const [vendor, activeProductCount, sku] = await Promise.all([
       verifyB2BVendor(vendorId),
-
       Product.countDocuments({ vendorId, isActive: true }),
       generateSKU(name, vendorId)
     ]);
@@ -246,7 +241,6 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
       description,
       images = [],
       specifications = [],
-      bulkPricing = [],
       brand,
       availability,
       unit,
@@ -292,7 +286,7 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
       // Upload ALL shop images in parallel (main + gallery)
       const allUploads = finalImages.map(async (img, idx) => {
         if (img.startsWith('http')) {
-          return { secure_url: img, public_id: shopUnitDetails?.imagesPublicIds?.[idx] || null };
+          return { secure_url: img, public_id: null };
         }
         const folder = idx === 0 ? 'products/b2b' : 'products/b2b/gallery';
         return safeUpload(img, folder);
@@ -351,12 +345,11 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
       fieldUpdates,
     });
 
-    // We no longer push category/subcategory/bulkPricing to attributes
-    // Use the native schema fields instead
+    // We no longer push category/subcategory to attributes
 
     // Determine stock status
     let stock = 'in_stock';
-    let stockQuantity = parseInt(productData.stockQuantity || moq || 0);
+    let stockQuantity = parseInt(productData.stockQuantity || 0);
 
     if (availability === 'Out of Stock') {
       stock = 'out_of_stock';
@@ -369,13 +362,13 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
     const product = await Product.create({
       name: (name || '').trim(),
       sku,
+      mrp: mrp ? parseFloat(mrp) : undefined,
       price: parseFloat(price),
       description: description || '',
       image: imageUrl,
       imagePublicId: imagePublicId,
       images: imageUrls,
       imagesPublicIds: imagePublicIds,
-      minimumOrderQuantity: parseInt(moq) || 1,
       stockQuantity: stockQuantity,
       stock: stock,
       attributes: processedAttributes,
@@ -383,7 +376,6 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
       category: catIds.categoryId || null,
       subcategory: catIds.subcategoryId || null,
       subSubcategory: catIds.subSubcategoryId || null,
-      bulkPricing: bulkPricing || [],
       unit: unit || 'Pcs',
       vendorId,
       vendorName: vendor.storeName || vendor.name,
@@ -456,12 +448,11 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
       category,
       subcategory,
       subSubcategory,
-      moq,
+      mrp,
       price,
       description,
       images,
       specifications,
-      bulkPricing,
       brand,
       availability,
       stockQuantity: payloadStockQuantity,
@@ -471,12 +462,11 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
     const updateData = {};
 
     if (name !== undefined) updateData.name = name.trim();
+    if (mrp !== undefined) updateData.mrp = parseFloat(mrp);
     if (price !== undefined) updateData.price = parseFloat(price);
     if (description !== undefined) updateData.description = description || '';
     if (brand !== undefined) updateData.brandName = brand || '';
-    if (moq !== undefined) updateData.minimumOrderQuantity = parseInt(moq) || 1;
     if (productData.unit !== undefined) updateData.unit = productData.unit;
-    if (bulkPricing !== undefined) updateData.bulkPricing = bulkPricing;
 
 
     // Process images if provided

@@ -12,11 +12,13 @@ import B2BBottomNav from '../components/Layout/B2BBottomNav';
 import api from '../../../shared/utils/api';
 import { useAuthStore } from '../../../shared/store/authStore';
 import { useCartStore } from '../../../shared/store/cartStore';
+import { getRatingSummary, getUserRating, submitRating } from '../../../shared/services/ratingService';
+import StarRating from '../../../shared/components/StarRating';
 
 const GroceryProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuthStore();
+    const { isAuthenticated, user } = useAuthStore();
     const { addToCart } = useCartStore();
     
     const [product, setProduct] = useState(null);
@@ -24,6 +26,15 @@ const GroceryProductDetail = () => {
     const [quantity, setQuantity] = useState(1);
     const [addingToCart, setAddingToCart] = useState(false);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [selectedSize, setSelectedSize] = useState(null);
+    const [selectedColor, setSelectedColor] = useState(null);
+    const [ratingSummary, setRatingSummary] = useState({ averageRating: 0, ratingCount: 0, type: 'product' });
+    const [userRating, setUserRating] = useState(null);
+    const [draftRating, setDraftRating] = useState(0);
+    const [draftComment, setDraftComment] = useState('');
+    const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+    const [productReviews, setProductReviews] = useState([]);
+    const [activeTab, setActiveTab] = useState('details');
 
     useEffect(() => {
         const fetchProductDetails = async () => {
@@ -35,6 +46,8 @@ const GroceryProductDetail = () => {
                     if (res.data.stock > 0) {
                         setQuantity(1);
                     }
+                    if (res.data.sizes && res.data.sizes.length > 0) setSelectedSize(res.data.sizes[0]);
+                    if (res.data.colors && res.data.colors.length > 0) setSelectedColor(res.data.colors[0]);
                 }
             } catch (error) {
                 console.error(error);
@@ -44,10 +57,65 @@ const GroceryProductDetail = () => {
             }
         };
 
+        const fetchRatings = async () => {
+            if (id) {
+                const summary = await getRatingSummary('product', id);
+                if (summary) setRatingSummary({ ...summary, type: 'product' });
+                
+                if (isAuthenticated && user?._id) {
+                    const userR = await getUserRating('product', id, user._id);
+                    if (userR) {
+                        setUserRating(userR);
+                        setDraftRating(userR.rating || 0);
+                        setDraftComment(userR.review || '');
+                    }
+                }
+                
+                const revRes = await api.get('/rating/list', { params: { targetType: 'product', targetId: id } });
+                if (revRes.success && revRes.data) {
+                    setProductReviews(revRes.data);
+                }
+            }
+        };
+
         if (id) {
             fetchProductDetails();
+            fetchRatings();
         }
-    }, [id]);
+    }, [id, isAuthenticated, user]);
+
+    const handleRatingSubmit = async (e) => {
+        e.preventDefault();
+        if (!isAuthenticated) {
+            toast.error('Please login to submit a rating');
+            return;
+        }
+        if (draftRating === 0) {
+            toast.error('Please select a rating before submitting');
+            return;
+        }
+
+        setIsSubmittingRating(true);
+        try {
+            const res = await submitRating({
+                targetType: 'product',
+                targetId: id,
+                vendorId: product.vendorId?._id || product.vendorId,
+                rating: draftRating,
+                review: draftComment
+            });
+
+            if (res) {
+                const summary = await getRatingSummary('product', id);
+                if (summary) setRatingSummary({ ...summary, type: 'product' });
+                const revRes = await api.get('/rating/list', { params: { targetType: 'product', targetId: id } });
+                if (revRes.success && revRes.data) setProductReviews(revRes.data);
+                toast.success('Review submitted successfully!');
+            }
+        } finally {
+            setIsSubmittingRating(false);
+        }
+    };
 
     const handleQuantityChange = (type) => {
         if (type === 'inc' && quantity < product?.stock) {
@@ -164,6 +232,16 @@ const GroceryProductDetail = () => {
                             <h1 className="text-2xl lg:text-3xl font-black text-gray-900 tracking-tight leading-tight mb-2">
                                 {product.title}
                             </h1>
+
+                            {/* Rating Summary */}
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="flex items-center gap-1">
+                                    <StarRating rating={ratingSummary.averageRating} size={14} />
+                                    <span className="text-sm font-bold text-gray-900 ml-1">{ratingSummary.averageRating.toFixed(1)}</span>
+                                </div>
+                                <span className="text-gray-300">•</span>
+                                <span className="text-sm text-gray-500 font-medium">({ratingSummary.ratingCount} reviews)</span>
+                            </div>
                             
                             {product.brand && (
                                 <p className="text-gray-500 font-bold uppercase tracking-wider text-xs mb-4">Brand: <span className="text-gray-800">{product.brand}</span></p>
@@ -171,8 +249,46 @@ const GroceryProductDetail = () => {
                             
                             <div className="flex items-end gap-3 mb-6">
                                 <span className="text-4xl font-black text-gray-900 tracking-tighter">₹{product.price}</span>
+                                {product.mrp && product.mrp > product.price && (
+                                    <span className="text-2xl text-gray-400 font-medium line-through mb-1">₹{product.mrp}</span>
+                                )}
                                 <span className="text-lg text-gray-500 font-bold mb-1">/ {product.unit || 'kg'}</span>
                             </div>
+
+                            {/* Sizes & Colors */}
+                            {product.sizes && product.sizes.length > 0 && (
+                                <div className="mb-6">
+                                    <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Select Size / Weight</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {product.sizes.map((size, idx) => (
+                                            <button 
+                                                key={idx}
+                                                onClick={() => setSelectedSize(size)}
+                                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selectedSize === size ? 'bg-primary-600 border-primary-600 text-white shadow-md' : 'bg-white border-gray-200 text-gray-700 hover:border-primary-300'}`}
+                                            >
+                                                {size}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {product.colors && product.colors.length > 0 && (
+                                <div className="mb-6">
+                                    <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Select Color</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {product.colors.map((color, idx) => (
+                                            <button 
+                                                key={idx}
+                                                onClick={() => setSelectedColor(color)}
+                                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selectedColor === color ? 'bg-primary-600 border-primary-600 text-white shadow-md' : 'bg-white border-gray-200 text-gray-700 hover:border-primary-300'}`}
+                                            >
+                                                {color}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="space-y-4 mb-8">
                                 <p className="text-gray-600 leading-relaxed text-sm">
@@ -237,8 +353,121 @@ const GroceryProductDetail = () => {
                             </div>
                         </div>
                     </div>
+                    </div>
+
+                    {/* Tabs Section */}
+                    <div className="border-t border-gray-100 mt-8">
+                        <div className="flex border-b border-gray-100">
+                            <button
+                                onClick={() => setActiveTab('details')}
+                                className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'details' ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+                            >
+                                Details & Specs
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('reviews')}
+                                className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'reviews' ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+                            >
+                                Reviews ({ratingSummary.ratingCount})
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 lg:p-10">
+                            {activeTab === 'details' && (
+                                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Basic Specs */}
+                                        <div className="flex flex-col p-4 bg-gray-50 rounded-xl">
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Category</span>
+                                            <span className="text-sm font-medium text-gray-900">{product.category?.name || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex flex-col p-4 bg-gray-50 rounded-xl">
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Brand</span>
+                                            <span className="text-sm font-medium text-gray-900">{product.brand || 'Generic'}</span>
+                                        </div>
+                                        {product.expiryDate && (
+                                            <div className="flex flex-col p-4 bg-gray-50 rounded-xl">
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Expiry Date</span>
+                                                <span className="text-sm font-medium text-gray-900">{new Date(product.expiryDate).toLocaleDateString()}</span>
+                                            </div>
+                                        )}
+                                        {/* Dynamic Attributes */}
+                                        {product.attributes && product.attributes.length > 0 && product.attributes.map((attr, idx) => (
+                                            <div key={`attr-${idx}`} className="flex flex-col p-4 bg-gray-50 rounded-xl">
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{attr.attributeName || attr.name}</span>
+                                                <span className="text-sm font-medium text-gray-900">{Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'reviews' && (
+                                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                    {/* Write Review */}
+                                    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                                        <h3 className="text-lg font-black text-gray-900 mb-4">{userRating ? 'Your Review' : 'Write a Review'}</h3>
+                                        <form onSubmit={handleRatingSubmit}>
+                                            <div className="mb-4">
+                                                <label className="block text-sm font-bold text-gray-700 mb-2">Rating</label>
+                                                <StarRating 
+                                                    rating={draftRating} 
+                                                    interactive={true} 
+                                                    onRate={setDraftRating} 
+                                                    size={24} 
+                                                />
+                                            </div>
+                                            <div className="mb-4">
+                                                <label className="block text-sm font-bold text-gray-700 mb-2">Comment (Optional)</label>
+                                                <textarea 
+                                                    value={draftComment}
+                                                    onChange={(e) => setDraftComment(e.target.value)}
+                                                    className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all resize-none"
+                                                    rows="3"
+                                                    placeholder="Share your experience with this product..."
+                                                ></textarea>
+                                            </div>
+                                            <button 
+                                                type="submit"
+                                                disabled={isSubmittingRating || draftRating === 0}
+                                                className="px-6 py-2 bg-primary-600 text-white rounded-xl font-bold uppercase tracking-wider text-sm disabled:opacity-50 hover:bg-primary-700 transition-colors"
+                                            >
+                                                {isSubmittingRating ? 'Submitting...' : 'Submit Review'}
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    {/* Existing Reviews */}
+                                    <div>
+                                        <h3 className="text-lg font-black text-gray-900 mb-4">Customer Reviews</h3>
+                                        {productReviews.length === 0 ? (
+                                            <p className="text-gray-500 text-sm italic">No reviews yet. Be the first to review!</p>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {productReviews.map((rev) => (
+                                                    <div key={rev._id} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-bold text-xs uppercase">
+                                                                    {rev.userId?.name?.charAt(0) || 'U'}
+                                                                </div>
+                                                                <span className="font-bold text-gray-900 text-sm">{rev.userId?.name || 'User'}</span>
+                                                            </div>
+                                                            <span className="text-xs text-gray-400">{new Date(rev.createdAt).toLocaleDateString()}</span>
+                                                        </div>
+                                                        <StarRating rating={rev.rating} size={14} className="mb-2" />
+                                                        {rev.review && <p className="text-sm text-gray-600">{rev.review}</p>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
-            </div>
+
 
             <div className="lg:hidden">
                 <B2BBottomNav />
