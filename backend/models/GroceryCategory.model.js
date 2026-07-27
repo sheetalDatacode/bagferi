@@ -12,7 +12,7 @@ const groceryCategorySchema = new mongoose.Schema({
   image: { type: String, default: null },
   imagePublicId: { type: String, default: null },
   parent: { type: mongoose.Schema.Types.ObjectId, ref: 'GroceryCategory', default: null },
-  level: { type: Number, required: true, enum: [1, 2, 3], default: 1 },
+  level: { type: Number, required: true, enum: [1, 2], default: 1 },
   fields: { type: [fieldSchema], default: [] },
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });

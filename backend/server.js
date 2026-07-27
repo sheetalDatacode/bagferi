@@ -61,6 +61,7 @@ import adminDefaultBannerRoutes from "./routes/adminDefaultBanner.routes.js";
 import publicBannerRoutes from "./routes/publicBanner.routes.js";
 import adminAnalyticsRoutes from "./routes/adminAnalytics.routes.js";
 import adminDashboardRoutes from "./routes/adminDashboard.routes.js";
+import brandRoutes from "./routes/brand.routes.js";
 import businessTypeRoutes from "./routes/businessType.routes.js";
 import adminBusinessSettingsRoutes from "./routes/adminBusinessSettings.routes.js";
 import adminNotificationRoutes from "./routes/adminNotification.routes.js";
@@ -332,6 +333,9 @@ app.use("/api/vendor/hero-banners", heroBannerVendorRoutes);
 app.use("/api/admin/hero-banners", heroBannerAdminRoutes);
 app.use("/api/admin/default-banners", adminDefaultBannerRoutes);
 app.use("/api/public/banners", publicBannerRoutes);
+app.use("/api/brands", brandRoutes);
+
+// Analytics
 app.use("/api/admin/analytics", adminAnalyticsRoutes);
 app.use("/api/admin/reports", adminDashboardRoutes);
 app.use("/api/admin/transactions", adminTransactionsRoutes);

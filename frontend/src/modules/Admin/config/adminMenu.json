@@ -60,6 +60,11 @@
     "children": []
   },
   {
+    "title": "Brands",
+    "route": "/admin/brands",
+    "children": []
+  },
+  {
     "title": "Banner Bookings",
     "route": "/admin/b2b-vendors/banner-bookings",
     "children": []

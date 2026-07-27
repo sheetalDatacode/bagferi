@@ -4,12 +4,34 @@ import Vendor from '../models/Vendor.model.js';
 
 export const getGroceryProducts = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, search, category, subcategory, vendorId, sort, minPrice, maxPrice, maxMoq } = req.query;
+    const { page = 1, limit = 20, search, category, subcategory, vendorId, sort, minPrice, maxPrice, maxMoq, brands, weights } = req.query;
     const query = { isActive: true, isVisible: true };
     if (search) query.name = { $regex: search, $options: 'i' };
     if (category) query.category = category;
     if (subcategory) query.subcategory = subcategory;
     if (vendorId) query.vendorId = vendorId;
+
+    if (brands) {
+      const brandArray = brands.split(',').map(b => b.trim()).filter(Boolean);
+      if (brandArray.length > 0) {
+        query.brandName = { $in: brandArray };
+      }
+    }
+
+    if (weights) {
+      const weightArray = weights.split(',').map(w => w.trim()).filter(Boolean);
+      if (weightArray.length > 0) {
+        // weights format is "1 kg", so we might need to match weight and unit, or just search string
+        // Assuming weight filter from frontend is "$weight $unit" e.g. "1 kg"
+        query.$or = weightArray.map(w => {
+          const parts = w.split(' ');
+          if (parts.length === 2) {
+            return { weight: parts[0], unit: parts[1] };
+          }
+          return { weight: w };
+        });
+      }
+    }
 
     if (minPrice !== undefined || maxPrice !== undefined) {
       query.price = {};
@@ -24,6 +46,8 @@ export const getGroceryProducts = async (req, res, next) => {
     let sortOptions = { createdAt: -1 };
     if (sort === 'price_asc') sortOptions = { price: 1 };
     else if (sort === 'price_desc') sortOptions = { price: -1 };
+    else if (sort === 'discount_desc') sortOptions = { discountPercent: -1 };
+    else if (sort === 'rating_desc') sortOptions = { averageRating: -1 };
     else if (sort === 'newest') sortOptions = { createdAt: -1 };
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -54,10 +78,41 @@ export const getGroceryProducts = async (req, res, next) => {
 export const getGroceryProductById = async (req, res, next) => {
   try {
     const product = await GroceryProduct.findById(req.params.id)
-      .populate('category subcategory subSubcategory vendorId')
+      .populate('category subcategory vendorId')
       .lean();
     if (!product) return res.status(404).json({ success: false, message: 'Not found' });
     res.status(200).json({ success: true, data: product });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getGroceryProductFilters = async (req, res, next) => {
+  try {
+    const { category, subcategory } = req.query;
+    const query = { isActive: true, isVisible: true };
+    if (category) query.category = category;
+    if (subcategory) query.subcategory = subcategory;
+
+    const [brands, weights] = await Promise.all([
+      GroceryProduct.distinct('brandName', { ...query, brandName: { $ne: '', $exists: true } }),
+      GroceryProduct.aggregate([
+        { $match: { ...query, weight: { $exists: true, $ne: '' } } },
+        { $group: { _id: { weight: '$weight', unit: '$unit' } } },
+        { $project: { _id: 0, weight: '$_id.weight', unit: '$_id.unit' } },
+        { $sort: { weight: 1 } }
+      ])
+    ]);
+
+    const formattedWeights = weights.map(w => `${w.weight} ${w.unit || ''}`.trim());
+
+    res.status(200).json({
+      success: true,
+      data: {
+        brands: brands.filter(Boolean).sort(),
+        weights: formattedWeights
+      }
+    });
   } catch (error) {
     next(error);
   }
@@ -90,8 +145,16 @@ export const createGroceryProduct = async (req, res, next) => {
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
 
-    let { name, mrp, price, stockQuantity, category, subcategory, subSubcategory, description, expiryDate } = req.body;
+    let { name, mrp, price, stockQuantity, category, subcategory, description, expiryDate, brand, weight, unit, attributes } = req.body;
     let image = null, imagePublicId = null;
+
+    if (typeof attributes === 'string') {
+      try {
+        attributes = JSON.parse(attributes);
+      } catch (e) {
+        attributes = [];
+      }
+    }
 
     if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer, 'grocery_products');
@@ -106,9 +169,11 @@ export const createGroceryProduct = async (req, res, next) => {
     const sku = 'GROC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
 
     const product = await GroceryProduct.create({
-      name, mrp, price, stockQuantity, category, subcategory, subSubcategory, description,
+      name, mrp, price, stockQuantity, category, subcategory, description,
       expiryDate, vendorId, vendorName: vendor.storeName, image, imagePublicId, sku,
-      images: image ? [image] : [], imagesPublicIds: imagePublicId ? [imagePublicId] : []
+      images: image ? [image] : [], imagesPublicIds: imagePublicId ? [imagePublicId] : [],
+      brandName: brand || '',
+      weight, unit, attributes
     });
 
     res.status(201).json({ success: true, data: product });
@@ -129,6 +194,18 @@ export const updateGroceryProduct = async (req, res, next) => {
     }
 
     const updateData = { ...req.body };
+    if (updateData.brand) {
+      updateData.brandName = updateData.brand;
+      delete updateData.brand;
+    }
+    if (typeof updateData.attributes === 'string') {
+      try {
+        updateData.attributes = JSON.parse(updateData.attributes);
+      } catch (e) {
+        updateData.attributes = [];
+      }
+    }
+    
     if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer, 'grocery_products');
       updateData.image = result.secure_url;

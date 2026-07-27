@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { motion } from "framer-motion";
-import { FiSearch, FiPackage, FiArrowLeft, FiFilter } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiSearch, FiPackage, FiArrowLeft, FiFilter, FiChevronDown, FiCheck } from "react-icons/fi";
 import B2BHeader from "../components/Layout/B2BHeader";
 import B2BBottomNav from "../components/Layout/B2BBottomNav";
 import api from "../../../shared/utils/api";
@@ -23,6 +23,14 @@ const GroceryCatalog = () => {
   const [maxPrice, setMaxPrice] = useState('');
   const [debouncedMinPrice, setDebouncedMinPrice] = useState('');
   const [debouncedMaxPrice, setDebouncedMaxPrice] = useState('');
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedWeights, setSelectedWeights] = useState([]);
+  const [availableFilters, setAvailableFilters] = useState({ brands: [], weights: [] });
+  const [maxMoq, setMaxMoq] = useState(null);
+
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isQtyOpen, setIsQtyOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -66,6 +74,9 @@ const GroceryCatalog = () => {
         let url = `/grocery/products?category=${selectedRootId}&limit=20&sort=${sortBy}`;
         if (debouncedMinPrice) url += `&minPrice=${debouncedMinPrice}`;
         if (debouncedMaxPrice) url += `&maxPrice=${debouncedMaxPrice}`;
+        if (maxMoq) url += `&maxMoq=${maxMoq}`;
+        if (selectedBrands.length > 0) url += `&brands=${encodeURIComponent(selectedBrands.join(','))}`;
+        if (selectedWeights.length > 0) url += `&weights=${encodeURIComponent(selectedWeights.join(','))}`;
         
         const res = await api.get(url);
         if (res.success) {
@@ -77,8 +88,22 @@ const GroceryCatalog = () => {
         setLoadingProducts(false);
       }
     };
+
+    const fetchFilters = async () => {
+      if (!selectedRootId) return;
+      try {
+        const res = await api.get(`/grocery/products/filters?category=${selectedRootId}`);
+        if (res.success) {
+          setAvailableFilters(res.data || { brands: [], weights: [] });
+        }
+      } catch (error) {
+        console.error("Error fetching filters", error);
+      }
+    };
+
     fetchProducts();
-  }, [selectedRootId, sortBy, debouncedMinPrice, debouncedMaxPrice]);
+    fetchFilters();
+  }, [selectedRootId, sortBy, debouncedMinPrice, debouncedMaxPrice, selectedBrands, selectedWeights, maxMoq]);
 
   const selectedRoot = categories.find(c => c._id === selectedRootId) || null;
 
@@ -180,38 +205,181 @@ const GroceryCatalog = () => {
                             </h3>
                             
                             {/* Filter Bar */}
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-                                    <FiFilter className="text-gray-400 text-sm" />
-                                    <select 
-                                        value={sortBy} 
-                                        onChange={(e) => setSortBy(e.target.value)}
-                                        className="text-xs font-semibold text-gray-700 bg-transparent focus:outline-none cursor-pointer"
-                                    >
-                                        <option value="newest">Newest First</option>
-                                        <option value="price_asc">Price: Low to High</option>
-                                        <option value="price_desc">Price: High to Low</option>
-                                    </select>
-                                </div>
-                                
-                                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-                                    <span className="text-xs font-bold text-gray-400">₹</span>
-                                    <input 
-                                        type="number" 
-                                        placeholder="Min" 
-                                        value={minPrice}
-                                        onChange={(e) => setMinPrice(e.target.value)}
-                                        className="w-12 text-xs font-semibold text-gray-700 bg-transparent focus:outline-none placeholder-gray-400"
-                                    />
-                                    <span className="text-xs text-gray-300 font-bold">-</span>
-                                    <input 
-                                        type="number" 
-                                        placeholder="Max" 
-                                        value={maxPrice}
-                                        onChange={(e) => setMaxPrice(e.target.value)}
-                                        className="w-12 text-xs font-semibold text-gray-700 bg-transparent focus:outline-none placeholder-gray-400"
-                                    />
-                                </div>
+                            <div className="flex items-center gap-2">
+                               {/* Filters Dropdown */}
+                               <div className="relative">
+                                  <button 
+                                    onClick={() => { setIsFilterOpen(!isFilterOpen); setIsSortOpen(false); setIsQtyOpen(false); }}
+                                    className="flex items-center gap-1.5 text-[10px] font-black text-gray-600 bg-white px-3 py-1.5 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all uppercase tracking-wider shadow-sm"
+                                  >
+                                     <FiFilter size={12} /> Filters <FiChevronDown size={12} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
+                                  </button>
+                                  <AnimatePresence>
+                                    {isFilterOpen && (
+                                      <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute top-full left-0 md:right-0 md:left-auto mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
+                                      >
+                                        {/* Price Range */}
+                                        <div className="mb-4">
+                                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Price Range (₹)</h4>
+                                          <div className="grid grid-cols-2 gap-2 items-center">
+                                            <input 
+                                              type="number" 
+                                              placeholder="Min" 
+                                              value={minPrice}
+                                              onChange={(e) => setMinPrice(e.target.value)}
+                                              className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs font-bold outline-none focus:border-primary-300"
+                                            />
+                                            <input 
+                                              type="number" 
+                                              placeholder="Max" 
+                                              value={maxPrice}
+                                              onChange={(e) => setMaxPrice(e.target.value)}
+                                              className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs font-bold outline-none focus:border-primary-300"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        {/* Brands Filter */}
+                                        {availableFilters.brands && availableFilters.brands.length > 0 && (
+                                          <div className="mb-4">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Brand</h4>
+                                            <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar">
+                                              {availableFilters.brands.map(brand => (
+                                                <label key={brand} className="flex items-center gap-2 cursor-pointer group">
+                                                  <div className="relative flex items-center justify-center">
+                                                    <input 
+                                                      type="checkbox"
+                                                      checked={selectedBrands.includes(brand)}
+                                                      onChange={(e) => {
+                                                        if (e.target.checked) setSelectedBrands([...selectedBrands, brand]);
+                                                        else setSelectedBrands(selectedBrands.filter(b => b !== brand));
+                                                      }}
+                                                      className="appearance-none w-4 h-4 rounded border border-gray-300 checked:bg-primary-600 checked:border-primary-600 transition-colors cursor-pointer"
+                                                    />
+                                                    {selectedBrands.includes(brand) && <FiCheck size={10} className="absolute text-white pointer-events-none" />}
+                                                  </div>
+                                                  <span className="text-xs font-semibold text-gray-600 group-hover:text-primary-600 truncate">{brand}</span>
+                                                </label>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Weight/Size Filter */}
+                                        {availableFilters.weights && availableFilters.weights.length > 0 && (
+                                          <div className="mb-4">
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Weight / Size</h4>
+                                            <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar">
+                                              {availableFilters.weights.map(weight => (
+                                                <label key={weight} className="flex items-center gap-2 cursor-pointer group">
+                                                  <div className="relative flex items-center justify-center">
+                                                    <input 
+                                                      type="checkbox"
+                                                      checked={selectedWeights.includes(weight)}
+                                                      onChange={(e) => {
+                                                        if (e.target.checked) setSelectedWeights([...selectedWeights, weight]);
+                                                        else setSelectedWeights(selectedWeights.filter(w => w !== weight));
+                                                      }}
+                                                      className="appearance-none w-4 h-4 rounded border border-gray-300 checked:bg-primary-600 checked:border-primary-600 transition-colors cursor-pointer"
+                                                    />
+                                                    {selectedWeights.includes(weight) && <FiCheck size={10} className="absolute text-white pointer-events-none" />}
+                                                  </div>
+                                                  <span className="text-xs font-semibold text-gray-600 group-hover:text-primary-600 truncate">{weight}</span>
+                                                </label>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        <div className="flex gap-2 sticky bottom-0 bg-white pt-2 border-t border-gray-100">
+                                           <button onClick={() => { setMinPrice(''); setMaxPrice(''); setSelectedBrands([]); setSelectedWeights([]); setIsFilterOpen(false); }} className="flex-1 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-gray-200">Clear</button>
+                                           <button onClick={() => setIsFilterOpen(false)} className="flex-1 px-3 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/20">Apply</button>
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                               </div>
+
+                               {/* Sort Dropdown */}
+                               <div className="relative">
+                                  <button 
+                                    onClick={() => { setIsSortOpen(!isSortOpen); setIsFilterOpen(false); setIsQtyOpen(false); }}
+                                    className="flex items-center gap-1.5 text-[10px] font-black text-gray-600 bg-white px-3 py-1.5 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all uppercase tracking-wider shadow-sm"
+                                  >
+                                     Sort <FiChevronDown size={12} className={`transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
+                                  </button>
+                                  <AnimatePresence>
+                                    {isSortOpen && (
+                                      <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute top-full right-0 md:left-0 md:right-auto mt-2 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden"
+                                      >
+                                        <div className="p-1.5 space-y-0.5">
+                                          {[
+                                            { id: 'newest', label: 'Newest First' },
+                                            { id: 'price_asc', label: 'Price (low to high)' },
+                                            { id: 'price_desc', label: 'Price (high to low)' },
+                                            { id: 'rating_desc', label: 'Rating (high to low)' },
+                                            { id: 'discount_desc', label: 'Discount (high to low)' }
+                                          ].map(opt => (
+                                            <button
+                                              key={opt.id}
+                                              onClick={() => { setSortBy(opt.id); setIsSortOpen(false); }}
+                                              className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-between ${sortBy === opt.id ? 'bg-primary-50 text-primary-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                            >
+                                              {opt.label}
+                                              {sortBy === opt.id && <FiCheck size={12} className="text-primary-600" />}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                               </div>
+
+                               {/* Quantity Dropdown */}
+                               <div className="relative hidden md:block">
+                                  <button 
+                                    onClick={() => { setIsQtyOpen(!isQtyOpen); setIsFilterOpen(false); setIsSortOpen(false); }}
+                                    className="flex items-center gap-1.5 text-[10px] font-black text-gray-600 bg-white px-3 py-1.5 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all uppercase tracking-wider shadow-sm"
+                                  >
+                                     Quantity <FiChevronDown size={12} className={`transition-transform ${isQtyOpen ? 'rotate-180' : ''}`} />
+                                  </button>
+                                  <AnimatePresence>
+                                    {isQtyOpen && (
+                                      <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute top-full right-0 mt-2 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden"
+                                      >
+                                        <div className="p-1.5 space-y-0.5">
+                                          {[
+                                            { id: null, label: 'Any Quantity' },
+                                            { id: 10, label: 'MOQ ≤ 10' },
+                                            { id: 50, label: 'MOQ ≤ 50' },
+                                            { id: 100, label: 'MOQ ≤ 100' }
+                                          ].map(opt => (
+                                            <button
+                                              key={opt.id || 'any'}
+                                              onClick={() => { setMaxMoq(opt.id); setIsQtyOpen(false); }}
+                                              className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-between ${maxMoq === opt.id ? 'bg-primary-50 text-primary-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                            >
+                                              {opt.label}
+                                              {maxMoq === opt.id && <FiCheck size={12} className="text-primary-600" />}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                               </div>
                             </div>
                         </div>
                         {loadingProducts ? (

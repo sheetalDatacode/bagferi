@@ -37,6 +37,11 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
     const categoryDropdownRef = useRef(null);
     const subcategoryDropdownRef = useRef(null);
     const subSubcategoryDropdownRef = useRef(null);
+    const brandDropdownRef = useRef(null);
+
+    const [brands, setBrands] = useState([]);
+    const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
+    const [brandSearchQuery, setBrandSearchQuery] = useState("");
 
     // Lock scroll when unit selection modal is open
     useScrollLock(isUnitDropdownOpen);
@@ -139,6 +144,29 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        const fetchBrands = async () => {
+            try {
+                let query = '?type=fashion';
+                const catObj = categories.find(c => c.name === formData.category);
+                if (catObj) {
+                    query += `&category=${catObj.id || catObj._id}`;
+                    const subcatObj = (catObj.subcategories || []).find(s => s.name === formData.subcategory);
+                    if (subcatObj) {
+                        query += `&subcategory=${subcatObj.id || subcatObj._id}`;
+                    }
+                }
+                const res = await api.get(`/brands${query}`);
+                if (res.success) {
+                    setBrands(res.data || []);
+                }
+            } catch (error) {
+                console.error("Failed to fetch brands", error);
+            }
+        };
+        fetchBrands();
+    }, [formData.category, formData.subcategory, categories]);
 
     useEffect(() => {
         if (!isEdit && isDraftLoaded) {
@@ -1029,16 +1057,72 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 </div>
                             ))}
 
-                            <div>
+                            <div className="relative" ref={brandDropdownRef}>
                                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Brand / Manufacturer</label>
-                                <input
-                                    type="text"
-                                    name="brand"
-                                    value={formData.brand || ""}
-                                    onChange={handleChange}
-                                    className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.brand ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none`}
-                                    placeholder="e.g. Tata Steel"
-                                />
+                                <div 
+                                    onClick={() => setIsBrandDropdownOpen(!isBrandDropdownOpen)}
+                                    className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.brand ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus-within:border-primary-500 focus-within:bg-white rounded-xl transition-all cursor-pointer flex justify-between items-center`}
+                                >
+                                    <span className={`truncate ${!formData.brand ? 'text-gray-400' : 'text-gray-800'}`}>
+                                        {formData.brand || "Select or search brand"}
+                                    </span>
+                                    <FiChevronDown className={`text-gray-400 transition-transform ${isBrandDropdownOpen ? 'rotate-180' : ''}`} />
+                                </div>
+
+                                <AnimatePresence>
+                                    {isBrandDropdownOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            className="absolute z-[100] w-full mt-2 bg-white border border-gray-100 shadow-xl rounded-2xl overflow-hidden"
+                                        >
+                                            <div className="p-3 border-b border-gray-50">
+                                                <div className="relative">
+                                                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                    <input 
+                                                        autoFocus
+                                                        type="text"
+                                                        placeholder="Search brand..."
+                                                        value={brandSearchQuery}
+                                                        onChange={(e) => setBrandSearchQuery(e.target.value)}
+                                                        className="w-full pl-9 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 outline-none"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="max-h-60 overflow-y-auto p-2 custom-scrollbar">
+                                                {brands
+                                                    .filter(b => b.name.toLowerCase().includes(brandSearchQuery.toLowerCase()))
+                                                    .map((b) => (
+                                                        <button
+                                                            key={b._id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setFormData(prev => ({ ...prev, brand: b.name }));
+                                                                setIsBrandDropdownOpen(false);
+                                                                setBrandSearchQuery("");
+                                                                if (errors.brand) setErrors(prev => ({ ...prev, brand: null }));
+                                                            }}
+                                                            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-colors flex items-center justify-between ${
+                                                                formData.brand === b.name 
+                                                                ? 'bg-primary-50 text-primary-700 font-bold' 
+                                                                : 'text-gray-600 hover:bg-gray-50'
+                                                            }`}
+                                                        >
+                                                            <span>{b.name}</span>
+                                                            {formData.brand === b.name && <FiCheck className="text-primary-600" />}
+                                                        </button>
+                                                    ))}
+                                                {brands.filter(b => b.name.toLowerCase().includes(brandSearchQuery.toLowerCase())).length === 0 && (
+                                                    <div className="p-4 text-center text-gray-400 text-sm italic">
+                                                        No brands found
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                                 {errors.brand && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{errors.brand}</p>}
                             </div>
 

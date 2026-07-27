@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -27,6 +27,16 @@ const B2BProductDetail = () => {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState(0);
+    const [selectedMedia, setSelectedMedia] = useState('image'); // 'image' | 'video'
+    const videoRef = useRef(null);
+
+    useEffect(() => {
+        if (selectedMedia === 'video' && videoRef.current) {
+            videoRef.current.play().catch(err => {
+                console.log("Autoplay was prevented or video load failed:", err);
+            });
+        }
+    }, [selectedMedia]);
     const [quantity, setQuantity] = useState(1);
     const [showInquiryModal, setShowInquiryModal] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -383,29 +393,57 @@ const B2BProductDetail = () => {
 
                     {/* Media Section */}
                     <div className="space-y-4">
-                        <div className="relative aspect-square md:aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 flex items-center justify-center p-4">
-                            {(ytId && productImages.length === 0) ? (
-                                <iframe 
-                                    width="100%" 
-                                    height="100%" 
-                                    src={`https://www.youtube.com/embed/${ytId}`} 
-                                    title="YouTube video player" 
-                                    frameBorder="0" 
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                    allowFullScreen
-                                    className="rounded-xl"
-                                ></iframe>
-                            ) : (!ytId && videoLink && productImages.length === 0) ? (
-                                <video 
-                                    className="w-full h-full object-cover rounded-xl bg-black"
-                                    autoPlay
-                                    muted 
-                                    loop
-                                    playsInline
-                                    controls 
-                                >
-                                    <source src={videoLink} type="video/mp4" />
-                                </video>
+                        <div className="relative aspect-square md:aspect-[4/3] rounded-2xl overflow-hidden bg-gray-50 flex items-center justify-center">
+                            {selectedMedia === 'video' && videoLink ? (
+                                ytId ? (
+                                    <iframe 
+                                        width="100%" 
+                                        height="100%" 
+                                        src={`https://www.youtube.com/embed/${ytId}?autoplay=1`} 
+                                        title="YouTube video player" 
+                                        frameBorder="0" 
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                        allowFullScreen
+                                        ></iframe>
+                                ) : (
+                                    <video 
+                                        key={videoLink}
+                                        ref={videoRef}
+                                        src={videoLink}
+                                        className="w-full h-full object-contain rounded-xl bg-black"
+                                        muted={true}
+                                        loop
+                                        playsInline
+                                        controls
+                                        preload="auto"
+                                    />
+                                )
+                            ) : productImages.length === 0 && videoLink ? (
+                                // No images at all, auto-show video
+                                ytId ? (
+                                    <iframe 
+                                        width="100%" 
+                                        height="100%" 
+                                        src={`https://www.youtube.com/embed/${ytId}`} 
+                                        title="YouTube video player" 
+                                        frameBorder="0" 
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                        allowFullScreen
+                                        className="w-full h-full"
+                                    ></iframe>
+                                ) : (
+                                    <video 
+                                        key={videoLink}
+                                        ref={videoRef}
+                                        src={videoLink}
+                                        className="w-full h-full object-contain rounded-xl bg-black"
+                                        muted={true}
+                                        loop
+                                        playsInline
+                                        controls
+                                        preload="auto"
+                                    />
+                                )
                             ) : (
                                 <img
                                     src={productImages[safeSelectedImage]}
@@ -441,47 +479,52 @@ const B2BProductDetail = () => {
                             </div>
                         </div>
 
-                        {productImages.length > 1 && (
+                        {/* Thumbnail Strip: images + video */}
+                        {(productImages.length > 1 || (productImages.length >= 1 && videoLink)) && (
                             <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
                                 {productImages.map((img, idx) => (
                                     <button
                                         key={idx}
-                                        onClick={() => setSelectedImage(idx)}
-                                        className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-white ${safeSelectedImage === idx ? 'border-teal-500' : 'border-gray-100 hover:border-gray-200'}`}
+                                        onClick={() => { setSelectedImage(idx); setSelectedMedia('image'); }}
+                                        className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-white ${
+                                            selectedMedia === 'image' && safeSelectedImage === idx 
+                                                ? 'border-teal-500' 
+                                                : 'border-gray-100 hover:border-gray-200'
+                                        }`}
                                     >
                                         <img src={img} alt="" className="w-full h-full object-cover" />
                                     </button>
                                 ))}
-                            </div>
-                        )}
-                        
-                        {videoLink && productImages.length > 0 && (
-                            <div className="mt-4">
-                                <h4 className="text-sm font-bold text-gray-800 mb-2">Product Video</h4>
-                                <div className="aspect-video rounded-xl overflow-hidden shadow-sm">
-                                    {ytId ? (
-                                        <iframe 
-                                            width="100%" 
-                                            height="100%" 
-                                            src={`https://www.youtube.com/embed/${ytId}`} 
-                                            title="YouTube video player" 
-                                            frameBorder="0" 
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                            allowFullScreen
-                                        ></iframe>
-                                    ) : (
-                                        <video 
-                                            className="w-full h-full object-cover bg-black" 
-                                            autoPlay
-                                            muted
-                                            loop
-                                            controls 
-                                            playsInline 
-                                        >
-                                            <source src={videoLink} type="video/mp4" />
-                                        </video>
-                                    )}
-                                </div>
+
+                                {/* Video Thumbnail */}
+                                {videoLink && (
+                                    <button
+                                        onClick={() => setSelectedMedia('video')}
+                                        className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-black relative flex items-center justify-center ${
+                                            selectedMedia === 'video' 
+                                                ? 'border-teal-500' 
+                                                : 'border-gray-100 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        {ytId ? (
+                                            <img 
+                                                src={`https://img.youtube.com/vi/${ytId}/default.jpg`} 
+                                                alt="video" 
+                                                className="w-full h-full object-cover opacity-60"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gray-900"></div>
+                                        )}
+                                        {/* Play icon overlay */}
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow">
+                                                <svg className="w-3 h-3 text-gray-900 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M8 5v14l11-7z"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -662,7 +705,7 @@ const B2BProductDetail = () => {
                                 <div className="space-y-4 text-sm mt-4">
                                     <div className="grid grid-cols-[1fr_2fr] pb-4 border-b border-gray-100">
                                         <span className="text-slate-400 font-medium uppercase text-xs tracking-wider">Brand</span>
-                                        <span className="text-slate-800 font-bold">{product.brand || 'Local'}</span>
+                                        <span className="text-slate-800 font-bold">{product.brandName || product.brand || 'Local'}</span>
                                     </div>
                                     <div className="grid grid-cols-[1fr_2fr] pb-4 border-b border-gray-100">
                                         <span className="text-slate-400 font-medium uppercase text-xs tracking-wider">Category</span>

@@ -12,7 +12,8 @@ import {
     createGroceryProduct, 
     updateGroceryProduct, 
     deleteGroceryProduct,
-    getVendorGroceryProducts
+    getVendorGroceryProducts,
+    getGroceryProductFilters
 } from '../controllers/groceryProduct.controller.js';
 import { upload } from '../utils/upload.util.js';
 import { authenticate } from '../middleware/auth.middleware.js';
@@ -24,6 +25,7 @@ const router = express.Router();
 router.get('/categories', getGroceryCategories);
 router.get('/categories/:id', getGroceryCategory);
 router.get('/products', getGroceryProducts);
+router.get('/products/filters', getGroceryProductFilters);
 router.get('/products/:id', getGroceryProductById);
 
 // Admin Routes (Categories & Products management)

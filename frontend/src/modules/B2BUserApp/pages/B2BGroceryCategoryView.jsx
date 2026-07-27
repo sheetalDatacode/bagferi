@@ -28,6 +28,9 @@ const B2BGroceryCategoryView = () => {
   const [sortOption, setSortOption] = useState('newest');
   const [maxMoq, setMaxMoq] = useState(null);
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedWeights, setSelectedWeights] = useState([]);
+  const [availableFilters, setAvailableFilters] = useState({ brands: [], weights: [] });
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isQtyOpen, setIsQtyOpen] = useState(false);
@@ -106,6 +109,8 @@ const B2BGroceryCategoryView = () => {
       if (maxMoq) params.append('maxMoq', maxMoq);
       if (priceRange.min) params.append('minPrice', priceRange.min);
       if (priceRange.max) params.append('maxPrice', priceRange.max);
+      if (selectedBrands.length > 0) params.append('brands', selectedBrands.join(','));
+      if (selectedWeights.length > 0) params.append('weights', selectedWeights.join(','));
 
       const res = await api.get(`/grocery/products?${params.toString()}`);
       if (res.success) {
@@ -125,13 +130,32 @@ const B2BGroceryCategoryView = () => {
     }
   };
 
+  const fetchFilters = async () => {
+    if (!selectedSub) return;
+    try {
+      const params = new URLSearchParams();
+      if (selectedSub.isRoot || selectedSub._id === rootCategory._id) {
+        params.append('category', selectedSub._id);
+      } else {
+        params.append('subcategory', selectedSub._id);
+      }
+      const res = await api.get(`/grocery/products/filters?${params.toString()}`);
+      if (res.success) {
+        setAvailableFilters(res.data || { brands: [], weights: [] });
+      }
+    } catch (error) {
+      console.error("Error fetching filters", error);
+    }
+  };
+
   useEffect(() => {
     if (selectedSub) {
       setPage(1);
       fetchProducts(1, true);
+      fetchFilters();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSub, sortOption, maxMoq, priceRange]);
+  }, [selectedSub, sortOption, maxMoq, priceRange, selectedBrands, selectedWeights]);
 
   useEffect(() => {
     if (page > 1 && selectedSub) {
@@ -216,29 +240,84 @@ const B2BGroceryCategoryView = () => {
                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          className="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-4"
+                          className="absolute top-full left-0 md:right-0 md:left-auto mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
                         >
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Price Range (₹)</h4>
-                          <div className="flex items-center gap-2 mb-4">
-                            <input 
-                              type="number" 
-                              placeholder="Min" 
-                              value={priceRange.min}
-                              onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                              className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs font-bold outline-none focus:border-primary-300"
-                            />
-                            <span className="text-gray-400">-</span>
-                            <input 
-                              type="number" 
-                              placeholder="Max" 
-                              value={priceRange.max}
-                              onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                              className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs font-bold outline-none focus:border-primary-300"
-                            />
+                          {/* Price Range */}
+                          <div className="mb-4">
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Price Range (₹)</h4>
+                            <div className="grid grid-cols-2 gap-2 items-center">
+                              <input 
+                                type="number" 
+                                placeholder="Min" 
+                                value={priceRange.min}
+                                onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs font-bold outline-none focus:border-primary-300"
+                              />
+                              <input 
+                                type="number" 
+                                placeholder="Max" 
+                                value={priceRange.max}
+                                onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs font-bold outline-none focus:border-primary-300"
+                              />
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                             <button onClick={() => { setPriceRange({ min: '', max: '' }); setIsFilterOpen(false); }} className="flex-1 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-gray-200">Clear</button>
-                             <button onClick={() => setIsFilterOpen(false)} className="flex-1 px-3 py-1.5 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-primary-700">Apply</button>
+
+                          {/* Brands Filter */}
+                          {availableFilters.brands && availableFilters.brands.length > 0 && (
+                            <div className="mb-4">
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Brand</h4>
+                              <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar">
+                                {availableFilters.brands.map(brand => (
+                                  <label key={brand} className="flex items-center gap-2 cursor-pointer group">
+                                    <div className="relative flex items-center justify-center">
+                                      <input 
+                                        type="checkbox"
+                                        checked={selectedBrands.includes(brand)}
+                                        onChange={(e) => {
+                                          if (e.target.checked) setSelectedBrands([...selectedBrands, brand]);
+                                          else setSelectedBrands(selectedBrands.filter(b => b !== brand));
+                                        }}
+                                        className="appearance-none w-4 h-4 rounded border border-gray-300 checked:bg-primary-600 checked:border-primary-600 transition-colors cursor-pointer"
+                                      />
+                                      {selectedBrands.includes(brand) && <FiCheck size={10} className="absolute text-white pointer-events-none" />}
+                                    </div>
+                                    <span className="text-xs font-semibold text-gray-600 group-hover:text-primary-600 truncate">{brand}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Weight/Size Filter */}
+                          {availableFilters.weights && availableFilters.weights.length > 0 && (
+                            <div className="mb-4">
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Weight / Size</h4>
+                              <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar">
+                                {availableFilters.weights.map(weight => (
+                                  <label key={weight} className="flex items-center gap-2 cursor-pointer group">
+                                    <div className="relative flex items-center justify-center">
+                                      <input 
+                                        type="checkbox"
+                                        checked={selectedWeights.includes(weight)}
+                                        onChange={(e) => {
+                                          if (e.target.checked) setSelectedWeights([...selectedWeights, weight]);
+                                          else setSelectedWeights(selectedWeights.filter(w => w !== weight));
+                                        }}
+                                        className="appearance-none w-4 h-4 rounded border border-gray-300 checked:bg-primary-600 checked:border-primary-600 transition-colors cursor-pointer"
+                                      />
+                                      {selectedWeights.includes(weight) && <FiCheck size={10} className="absolute text-white pointer-events-none" />}
+                                    </div>
+                                    <span className="text-xs font-semibold text-gray-600 group-hover:text-primary-600 truncate">{weight}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2 sticky bottom-0 bg-white pt-2 border-t border-gray-100">
+                             <button onClick={() => { setPriceRange({ min: '', max: '' }); setSelectedBrands([]); setSelectedWeights([]); setIsFilterOpen(false); }} className="flex-1 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-gray-200">Clear</button>
+                             <button onClick={() => setIsFilterOpen(false)} className="flex-1 px-3 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/20">Apply</button>
                           </div>
                         </motion.div>
                       )}
@@ -263,9 +342,10 @@ const B2BGroceryCategoryView = () => {
                         >
                           <div className="p-1.5 space-y-0.5">
                             {[
-                              { id: 'newest', label: 'Newest First' },
-                              { id: 'price_asc', label: 'Price: Low to High' },
-                              { id: 'price_desc', label: 'Price: High to Low' }
+                              { id: 'price_asc', label: 'Price (low to high)' },
+                              { id: 'price_desc', label: 'Price (high to low)' },
+                              { id: 'rating_desc', label: 'Rating (high to low)' },
+                              { id: 'discount_desc', label: 'Discount (high to low)' }
                             ].map(opt => (
                               <button
                                 key={opt.id}

@@ -230,7 +230,7 @@ const GroceryProductDetail = () => {
                             </div>
                             
                             <h1 className="text-2xl lg:text-3xl font-black text-gray-900 tracking-tight leading-tight mb-2">
-                                {product.title}
+                                {product.name}
                             </h1>
 
                             {/* Rating Summary */}
@@ -243,8 +243,8 @@ const GroceryProductDetail = () => {
                                 <span className="text-sm text-gray-500 font-medium">({ratingSummary.ratingCount} reviews)</span>
                             </div>
                             
-                            {product.brand && (
-                                <p className="text-gray-500 font-bold uppercase tracking-wider text-xs mb-4">Brand: <span className="text-gray-800">{product.brand}</span></p>
+                            {(product.brandName || product.brand) && (
+                                <p className="text-gray-500 font-bold uppercase tracking-wider text-xs mb-4">Brand: <span className="text-gray-800">{product.brandName || product.brand}</span></p>
                             )}
                             
                             <div className="flex items-end gap-3 mb-6">
@@ -299,8 +299,8 @@ const GroceryProductDetail = () => {
                             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 mb-8 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-bold text-gray-700">Availability</span>
-                                    {product.stock > 0 ? (
-                                        <span className="flex items-center gap-1.5 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full"><FiCheckCircle /> In Stock ({product.stock})</span>
+                                    {product.stockQuantity > 0 ? (
+                                        <span className="flex items-center gap-1.5 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full"><FiCheckCircle /> In Stock ({product.stockQuantity})</span>
                                     ) : (
                                         <span className="text-red-500 font-bold text-sm bg-red-50 px-3 py-1 rounded-full">Out of Stock</span>
                                     )}
@@ -313,43 +313,67 @@ const GroceryProductDetail = () => {
                                 )}
                             </div>
 
-                            {/* Actions */}
-                            <div className="mt-auto space-y-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center bg-gray-100 rounded-xl p-1 border border-gray-200">
-                                        <button 
-                                            onClick={() => handleQuantityChange('dec')}
-                                            disabled={quantity <= 1}
-                                            className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
-                                        >
-                                            <FiMinus />
-                                        </button>
-                                        <input 
-                                            type="number" 
-                                            value={quantity}
-                                            readOnly
-                                            className="w-12 h-10 bg-transparent text-center font-black text-gray-900 outline-none"
-                                        />
-                                        <button 
-                                            onClick={() => handleQuantityChange('inc')}
-                                            disabled={quantity >= product.stock}
-                                            className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
-                                        >
-                                            <FiPlus />
-                                        </button>
-                                    </div>
+                            {/* Quantity Selector */}
+                            <div className="flex items-center gap-4 mb-4">
+                                <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">Quantity:</span>
+                                <div className="flex items-center bg-gray-100 rounded-xl p-1 border border-gray-200">
                                     <button 
-                                        onClick={handleAddToCart}
-                                        disabled={addingToCart || product.stock === 0}
-                                        className="flex-1 flex items-center justify-center gap-2 bg-primary-600 text-white h-12 rounded-xl font-black uppercase tracking-wider hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/30 disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
+                                        onClick={() => handleQuantityChange('dec')}
+                                        disabled={quantity <= 1}
+                                        className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
                                     >
-                                        {addingToCart ? (
-                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        ) : (
-                                            <><FiShoppingCart size={18} /> Add to Cart</>
-                                        )}
+                                        <FiMinus />
+                                    </button>
+                                    <input 
+                                        type="number" 
+                                        value={quantity}
+                                        readOnly
+                                        className="w-12 h-10 bg-transparent text-center font-black text-gray-900 outline-none"
+                                    />
+                                    <button 
+                                        onClick={() => handleQuantityChange('inc')}
+                                        disabled={quantity >= (product.stockQuantity || 999)}
+                                        className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
+                                    >
+                                        <FiPlus />
                                     </button>
                                 </div>
+                            </div>
+
+                            {/* Sticky Action Buttons */}
+                            <div className="fixed bottom-[64px] left-0 right-0 px-4 py-3 bg-white border-t border-gray-100 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] md:static md:shadow-none md:border-none md:p-0 md:bg-transparent z-40 mt-auto grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={handleAddToCart}
+                                    disabled={addingToCart || product.stockQuantity === 0}
+                                    className="bg-[#ff6b00] hover:bg-[#e66000] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    {addingToCart ? (
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    ) : (
+                                        <><FiShoppingCart className="text-lg" /> Add to Cart</>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!isAuthenticated) {
+                                            toast.error('Please login first');
+                                            return navigate('/b2b/login');
+                                        }
+                                        if (product.stockQuantity === 0) {
+                                            toast.error('Product is out of stock');
+                                            return;
+                                        }
+                                        await addToCart(product._id, quantity);
+                                        navigate('/b2b/checkout');
+                                    }}
+                                    disabled={addingToCart || product.stockQuantity === 0}
+                                    className="bg-[#04439c] hover:bg-[#03367c] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12.9868 6.94103C13.2519 6.64332 13.0405 6.16669 12.6416 6.16669H7.66667V0.833354C7.66667 0.395167 7.15174 0.158102 6.8188 0.443903L0.342611 6.00223C0.0336631 6.26732 0.222378 6.77259 0.635852 6.77259H5.5303V12.1667C5.5303 12.6049 6.04523 12.8419 6.37817 12.5561L12.9868 6.94103Z" fill="currentColor" />
+                                    </svg>
+                                    Buy Now
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -383,7 +407,7 @@ const GroceryProductDetail = () => {
                                         </div>
                                         <div className="flex flex-col p-4 bg-gray-50 rounded-xl">
                                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Brand</span>
-                                            <span className="text-sm font-medium text-gray-900">{product.brand || 'Generic'}</span>
+                                            <span className="text-sm font-medium text-gray-900">{product.brandName || product.brand || 'Generic'}</span>
                                         </div>
                                         {product.expiryDate && (
                                             <div className="flex flex-col p-4 bg-gray-50 rounded-xl">

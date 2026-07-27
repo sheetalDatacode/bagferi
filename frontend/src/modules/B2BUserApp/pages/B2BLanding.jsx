@@ -35,7 +35,7 @@ const ICONS = {
 const B2BLanding = () => {
     const navigate = useNavigate();
     const { categories, initialize: fetchCategories } = useB2BCategoryStore();
-    const { isAuthenticated } = useAuthStore();
+    const { isAuthenticated, user } = useAuthStore();
     const { isAuthenticated: isVendorAuthenticated } = useB2BVendorAuthStore();
 
     // Navigation helper: requires login for any navigation from landing page (except login/register)
@@ -88,6 +88,20 @@ const B2BLanding = () => {
     const [allVendors, setAllVendors] = useState([]);
     const [vendorsLoading, setVendorsLoading] = useState(false);
     const [isMobileBusinessTypeOpen, setIsMobileBusinessTypeOpen] = useState(false);
+    
+    // Address & delivery zone filtering states
+    const [addresses, setAddresses] = useState([]);
+    const [selectedAddress, setSelectedAddress] = useState(null);
+    const [showAddAddressForm, setShowAddAddressForm] = useState(false);
+    const [newAddress, setNewAddress] = useState({
+        streetAddress: '',
+        areaName: '',
+        city: '',
+        state: '',
+        pincode: '',
+        addressType: 'Home',
+        isDefault: false
+    });
 
     // Refs
     const searchRef = useRef(null);
@@ -112,10 +126,64 @@ const B2BLanding = () => {
     // Store hooks
     const { states: availableStates, initialize: fetchLocations, isLoading: locationsLoading } = useB2BLocationStore();
 
-    // Fetch initial data on mount
+    // Fetch saved addresses if logged in
+    useEffect(() => {
+        const fetchSavedAddresses = async () => {
+            if (!isAuthenticated) {
+                setAddresses([]);
+                setSelectedAddress(null);
+                return;
+            }
+            try {
+                const res = await api.get('/user/addresses');
+                if (res.success && res.data) {
+                    setAddresses(res.data);
+                    const defaultAddr = res.data.find(a => a.isDefault) || res.data[0];
+                    if (defaultAddr) {
+                        setSelectedAddress(defaultAddr);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching user addresses:', error);
+            }
+        };
+        fetchSavedAddresses();
+    }, [isAuthenticated]);
+
+    // Handle adding a new address
+    const handleAddAddressSubmit = async (e) => {
+        e.preventDefault();
+        if (!newAddress.streetAddress || !newAddress.city || !newAddress.state || !newAddress.pincode) {
+            toast.error('Please fill in all required fields');
+            return;
+        }
+        try {
+            const res = await api.post('/user/addresses', newAddress);
+            if (res.success) {
+                toast.success('Address added successfully');
+                setAddresses(res.data || []);
+                const added = res.data && res.data[res.data.length - 1];
+                if (added) setSelectedAddress(added);
+                setShowAddAddressForm(false);
+                setNewAddress({
+                    streetAddress: '',
+                    areaName: '',
+                    city: '',
+                    state: '',
+                    pincode: '',
+                    addressType: 'Home',
+                    isDefault: false
+                });
+            }
+        } catch (error) {
+            console.error('Error adding address:', error);
+            toast.error('Failed to add address');
+        }
+    };
+
+    // 1. Mount effect for static data / configurations
     useEffect(() => {
         fetchCategories();
-        // Force refresh once to migrate location data format from strings to objects
         fetchLocations(true);
 
         const fetchHomeFeatures = async () => {
@@ -140,14 +208,40 @@ const B2BLanding = () => {
                 console.error('Error fetching business types:', error);
             }
         };
+        fetchBusinessTypes();
 
+        const fetchLiveReels = async () => {
+            try {
+                const response = await api.get('/reels/feed', { params: { limit: 50 } });
+                if (response.success && response.data) {
+                    const reels = Array.isArray(response.data) ? response.data : (response.data.reels || []);
+                    const productReels = reels.filter(r => r.productId != null && r.productId !== "");
+                    setLiveReels(productReels);
+                }
+            } catch (error) {
+                console.error('Error fetching reels:', error);
+            }
+        };
+        fetchLiveReels();
+    }, [fetchCategories, fetchLocations]);
+
+    // 2. Filter-dependent effect: Refetches vendors and products when selectedCity or selectedAddress changes
+    useEffect(() => {
         const fetchAllVendors = async () => {
             try {
                 setVendorsLoading(true);
                 const params = { limit: 50, vendorType: 'b2b', nocache: 1 };
-                if (selectedCity && selectedCity !== 'All Cities') {
+                
+                if (selectedAddress) {
+                    params.city = selectedAddress.city;
+                    params.area = selectedAddress.areaName;
+                    if (selectedAddress.pincode) {
+                        params.pincode = selectedAddress.pincode;
+                    }
+                } else if (selectedCity && selectedCity !== 'All Cities') {
                     params.city = selectedCity;
                 }
+
                 const response = await api.get('/vendors', { params });
                 if (response.success && response.data) {
                     const vendorData = Array.isArray(response.data) ? response.data : (response.data.vendors || []);
@@ -163,9 +257,17 @@ const B2BLanding = () => {
         const fetchSuggestedProducts = async () => {
             try {
                 const params = { limit: 10, vendorType: 'b2b' };
-                if (selectedCity && selectedCity !== 'All Cities') {
+                
+                if (selectedAddress) {
+                    params.city = selectedAddress.city;
+                    params.area = selectedAddress.areaName;
+                    if (selectedAddress.pincode && selectedAddress.areaName) {
+                        params.deliveryArea = `${selectedAddress.pincode}|${selectedAddress.areaName}`;
+                    }
+                } else if (selectedCity && selectedCity !== 'All Cities') {
                     params.city = selectedCity;
                 }
+
                 const response = await api.get('/products', { params });
                 if (response.success && response.data) {
                     const products = Array.isArray(response.data) ? response.data : (response.data.products || []);
@@ -176,26 +278,23 @@ const B2BLanding = () => {
             }
         };
 
-        const fetchLiveReels = async () => {
-            try {
-                const response = await api.get('/reels/feed', { params: { limit: 50 } });
-                if (response.success && response.data) {
-                    const reels = Array.isArray(response.data) ? response.data : (response.data.reels || []);
-                    const productReels = reels.filter(r => r.productId != null && r.productId !== "");
-                    setLiveReels(productReels);
-                }
-            } catch (error) {
-                console.error('Error fetching reels:', error);
-            }
-        };
-
         const fetchGroceryData = async () => {
             try {
                 const catRes = await api.get('/grocery/categories');
                 if (catRes.success) {
                     setGroceryCategories(catRes.data || []);
                 }
-                const prodRes = await api.get('/grocery/products?limit=10');
+                
+                // Filter grocery products by delivery location if address is set
+                const params = { limit: 10 };
+                if (selectedAddress) {
+                    params.city = selectedAddress.city;
+                    params.area = selectedAddress.areaName;
+                } else if (selectedCity && selectedCity !== 'All Cities') {
+                    params.city = selectedCity;
+                }
+
+                const prodRes = await api.get('/grocery/products', { params });
                 if (prodRes.success) {
                     const prods = Array.isArray(prodRes.data) ? prodRes.data : (prodRes.data.products || []);
                     setGroceryProducts(prods);
@@ -205,12 +304,10 @@ const B2BLanding = () => {
             }
         };
 
-        fetchBusinessTypes();
         fetchAllVendors();
         fetchSuggestedProducts();
-        fetchLiveReels();
         fetchGroceryData();
-    }, [fetchCategories, fetchLocations, selectedCity]);
+    }, [selectedCity, selectedAddress]);
 
     // Effect to calculate header height dynamically
     useEffect(() => {
@@ -989,6 +1086,306 @@ const B2BLanding = () => {
 
             {/* --- MAIN CONTENT START --- */}
             <div className="flex-1 overflow-y-auto pb-20">
+
+                {/* --- MOBILE LOCATION & SEARCH (Blinkit style) --- */}
+                <div className="lg:hidden w-full bg-gradient-to-b from-orange-50/80 to-white pt-2 pb-4 px-4 shadow-sm mb-1 relative">
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                                <h2 className="text-[22px] font-black text-gray-900 tracking-tighter leading-none">Deliver Now</h2>
+                            </div>
+                            <button onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)} className="flex items-center gap-1 text-[11px] font-bold text-gray-800 text-left w-full">
+                                <span className="truncate max-w-[80vw]">
+                                    {selectedAddress 
+                                        ? `${selectedAddress.addressType || 'Work'}: ${selectedAddress.areaName || selectedAddress.city} (${selectedAddress.pincode})` 
+                                        : (selectedCity !== 'All Cities' ? `HOME - ${selectedCity}` : 'HOME - Set your location')
+                                    }
+                                </span> 
+                                <FiChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${isCityDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button onClick={() => navigateWithAuth('/b2b/profile')} className="w-10 h-10 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-600 hover:text-primary-600 transition-colors">
+                                <FiUser size={20} />
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {/* Location & Address Dropdown */}
+                    <AnimatePresence>
+                        {isCityDropdownOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
+                                className="absolute top-16 left-4 right-4 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[100] p-4 max-h-[80vh] overflow-y-auto custom-scrollbar"
+                            >
+                                {!showAddAddressForm ? (
+                                    <div className="space-y-4">
+                                        {/* Saved Addresses Section */}
+                                        <div>
+                                            <div className="flex justify-between items-center pb-2 border-b border-gray-100 mb-2">
+                                                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Delivery Addresses</span>
+                                                {isAuthenticated && (
+                                                    <button 
+                                                        onClick={() => setShowAddAddressForm(true)} 
+                                                        className="text-[10px] font-black uppercase text-primary-600 hover:text-primary-700 tracking-wider"
+                                                    >
+                                                        + Add New
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {!isAuthenticated ? (
+                                                <div className="py-4 text-center">
+                                                    <p className="text-xs text-gray-400 font-bold mb-2">Login to see your saved addresses</p>
+                                                    <button 
+                                                        onClick={() => navigate('/b2b/login')} 
+                                                        className="px-4 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/25"
+                                                    >
+                                                        Login
+                                                    </button>
+                                                </div>
+                                            ) : addresses.length === 0 ? (
+                                                <div className="py-4 text-center">
+                                                    <p className="text-xs text-gray-400 font-bold mb-2">No saved addresses found</p>
+                                                    <button 
+                                                        onClick={() => setShowAddAddressForm(true)} 
+                                                        className="px-4 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/25"
+                                                    >
+                                                        Add First Address
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {addresses.map(addr => (
+                                                        <button
+                                                            key={addr._id}
+                                                            onClick={() => {
+                                                                setSelectedAddress(addr);
+                                                                setIsCityDropdownOpen(false);
+                                                            }}
+                                                            className={`w-full text-left p-3 rounded-xl border transition-all flex items-start gap-3 ${
+                                                                selectedAddress?._id === addr._id 
+                                                                    ? 'border-primary-600 bg-primary-50/50 text-primary-900 shadow-sm' 
+                                                                    : 'border-gray-100 hover:bg-gray-50 text-gray-700'
+                                                            }`}
+                                                        >
+                                                            <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${selectedAddress?._id === addr._id ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'}`}>
+                                                                {selectedAddress?._id === addr._id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="text-xs font-black uppercase tracking-wide">{addr.addressType || 'Work'}</span>
+                                                                    {addr.isDefault && <span className="bg-primary-100 text-primary-800 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Default</span>}
+                                                                </div>
+                                                                <p className="text-[11px] font-medium text-gray-500 truncate mt-0.5">{addr.streetAddress}</p>
+                                                                <p className="text-[10px] font-black text-gray-800 uppercase tracking-tight mt-0.5">{addr.areaName || addr.city}, {addr.city} ({addr.pincode})</p>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* City/Region Dropdown fallback */}
+                                        <div className="pt-2 border-t border-gray-100">
+                                            <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Or Choose City</div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {['All Cities', 'Surat', 'Ahmedabad', 'Mumbai', 'Delhi', 'Bengaluru'].map(city => (
+                                                    <button
+                                                        key={city}
+                                                        onClick={() => {
+                                                            setSelectedAddress(null);
+                                                            setSelectedCity(city);
+                                                            setIsCityDropdownOpen(false);
+                                                        }}
+                                                        className={`text-center py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${selectedCity === city && !selectedAddress ? 'border-primary-600 text-primary-600 bg-primary-50' : 'border-gray-100 text-gray-700 hover:bg-gray-50'}`}
+                                                    >
+                                                        {city}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* Add New Address Form */
+                                    <form onSubmit={handleAddAddressSubmit} className="space-y-3.5">
+                                        <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-3">
+                                            <span className="text-xs font-black uppercase text-gray-800 tracking-wider">Add Delivery Address</span>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setShowAddAddressForm(false)} 
+                                                className="text-[10px] font-black uppercase text-gray-400 hover:text-gray-600 tracking-wider"
+                                            >
+                                                Back
+                                            </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Address Type</label>
+                                                <select 
+                                                    value={newAddress.addressType}
+                                                    onChange={(e) => setNewAddress({ ...newAddress, addressType: e.target.value })}
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none"
+                                                >
+                                                    <option value="Home">Home</option>
+                                                    <option value="Work">Work</option>
+                                                    <option value="Warehouse">Warehouse</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Pincode *</label>
+                                                <input 
+                                                    type="text" 
+                                                    required
+                                                    placeholder="395003"
+                                                    value={newAddress.pincode}
+                                                    onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value })}
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none focus:border-primary-300 focus:bg-white"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Street Address *</label>
+                                            <input 
+                                                type="text" 
+                                                required
+                                                placeholder="Shop No, Building Name, Street Address"
+                                                value={newAddress.streetAddress}
+                                                onChange={(e) => setNewAddress({ ...newAddress, streetAddress: e.target.value })}
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none focus:border-primary-300 focus:bg-white"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Area Name *</label>
+                                                <input 
+                                                    type="text" 
+                                                    required
+                                                    placeholder="Ring Road"
+                                                    value={newAddress.areaName}
+                                                    onChange={(e) => setNewAddress({ ...newAddress, areaName: e.target.value })}
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none focus:border-primary-300 focus:bg-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">City *</label>
+                                                <input 
+                                                    type="text" 
+                                                    required
+                                                    placeholder="Surat"
+                                                    value={newAddress.city}
+                                                    onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none focus:border-primary-300 focus:bg-white"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">State *</label>
+                                            <input 
+                                                type="text" 
+                                                required
+                                                placeholder="Gujarat"
+                                                value={newAddress.state}
+                                                onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none focus:border-primary-300 focus:bg-white"
+                                            />
+                                        </div>
+
+                                        <div className="flex gap-2 pt-2">
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setShowAddAddressForm(false)} 
+                                                className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-gray-200"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button 
+                                                type="submit" 
+                                                className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/20"
+                                            >
+                                                Save & Select
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Mobile Search Bar */}
+                    <div className="relative group mt-2">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <FiSearch className="text-gray-400 group-focus-within:text-primary-600 transition-colors" size={18} />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search products, stores, real estate..."
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            onFocus={() => searchQuery.trim() && setShowSuggestions(true)}
+                            className="w-full pl-12 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-50 transition-all font-bold text-sm tracking-tight placeholder:text-gray-400 placeholder:font-medium shadow-sm"
+                        />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-600 border-l border-gray-200 pl-3 py-1 cursor-pointer hover:opacity-80 transition-opacity">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                        </div>
+                        
+                        {/* Render Mobile Search Suggestions */}
+                        <AnimatePresence>
+                            {showSuggestions && (suggestions.length > 0 || isSearching) && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 15 }}
+                                    className="absolute top-[calc(100%+0.5rem)] left-0 right-0 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 py-2"
+                                >
+                                    {isSearching && suggestions.length === 0 ? (
+                                        <div className="px-6 py-4 text-xs font-black text-gray-500 flex items-center gap-3 uppercase tracking-widest">
+                                            <div className="w-4 h-4 border-2 border-primary-100 border-t-primary-600 rounded-full animate-spin"></div>
+                                            Loading...
+                                        </div>
+                                    ) : (
+                                        <div className="max-h-[50vh] overflow-y-auto custom-scrollbar">
+                                            {suggestions.map((suggestion, index) => {
+                                                const isStore = suggestion.type === 'store' && suggestion.vendorId;
+                                                const vendorLinkUrl = suggestion.isRealEstate
+                                                    ? `/b2b/real-estate?vendorId=${suggestion.vendorId}`
+                                                    : `/b2b/vendor/${suggestion.vendorId}`;
+                                                const Wrapper = isStore ? Link : 'button';
+                                                const wrapperProps = isStore
+                                                    ? { to: vendorLinkUrl, onClick: (e) => { e.stopPropagation(); setShowSuggestions(false); } }
+                                                    : { type: 'button', onMouseDown: (e) => { e.preventDefault(); handleSearchProductPopup(suggestion); setShowSuggestions(false); } };
+                                                return (
+                                                    <Wrapper
+                                                        key={index}
+                                                        {...wrapperProps}
+                                                        className="w-full px-4 py-3 hover:bg-primary-50 flex items-center gap-3 text-left transition-all group no-underline border-b border-gray-50 last:border-0"
+                                                    >
+                                                        {(suggestion.type === 'product' || suggestion.type === 'store') && suggestion.image ? (
+                                                            <div className="w-8 h-8 rounded-lg overflow-hidden bg-white border border-gray-100 flex-shrink-0 shadow-sm">
+                                                                <img src={suggestion.image} alt={suggestion.text} className="w-full h-full object-cover" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-50 text-gray-400 flex-shrink-0 border border-gray-100">
+                                                                {suggestion.type === 'property' || suggestion.isRealEstate ? <FiHome size={14} /> : <FiSearch size={14} />}
+                                                            </div>
+                                                        )}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-[11px] font-black text-gray-900 truncate uppercase tracking-tight">{suggestion.text}</p>
+                                                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-[0.2em]">{suggestion.context}</p>
+                                                        </div>
+                                                    </Wrapper>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </div>
 
                 {/* --- HORIZONTAL CATEGORY SLIDER --- */}
                 <section className="w-full bg-white pt-4 pb-2 border-b border-gray-50">

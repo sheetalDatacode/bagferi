@@ -19,12 +19,7 @@ export const getGroceryCategories = async (req, res, next) => {
     const tree = allCategories.filter(c => c.level === 1).map(c1 => {
         return {
             ...c1,
-            subcategories: allCategories.filter(c2 => c2.parent && c2.parent.toString() === c1._id.toString()).map(c2 => {
-                return {
-                    ...c2,
-                    subcategories: allCategories.filter(c3 => c3.parent && c3.parent.toString() === c2._id.toString())
-                }
-            })
+            subcategories: allCategories.filter(c2 => c2.parent && c2.parent.toString() === c1._id.toString())
         }
     });
 

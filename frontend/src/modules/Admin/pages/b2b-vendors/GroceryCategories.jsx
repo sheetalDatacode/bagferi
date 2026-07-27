@@ -24,9 +24,7 @@ const GroceryCategories = () => {
         file: null,
         subCategories: [], 
         originalSubIds: []
-    });
-    
-    const [subSubInput, setSubSubInput] = useState({}); 
+    }); 
 
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null, name: '', inputName: '' });
 
@@ -62,14 +60,6 @@ const GroceryCategories = () => {
 
         const subs = rootCategory.subcategories || [];
         const builtSubs = subs.map(sub => {
-            const subSubs = (sub.subcategories || []).map(ss => ({ 
-                uiId: Math.random().toString(), 
-                id: ss._id || ss.id, 
-                name: ss.name,
-                image: ss.image,
-                imagePreview: ss.image,
-                file: null
-            }));
             return {
                 uiId: Math.random().toString(),
                 id: sub._id || sub.id,
@@ -77,9 +67,7 @@ const GroceryCategories = () => {
                 image: sub.image,
                 imagePreview: sub.image,
                 file: null,
-                fields: sub.fields || [],
-                subSubCategories: subSubs,
-                originalSubSubIds: subSubs.map(ss => ss.id)
+                fields: sub.fields || []
             };
         });
 
@@ -119,7 +107,7 @@ const GroceryCategories = () => {
             ...prev,
             subCategories: [
                 ...prev.subCategories,
-                { uiId: Math.random().toString(), id: null, name: '', image: null, imagePreview: null, file: null, fields: [], subSubCategories: [] }
+                { uiId: Math.random().toString(), id: null, name: '', image: null, imagePreview: null, file: null, fields: [] }
             ]
         }));
     };
@@ -184,61 +172,7 @@ const GroceryCategories = () => {
         }
     };
 
-    const handleSubSubImage = (subIndex, e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setSubSubInput(prev => ({
-                ...prev,
-                [subIndex]: {
-                    ...prev[subIndex],
-                    file,
-                    preview: URL.createObjectURL(file)
-                }
-            }));
-        }
-    };
 
-    const addSubSubCategory = (subIndex) => {
-        const currentInput = subSubInput[subIndex] || {};
-        const val = currentInput.name?.trim();
-        if (!val) return;
-        
-        setTreeData(prev => {
-            const updatedSubCategories = prev.subCategories.map((sub, idx) => {
-                if (idx !== subIndex) return sub;
-                return {
-                    ...sub,
-                    subSubCategories: [
-                        ...sub.subSubCategories,
-                        {
-                            uiId: Math.random().toString(), 
-                            id: null, 
-                            name: val,
-                            file: currentInput.file || null,
-                            imagePreview: currentInput.preview || null,
-                            image: null
-                        }
-                    ]
-                };
-            });
-            return { ...prev, subCategories: updatedSubCategories };
-        });
-        
-        setSubSubInput(prev => ({ ...prev, [subIndex]: { name: '', file: null, preview: null } }));
-    };
-
-    const removeSubSubCategory = (subIndex, subSubIndex) => {
-        setTreeData(prev => {
-            const updatedSubCategories = prev.subCategories.map((sub, idx) => {
-                if (idx !== subIndex) return sub;
-                return {
-                    ...sub,
-                    subSubCategories: sub.subSubCategories.filter((_, i) => i !== subSubIndex)
-                };
-            });
-            return { ...prev, subCategories: updatedSubCategories };
-        });
-    };
 
     const saveCategoryTree = async () => {
         if (!treeData.name.trim()) {
@@ -288,38 +222,6 @@ const GroceryCategories = () => {
                     await api.put(`/grocery/categories/${subId}`, subData);
                 }
 
-                const uiSubSubIds = sub.subSubCategories.map(ss => ss.id).filter(Boolean);
-                const subSubsToDelete = (sub.originalSubSubIds || []).filter(id => !uiSubSubIds.includes(id));
-                
-                for (const ssId of subSubsToDelete) {
-                    await api.delete(`/grocery/categories/${ssId}`);
-                }
-
-                for (const ss of sub.subSubCategories) {
-                    if (!ss.name.trim()) continue;
-                    const ssData = new FormData();
-                    ssData.append('name', ss.name.trim());
-                    ssData.append('level', 3);
-                    ssData.append('parent', subId);
-                    if (ss.file) ssData.append('image', ss.file);
-
-                    if (!ss.id) {
-                        await api.post('/grocery/categories', ssData);
-                    } else {
-                        await api.put(`/grocery/categories/${ss.id}`, ssData);
-                    }
-                }
-
-                const pendingSubSubIndex = treeData.subCategories.indexOf(sub);
-                const pendingSubSub = subSubInput[pendingSubSubIndex];
-                if (pendingSubSub && pendingSubSub.name && pendingSubSub.name.trim()) {
-                    const ssData = new FormData();
-                    ssData.append('name', pendingSubSub.name.trim());
-                    ssData.append('level', 3);
-                    ssData.append('parent', subId);
-                    if (pendingSubSub.file) ssData.append('image', pendingSubSub.file);
-                    await api.post('/grocery/categories', ssData);
-                }
             }
 
             toast.success('Category saved successfully!');
@@ -418,10 +320,8 @@ const GroceryCategories = () => {
                                         <div key={category.id}>
                                             {/* Category Row */}
                                             <div
-                                                onClick={() => toggleCategory(category)}
-                                                className={`flex items-center justify-between p-4 bg-white border shadow-sm rounded-xl cursor-pointer transition-all select-none ${
-                                                    isExpanded ? 'border-blue-400 ring-2 ring-blue-100 rounded-b-none' : 'border-gray-200 hover:border-blue-300'
-                                                }`}
+                                                onClick={() => { setSelectedCategory(category); setView('detail'); }}
+                                                className={`flex items-center justify-between p-4 bg-white border border-gray-200 shadow-sm rounded-xl cursor-pointer transition-all select-none hover:border-blue-300 hover:shadow-md group`}
                                             >
                                                 <div className="flex items-center gap-4">
                                                     {category.image ? (
@@ -452,67 +352,8 @@ const GroceryCategories = () => {
                                                     >
                                                         <FiTrash2 className="text-sm" />
                                                     </button>
-                                                    <span className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
-                                                        ▾
-                                                    </span>
                                                 </div>
                                             </div>
-
-                                            {/* Expanded Subcategory Panel */}
-                                            {isExpanded && (
-                                                <div className="border border-t-0 border-blue-400 rounded-b-xl bg-gray-50 p-5 ring-2 ring-blue-100 ring-t-0">
-                                                    {subs.length === 0 ? (
-                                                        <div className="text-center py-8">
-                                                            <p className="text-gray-400 font-medium">No subcategories yet. Click <strong>Manage</strong> to add some.</p>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                            {subs.map((sub, idx) => {
-                                                                const subSubs = sub.subcategories || [];
-                                                                return (
-                                                                    <div key={sub._id || idx} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                                                                        <div className="flex items-start justify-between mb-2">
-                                                                            <div className="flex items-center gap-2 min-w-0">
-                                                                                {sub.image && (
-                                                                                    <img src={sub.image} alt={sub.name} className="w-8 h-8 rounded-lg object-cover border flex-shrink-0" />
-                                                                                )}
-                                                                                <h4 className="font-bold text-gray-800 text-sm leading-tight truncate">{sub.name}</h4>
-                                                                            </div>
-                                                                            <button
-                                                                                onClick={(e) => { e.stopPropagation(); openEditor(category); }}
-                                                                                className="ml-2 p-1 text-blue-400 hover:text-blue-600 flex-shrink-0"
-                                                                                title="Edit"
-                                                                            >
-                                                                                <FiEdit2 className="w-3.5 h-3.5" />
-                                                                            </button>
-                                                                        </div>
-                                                                        {subSubs.length > 0 && (
-                                                                            <>
-                                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Sub-subcategories</p>
-                                                                                <div className="flex flex-wrap gap-1">
-                                                                                    {subSubs.slice(0, 4).map((ss, i) => (
-                                                                                        <span key={i} className="text-[11px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded font-semibold">
-                                                                                            {ss.name}
-                                                                                        </span>
-                                                                                    ))}
-                                                                                    {subSubs.length > 4 && (
-                                                                                        <span className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-semibold">
-                                                                                            +{subSubs.length - 4} more
-                                                                                        </span>
-                                                                                    )}
-                                                                                </div>
-                                                                            </>
-                                                                        )}
-                                                                        {subSubs.length === 0 && (
-                                                                            <p className="text-xs text-gray-400 mt-1">No sub-subcategories</p>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
                                         </div>
                                     );
                                 })}
@@ -520,6 +361,73 @@ const GroceryCategories = () => {
                         )}
                     </div>
                 </>
+            )}
+
+            {view === 'detail' && selectedCategory && (
+                <div className="space-y-6 animate-fade-in">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div>
+                            <button onClick={() => setView('list')} className="flex items-center gap-2 text-gray-500 font-bold hover:text-gray-900 mb-2">
+                                <FiArrowLeft /> Back to Categories
+                            </button>
+                            <h1 className="text-2xl font-black text-gray-900">{selectedCategory.name}</h1>
+                            <p className="text-gray-500 font-medium text-sm">Welcome back! Here's your business overview.</p>
+                        </div>
+                        <button
+                            onClick={() => openEditor(selectedCategory)}
+                            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-sm"
+                        >
+                            <FiEdit2 className="inline mr-2" /> Manage Category
+                        </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-6 pb-4 items-start min-h-[50vh]">
+                        {(selectedCategory.subcategories || []).map((sub, idx) => {
+                            const fields = sub.fields || [];
+                            return (
+                                <div key={sub._id || idx} className="w-[320px] flex-shrink-0 bg-gray-50/50 rounded-2xl p-5 border border-gray-200 shadow-sm">
+                                    <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-200">
+                                        <div className="flex items-center gap-3">
+                                            {sub.image && (
+                                                <img src={sub.image} alt={sub.name} className="w-10 h-10 rounded-lg object-cover border border-gray-200 shadow-sm" />
+                                            )}
+                                            <h3 className="text-lg font-black text-gray-800 tracking-tight">{sub.name}</h3>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => openEditor(selectedCategory)} className="text-blue-500 hover:text-blue-700"><FiEdit2 size={14} /></button>
+                                            <button onClick={() => openEditor(selectedCategory)} className="text-red-500 hover:text-red-700"><FiTrash2 size={14} /></button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            {fields.length > 0 ? (
+                                                <>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{fields.length} fields defined</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {fields.map((f, fi) => (
+                                                            <span key={fi} className="text-[11px] px-2.5 py-1 bg-white border border-gray-200 rounded-md text-gray-700 font-black uppercase tracking-wider shadow-sm">
+                                                                {f.label}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">No fields defined</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {(selectedCategory.subcategories || []).length === 0 && (
+                            <div className="w-full text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                <p className="text-gray-500 font-bold">No subcategories yet. Click "Manage Category" to add some.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
 
             {view === 'edit' && (
@@ -698,71 +606,6 @@ const GroceryCategories = () => {
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <h4 className="text-sm font-bold text-gray-800 mb-3">Sub-subcategories</h4>
-                                        
-                                        <div className="flex flex-wrap items-center gap-3">
-                                            {sub.subSubCategories.map((ss, ssIndex) => (
-                                                <div key={ss.uiId} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-full shadow-sm">
-                                                    {ss.imagePreview ? (
-                                                        <img src={ss.imagePreview} alt={ss.name} className="w-6 h-6 rounded-full object-cover border border-gray-100" />
-                                                    ) : (
-                                                        <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center text-xs">
-                                                            <FiImage />
-                                                        </div>
-                                                    )}
-                                                    <span className="text-sm font-semibold text-gray-700">{ss.name}</span>
-                                                    <button onClick={() => removeSubSubCategory(index, ssIndex)} className="text-red-400 hover:text-red-600 ml-1">
-                                                        <FiX className="text-sm" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            
-                                            <div className="w-full mt-2 flex flex-col gap-2 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">Add Sub-subcategory</div>
-                                                <div className="flex flex-wrap md:flex-nowrap items-center gap-3">
-                                                    <input
-                                                        type="text"
-                                                        value={subSubInput[index]?.name || ''}
-                                                        onChange={(e) => setSubSubInput({ ...subSubInput, [index]: { ...subSubInput[index], name: e.target.value } })}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                e.preventDefault();
-                                                                addSubSubCategory(index);
-                                                            }
-                                                        }}
-                                                        placeholder="Sub-subcategory name..."
-                                                        className="flex-1 min-w-[200px] px-3 py-2 bg-white border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm"
-                                                    />
-                                                    
-                                                    <label className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 cursor-pointer text-sm whitespace-nowrap">
-                                                        <FiImage />
-                                                        <span className="font-medium">{subSubInput[index]?.file ? 'Change Image' : 'Upload Image'}</span>
-                                                        <input 
-                                                            type="file" 
-                                                            accept="image/*"
-                                                            onChange={(e) => handleSubSubImage(index, e)}
-                                                            className="hidden"
-                                                        />
-                                                    </label>
-
-                                                    <button 
-                                                        onClick={() => addSubSubCategory(index)}
-                                                        className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-1"
-                                                    >
-                                                        <FiPlus /> Add
-                                                    </button>
-                                                </div>
-                                                {subSubInput[index]?.preview && (
-                                                    <div className="flex items-center gap-3 mt-1">
-                                                        <span className="text-xs text-gray-500 font-medium">Image ready:</span>
-                                                        <img src={subSubInput[index].preview} alt="preview" className="w-10 h-10 rounded object-cover border border-gray-200 shadow-sm" />
-                                                        <span className="text-xs text-gray-400">{subSubInput[index].file.name}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             ))}
                         </div>

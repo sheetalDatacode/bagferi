@@ -78,6 +78,9 @@ const B2BWallet = lazyWithRetry(
 const AdminB2BCategories = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/Categories"),
 );
+const AdminBrands = lazyWithRetry(
+  () => import("./modules/Admin/pages/b2b-vendors/Brands"),
+);
 const AdminGroceryCategories = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/GroceryCategories"),
 );
@@ -425,8 +428,11 @@ const AppRoutes = () => {
               path="subscription-wallet"
               element={<AdminB2BSubscriptionWallet />}
             />
-
             <Route path="categories" element={<AdminB2BCategories />} />
+            <Route
+              path="default-banners"
+              element={<AdminDefaultBannerManagement />}
+            />
             <Route
               path="banner-bookings"
               element={<AdminB2BBannerManagement />}
@@ -452,14 +458,20 @@ const AppRoutes = () => {
               element={<B2BVendorContactAnalytics mode="admin" />}
             />
           </Route>
-          <Route path="notifications" element={<Notifications />} />
-          <Route path="reels" element={<AdminReelModeration />} />
-          <Route path="reel-reports" element={<AdminReelReports />} />
+          <Route path="notifications" element={<Notifications />}>
+          </Route>
+
+          {/* Root Admin Routes */}
+          <Route path="grocery-categories" element={<AdminGroceryCategories />} />
+          <Route path="grocery-products" element={<AdminGroceryProducts />} />
+          <Route path="brands" element={<AdminBrands />} />
           <Route path="music-library" element={<AdminMusicLibrary />} />
           <Route path="support-settings" element={<SupportSettings />} />
           <Route path="transactions" element={<AdminTransactions />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="feedbacks" element={<AdminFeedbacks />} />
+          <Route path="reels" element={<AdminReelModeration />} />
+          <Route path="reel-reports" element={<AdminReelReports />} />
           <Route path="zones" element={<AdminZones />} />
           <Route path="b2b-home-features" element={<AdminB2BHomeSettings />} />
           <Route path="grocery-categories" element={<AdminGroceryCategories />} />

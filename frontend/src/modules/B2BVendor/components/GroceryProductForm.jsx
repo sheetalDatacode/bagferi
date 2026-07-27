@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiSave, FiX, FiUpload, FiTrash2, FiImage, FiTag, FiDollarSign, FiList } from "react-icons/fi";
+import { FiSave, FiX, FiUpload, FiTrash2, FiImage, FiTag, FiDollarSign, FiList, FiChevronDown, FiSearch, FiCheck } from "react-icons/fi";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import api from "../../../shared/utils/api";
 import { useB2BVendorAuthStore } from "../store/b2bVendorAuthStore";
@@ -18,7 +19,6 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
         stock: "",
         category: "",
         subcategory: "",
-        subsubcategory: "",
         unit: "kg",
         weight: "",
         brand: "",
@@ -28,7 +28,12 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
 
     const [categories, setCategories] = useState([]);
     const [subcategories, setSubcategories] = useState([]);
-    const [subSubcategories, setSubSubcategories] = useState([]);
+    const [brands, setBrands] = useState([]);
+    
+    const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
+    const [brandSearchQuery, setBrandSearchQuery] = useState("");
+    const brandDropdownRef = useRef(null);
+
     const [images, setImages] = useState([]); // UI state for new images
     const [existingImages, setExistingImages] = useState(initialData?.media || []); // Already uploaded
     const [dynamicFields, setDynamicFields] = useState([]);
@@ -45,6 +50,34 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
     }, []);
 
     useEffect(() => {
+        const fetchBrands = async () => {
+            try {
+                let query = '?type=grocery';
+                if (formData.category) query += `&category=${formData.category}`;
+                if (formData.subcategory) query += `&subcategory=${formData.subcategory}`;
+                const res = await api.get(`/brands${query}`);
+                if (res.success) {
+                    setBrands(res.data || []);
+                }
+            } catch (error) {
+                console.error("Failed to fetch brands", error);
+            }
+        };
+        fetchBrands();
+    }, [formData.category, formData.subcategory]);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (brandDropdownRef.current && !brandDropdownRef.current.contains(e.target)) {
+                setIsBrandDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
         if (formData.category && categories.length > 0) {
             const cat = categories.find(c => c.name === formData.category || c._id === formData.category);
             setSubcategories(cat?.subcategories || []);
@@ -53,18 +86,11 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
         }
     }, [formData.category, categories]);
 
-    useEffect(() => {
-        if (formData.subcategory && subcategories.length > 0) {
-            const subcat = subcategories.find(s => s.name === formData.subcategory || s._id === formData.subcategory);
-            setSubSubcategories(subcat?.subcategories || []);
-        } else {
-            setSubSubcategories([]);
-        }
-    }, [formData.subcategory, subcategories]);
+
 
     useEffect(() => {
         let fields = [];
-        let cat, sub, subSub;
+        let cat, sub;
         
         if (categories.length > 0 && formData.category) {
             cat = categories.find(c => c.name === formData.category || c._id === formData.category);
@@ -74,13 +100,9 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
             sub = cat.subcategories?.find(s => s.name === formData.subcategory || s._id === formData.subcategory);
             if (sub?.fields?.length > 0) fields = sub.fields;
         }
-        if (sub && formData.subsubcategory) {
-            subSub = sub.subcategories?.find(s => s.name === formData.subsubcategory || s._id === formData.subsubcategory);
-            if (subSub?.fields?.length > 0) fields = subSub.fields;
-        }
 
         setDynamicFields(fields);
-    }, [formData.category, formData.subcategory, formData.subsubcategory, categories]);
+    }, [formData.category, formData.subcategory, categories]);
 
     const fetchCategories = async () => {
         try {
@@ -194,9 +216,72 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                         <label className="text-xs font-bold text-gray-700 uppercase">Product Title *</label>
                         <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g. Organic Tomatoes" />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 relative" ref={brandDropdownRef}>
                         <label className="text-xs font-bold text-gray-700 uppercase">Brand</label>
-                        <input type="text" value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g. FreshFarms" />
+                        <button
+                            type="button"
+                            onClick={() => setIsBrandDropdownOpen(!isBrandDropdownOpen)}
+                            className={`w-full px-4 py-2 bg-gray-50 border rounded-xl flex items-center justify-between outline-none transition-all ${
+                                isBrandDropdownOpen ? 'border-primary-500 ring-2 ring-primary-500/20' : 'border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20'
+                            }`}
+                        >
+                            <span className={formData.brand ? 'text-gray-900' : 'text-gray-400'}>
+                                {formData.brand || 'Select or search brand'}
+                            </span>
+                            <FiChevronDown className={`transition-transform duration-200 text-gray-500 ${isBrandDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isBrandDropdownOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[300px]"
+                            >
+                                <div className="p-3 border-b border-gray-50 bg-gray-50/50 sticky top-0">
+                                    <div className="relative">
+                                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                                            placeholder="Type to search..."
+                                            value={brandSearchQuery}
+                                            onChange={(e) => setBrandSearchQuery(e.target.value)}
+                                        />
+                                        {brandSearchQuery && (
+                                            <button onClick={() => setBrandSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                                <FiX size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="overflow-y-auto custom-scrollbar p-1.5">
+                                    {brands.filter(b => b.name.toLowerCase().includes(brandSearchQuery.toLowerCase())).length > 0 ? (
+                                        brands.filter(b => b.name.toLowerCase().includes(brandSearchQuery.toLowerCase())).map((b) => (
+                                            <button
+                                                key={b._id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFormData({ ...formData, brand: b.name });
+                                                    setIsBrandDropdownOpen(false);
+                                                    setBrandSearchQuery('');
+                                                }}
+                                                className={`w-full text-left px-4 py-2 rounded-xl flex items-center justify-between text-sm transition-colors ${
+                                                    formData.brand === b.name ? 'bg-primary-50 text-primary-700 font-bold' : 'text-gray-700 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                <span>{b.name}</span>
+                                                {formData.brand === b.name && <FiCheck className="text-primary-600" />}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="p-4 text-center">
+                                            <p className="text-gray-400 text-sm">No brands found</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
                     <div className="space-y-1 md:col-span-2">
                         <label className="text-xs font-bold text-gray-700 uppercase">Description *</label>
@@ -248,26 +333,19 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                 <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
                     <FiTag className="text-primary-600" /> Categorization
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-gray-700 uppercase">Category *</label>
-                        <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subcategory: '', subsubcategory: ''})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+                        <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subcategory: ''})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
                             <option value="">Select Category</option>
                             {categories.map(c => <option key={c._id || c.name} value={c._id}>{c.name}</option>)}
                         </select>
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-gray-700 uppercase">Subcategory</label>
-                        <select value={formData.subcategory} onChange={e => setFormData({...formData, subcategory: e.target.value, subsubcategory: ''})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+                        <select value={formData.subcategory} onChange={e => setFormData({...formData, subcategory: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
                             <option value="">Select Subcategory</option>
                             {subcategories.map((s, i) => <option key={i} value={s._id}>{s.name || s}</option>)}
-                        </select>
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-700 uppercase">Sub-Subcategory</label>
-                        <select value={formData.subsubcategory} onChange={e => setFormData({...formData, subsubcategory: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-                            <option value="">Select Sub-Subcategory</option>
-                            {subSubcategories.map((s, i) => <option key={i} value={s._id}>{s.name || s}</option>)}
                         </select>
                     </div>
                 </div>

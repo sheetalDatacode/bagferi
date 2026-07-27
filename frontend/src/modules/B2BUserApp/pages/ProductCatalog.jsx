@@ -1929,44 +1929,6 @@ const ProductCatalog = () => {
           </div>
         </div>
 
-        {/* Gender Dropdown */}
-        <div className="flex gap-2 mb-4 relative z-20">
-          <div className="relative" ref={genderDropdownRef}>
-            <button
-              onClick={() => setIsGenderDropdownOpen(!isGenderDropdownOpen)}
-              className={`px-4 py-2 text-[11px] font-black transition-all flex items-center gap-2 whitespace-nowrap uppercase tracking-widest border rounded-xl ${selectedGender !== "All" ? "bg-primary-50 text-primary-600 border-primary-200 shadow-sm" : "bg-white text-gray-700 hover:text-primary-600 hover:bg-gray-50 border-gray-200 shadow-sm"}`}>
-              <FiUser size={16} />
-              {selectedGender === "All" ? "Gender" : selectedGender}
-              <FiChevronDown
-                className={`transition-transform duration-200 ${isGenderDropdownOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-            <AnimatePresence>
-              {isGenderDropdownOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
-                  <div className="p-2 space-y-1">
-                    {["All", "Men", "Women", "Kids", "Unisex"].map((g) => (
-                      <button
-                        key={g}
-                        onClick={() => {
-                          setSelectedGender(g);
-                          setIsGenderDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-between group ${selectedGender === g ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
-                        <span>{g === "All" ? "All Genders" : g}</span>
-                        {selectedGender === g && <FiCheck className="text-primary-600" />}
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
 
         {/* Subcategory Filter Row */}
         {selectedCategory !== "All" && allCategories.length > 0 && (
@@ -2288,56 +2250,94 @@ const ProductCatalog = () => {
                               {filteredProducts.length} ITEM
                               {filteredProducts.length > 1 ? "S" : ""}
                             </span>
-                          </div>
+                                        {/* Filters side-by-side on same line */}
+                          <div className="flex items-center gap-2 relative z-20">
+                            {/* Gender Dropdown */}
+                            <div className="relative" ref={genderDropdownRef}>
+                              <button
+                                onClick={() => setIsGenderDropdownOpen(!isGenderDropdownOpen)}
+                                className={`px-4 py-2 text-[10px] font-black transition-all flex items-center gap-2 whitespace-nowrap uppercase tracking-widest border rounded-xl ${selectedGender !== "All" ? "bg-primary-50 text-primary-600 border-primary-200 shadow-sm" : "bg-white text-gray-700 hover:text-primary-600 hover:bg-gray-50 border-gray-200 shadow-sm"}`}>
+                                <FiUser size={14} className="text-primary-600" />
+                                <span>Gender: {selectedGender === "All" ? "All" : selectedGender}</span>
+                                <FiChevronDown
+                                  className={`transition-transform duration-200 ${isGenderDropdownOpen ? "rotate-180" : ""}`}
+                                />
+                              </button>
+                              <AnimatePresence>
+                                {isGenderDropdownOpen && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute top-full right-0 mt-2 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
+                                    <div className="p-1.5 space-y-0.5">
+                                      {["All", "Men", "Women", "Kids", "Unisex"].map((g) => (
+                                        <button
+                                          key={g}
+                                          onClick={() => {
+                                            setSelectedGender(g);
+                                            setIsGenderDropdownOpen(false);
+                                          }}
+                                          className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-between group ${selectedGender === g ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
+                                          <span>{g === "All" ? "All Genders" : g}</span>
+                                          {selectedGender === g && <FiCheck className="text-primary-600" />}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
 
-                          {/* Price Sort Dropdown for search results */}
-                          <div className="relative" ref={sortDropdownRef}>
-                            <button
-                              onClick={() =>
-                                setIsSortDropdownOpen(!isSortDropdownOpen)
-                              }
-                              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-600 shadow-sm hover:border-primary-200 transition-all">
-                              <FiTrendingUp className="text-primary-600" />
-                              <span>Sort: {getSortLabel()}</span>
-                              <FiChevronDown
-                                className={`transition-transform duration-200 ${isSortDropdownOpen ? "rotate-180" : ""}`}
-                              />
-                            </button>
+                            {/* Price Sort Dropdown for search results */}
+                            <div className="relative" ref={sortDropdownRef}>
+                              <button
+                                onClick={() =>
+                                  setIsSortDropdownOpen(!isSortDropdownOpen)
+                                }
+                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-600 shadow-sm hover:border-primary-200 transition-all whitespace-nowrap">
+                                <FiTrendingUp className="text-primary-600" />
+                                <span>Sort: {getSortLabel()}</span>
+                                <FiChevronDown
+                                  className={`transition-transform duration-200 ${isSortDropdownOpen ? "rotate-180" : ""}`}
+                                />
+                              </button>
 
-                            <AnimatePresence>
-                              {isSortDropdownOpen && (
-                                <motion.div
-                                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                  className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
-                                  <div className="p-1">
-                                    <button
-                                      onClick={() =>
-                                        handleSortChange("createdAt", "desc")
-                                      }
-                                      className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "createdAt" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
-                                      Newest First
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleSortChange("price", "asc")
-                                      }
-                                      className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "price" && sortOrder === "asc" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
-                                      Price: Low to High
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleSortChange("price", "desc")
-                                      }
-                                      className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "price" && sortOrder === "desc" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
-                                      Price: High to Low
-                                    </button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
+                              <AnimatePresence>
+                                {isSortDropdownOpen && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
+                                    <div className="p-1">
+                                      <button
+                                        onClick={() =>
+                                          handleSortChange("createdAt", "desc")
+                                        }
+                                        className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "createdAt" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
+                                        Newest First
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleSortChange("price", "asc")
+                                        }
+                                        className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "price" && sortOrder === "asc" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
+                                        Price: Low to High
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleSortChange("price", "desc")
+                                        }
+                                        className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "price" && sortOrder === "desc" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
+                                        Price: High to Low
+                                      </button>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>                </div>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                           {filteredProducts.map((product) => (
@@ -2475,64 +2475,98 @@ const ProductCatalog = () => {
                       <>
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
-                            <span className="h-[2px] w-12 bg-primary-600"></span>
-                            <h3 className="text-xl font-black text-gray-800 tracking-tighter uppercase">
-                              Marketplace
-                            </h3>
                             <span className="px-3 py-1 bg-primary-50 text-primary-600 rounded-full text-[10px] font-black uppercase">
                               {filteredProducts.length} ITEM
                               {filteredProducts.length > 1 ? "S" : ""}
                             </span>
-                          </div>
+                                       {/* Filters side-by-side on same line */}
+                          <div className="flex items-center gap-2 relative z-20">
+                            {/* Gender Dropdown */}
+                            <div className="relative" ref={genderDropdownRef}>
+                              <button
+                                onClick={() => setIsGenderDropdownOpen(!isGenderDropdownOpen)}
+                                className={`px-4 py-2 text-[10px] font-black transition-all flex items-center gap-2 whitespace-nowrap uppercase tracking-widest border rounded-xl ${selectedGender !== "All" ? "bg-primary-50 text-primary-600 border-primary-200 shadow-sm" : "bg-white text-gray-700 hover:text-primary-600 hover:bg-gray-50 border-gray-200 shadow-sm"}`}>
+                                <FiUser size={14} className="text-primary-600" />
+                                <span>Gender: {selectedGender === "All" ? "All" : selectedGender}</span>
+                                <FiChevronDown
+                                  className={`transition-transform duration-200 ${isGenderDropdownOpen ? "rotate-180" : ""}`}
+                                />
+                              </button>
+                              <AnimatePresence>
+                                {isGenderDropdownOpen && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute top-full right-0 mt-2 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
+                                    <div className="p-1.5 space-y-0.5">
+                                      {["All", "Men", "Women", "Kids", "Unisex"].map((g) => (
+                                        <button
+                                          key={g}
+                                          onClick={() => {
+                                            setSelectedGender(g);
+                                            setIsGenderDropdownOpen(false);
+                                          }}
+                                          className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-between group ${selectedGender === g ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
+                                          <span>{g === "All" ? "All Genders" : g}</span>
+                                          {selectedGender === g && <FiCheck className="text-primary-600" />}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
 
-                          {/* Price Sort Dropdown */}
-                          <div className="relative" ref={sortDropdownRef}>
-                            <button
-                              onClick={() =>
-                                setIsSortDropdownOpen(!isSortDropdownOpen)
-                              }
-                              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-600 shadow-sm hover:border-primary-200 transition-all">
-                              <FiTrendingUp className="text-primary-600" />
-                              <span>Sort: {getSortLabel()}</span>
-                              <FiChevronDown
-                                className={`transition-transform duration-200 ${isSortDropdownOpen ? "rotate-180" : ""}`}
-                              />
-                            </button>
+                            {/* Price Sort Dropdown */}
+                            <div className="relative" ref={sortDropdownRef}>
+                              <button
+                                onClick={() =>
+                                  setIsSortDropdownOpen(!isSortDropdownOpen)
+                                }
+                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-600 shadow-sm hover:border-primary-200 transition-all whitespace-nowrap">
+                                <FiTrendingUp className="text-primary-600" />
+                                <span>Sort: {getSortLabel()}</span>
+                                <FiChevronDown
+                                  className={`transition-transform duration-200 ${isSortDropdownOpen ? "rotate-180" : ""}`}
+                                />
+                              </button>
 
-                            <AnimatePresence>
-                              {isSortDropdownOpen && (
-                                <motion.div
-                                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                  className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
-                                  <div className="p-1">
-                                    <button
-                                      onClick={() =>
-                                        handleSortChange("createdAt", "desc")
-                                      }
-                                      className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "createdAt" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
-                                      Newest First
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleSortChange("price", "asc")
-                                      }
-                                      className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "price" && sortOrder === "asc" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
-                                      Price: Low to High
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleSortChange("price", "desc")
-                                      }
-                                      className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "price" && sortOrder === "desc" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
-                                      Price: High to Low
-                                    </button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
+                              <AnimatePresence>
+                                {isSortDropdownOpen && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden">
+                                    <div className="p-1">
+                                      <button
+                                        onClick={() =>
+                                          handleSortChange("createdAt", "desc")
+                                        }
+                                        className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "createdAt" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
+                                        Newest First
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleSortChange("price", "asc")
+                                        }
+                                        className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "price" && sortOrder === "asc" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
+                                        Price: Low to High
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleSortChange("price", "desc")
+                                        }
+                                        className={`w-full text-left px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === "price" && sortOrder === "desc" ? "bg-primary-50 text-primary-600" : "text-gray-500 hover:bg-gray-50"}`}>
+                                        Price: High to Low
+                                      </button>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>                  </div>
                         </div>
                         {filteredProducts.length > 0 && (
                           <div className="space-y-4">
