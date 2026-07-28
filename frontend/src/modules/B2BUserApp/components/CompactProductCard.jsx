@@ -108,9 +108,8 @@ const CompactProductCard = ({ product }) => {
           {product.name || product.title}
         </h3>
         
-        {/* Vendor/Subtitle */}
         <p className="text-[10px] text-gray-500 mb-2 truncate">
-          {product.vendor?.businessName || 'ram texttile'}
+          {product.shopName || product.shopUnit?.name || product.vendorId?.storeName || product.vendor?.businessName || 'Vendor'}
         </p>
 
         {/* Price & Add to Cart Row */}

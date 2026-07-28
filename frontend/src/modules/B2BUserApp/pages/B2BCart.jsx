@@ -175,7 +175,7 @@ const B2BCart = () => {
 
                         {/* Right Column: Order Summary (Sticky Bottom on Mobile) */}
                         <div className="w-full lg:w-[380px] flex-shrink-0">
-                            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.05)] border-t border-gray-100 p-4 lg:sticky lg:top-[100px] lg:shadow-sm lg:border lg:rounded-2xl lg:p-6 transition-all">
+                            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.05)] border-t border-gray-100 p-4 lg:sticky lg:top-[100px] lg:shadow-sm lg:border lg:rounded-2xl lg:p-6 transition-all" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 1rem)' }}>
                                 <h3 className="hidden lg:block text-sm font-black text-gray-900 uppercase tracking-widest mb-6 border-b border-gray-100 pb-4">
                                     Order Summary
                                 </h3>

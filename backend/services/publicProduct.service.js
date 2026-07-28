@@ -194,8 +194,15 @@ export const getPublicProducts = async (filters) => {
 
     if (deliveryArea) {
         hasLocationFilter = true;
+        let deliveryQuery;
+        if (String(deliveryArea).includes('|')) {
+            deliveryQuery = deliveryArea;
+        } else {
+            // Match any zone starting with the pincode followed by |
+            deliveryQuery = { $regex: new RegExp(`^${deliveryArea}\\|`, 'i') };
+        }
         const shopUnits = await ShopUnit.find({
-            deliveryZones: deliveryArea // Expects format 'Pincode|AreaName'
+            deliveryZones: deliveryQuery
         }).select('vendorId').lean();
         locationVendorIds = shopUnits.map(s => s.vendorId).filter(Boolean);
     }

@@ -21,7 +21,8 @@ export const getPublicVendors = async (req, res, next) => {
       dynamicFilters,
       strict,
       nocache,
-      city
+      city,
+      deliveryArea
     } = req.query;
 
     const useCache = !(nocache === '1' || nocache === 'true');
@@ -54,7 +55,8 @@ export const getPublicVendors = async (req, res, next) => {
       excludeBusinessTypes,
       dynamicFilters,
       strict,
-      city: city || undefined
+      city: city || undefined,
+      deliveryArea
     });// OPTIMIZED: Get product counts and shop units for all vendors in a single query each
     const vendorIds = result.vendors.map(v => v._id);
     const ShopUnit = (await import('../models/ShopUnit.model.js')).default;

@@ -4,12 +4,95 @@ import Vendor from '../models/Vendor.model.js';
 
 export const getGroceryProducts = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, search, category, subcategory, vendorId, sort, minPrice, maxPrice, maxMoq, brands, weights } = req.query;
+    const { 
+      page = 1, 
+      limit = 20, 
+      search, 
+      category, 
+      subcategory, 
+      vendorId, 
+      sort, 
+      minPrice, 
+      maxPrice, 
+      maxMoq, 
+      brands, 
+      weights,
+      city,
+      area,
+      deliveryArea
+    } = req.query;
+
     const query = { isActive: true, isVisible: true };
     if (search) query.name = { $regex: search, $options: 'i' };
     if (category) query.category = category;
     if (subcategory) query.subcategory = subcategory;
-    if (vendorId) query.vendorId = vendorId;
+
+    // Location Filter for Grocery Products
+    let locationVendorIds = null;
+    let hasLocationFilter = false;
+
+    if (deliveryArea) {
+      hasLocationFilter = true;
+      const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
+      let deliveryQuery;
+      if (String(deliveryArea).includes('|')) {
+          deliveryQuery = deliveryArea;
+      } else {
+          deliveryQuery = { $regex: new RegExp(`^${deliveryArea}\\|`, 'i') };
+      }
+      const shopUnits = await ShopUnit.find({
+          deliveryZones: deliveryQuery
+      }).select('vendorId').lean();
+      locationVendorIds = shopUnits.map(s => s.vendorId).filter(Boolean);
+    }
+
+    if (city || area) {
+      hasLocationFilter = true;
+      const vendorQuery = { isActive: true };
+      if (city) {
+        const cityEscaped = String(city).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        vendorQuery['address.city'] = { $regex: new RegExp(`^\\s*${cityEscaped}\\s*$`, 'i') };
+      }
+      if (area) {
+        const areaEscaped = String(area).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        vendorQuery['address.area'] = { $regex: new RegExp(`^\\s*${areaEscaped}\\s*$`, 'i') };
+      }
+      const matchingVendors = await Vendor.find(vendorQuery).select('_id').lean();
+      const foundIds = matchingVendors.map(v => v._id);
+
+      if (locationVendorIds !== null) {
+        const set = new Set(locationVendorIds.map(id => id.toString()));
+        locationVendorIds = foundIds.filter(id => set.has(id.toString()));
+      } else {
+        locationVendorIds = foundIds;
+      }
+    }
+
+    if (hasLocationFilter) {
+      if (!locationVendorIds || locationVendorIds.length === 0) {
+        return res.status(200).json({
+          success: true,
+          data: [],
+          pagination: { total: 0, page: parseInt(page), pages: 0 }
+        });
+      } else {
+        if (vendorId) {
+          const isAllowed = locationVendorIds.some(id => id.toString() === vendorId.toString());
+          if (!isAllowed) {
+            return res.status(200).json({
+              success: true,
+              data: [],
+              pagination: { total: 0, page: parseInt(page), pages: 0 }
+            });
+          }
+          query.vendorId = vendorId;
+        } else {
+          query.vendorId = { $in: locationVendorIds };
+        }
+      }
+    } else if (vendorId) {
+      query.vendorId = vendorId;
+    }
 
     if (brands) {
       const brandArray = brands.split(',').map(b => b.trim()).filter(Boolean);

@@ -131,7 +131,7 @@ const UserDetailsModal = ({ isOpen, onClose, user }) => {
                           )}
                         </p>
                         <p className="text-gray-500 mt-0.5 font-medium">
-                          {addr.streetAddress}, {addr.city}, {addr.state} {addr.pincode}
+                          {addr.streetAddress}, {addr.areaName ? `${addr.areaName}, ` : ''}{addr.city}, {addr.state} {addr.pincode}
                         </p>
                       </div>
                     ))}

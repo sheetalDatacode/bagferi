@@ -6,7 +6,7 @@ import {
     FiSearch, FiX, FiChevronDown, FiGrid, FiShoppingBag,
     FiUser, FiArrowRight, FiArrowLeft, FiBriefcase, FiTrendingUp, FiHome, FiMapPin, FiFilter,
     FiTruck, FiPhone, FiShoppingCart, FiVideo, FiImage, FiHeart,
-    FiCheckCircle, FiXCircle, FiCreditCard, FiRefreshCw, FiPackage, FiShield, FiStar, FiAward
+    FiCheckCircle, FiXCircle, FiCreditCard, FiRefreshCw, FiPackage, FiShield, FiStar, FiAward, FiEdit2, FiTrash2
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { appLogo } from '../../../data/logos';
@@ -23,6 +23,7 @@ import B2BBottomNav from '../components/Layout/B2BBottomNav';
 import B2BHeaderComponent from '../components/Layout/B2BHeader';
 import api from '../../../shared/utils/api';
 import { debounce, getGoogleMapsUrl } from '../../../shared/utils/helpers';
+import toast from 'react-hot-toast';
 import { useB2BCategoryStore } from '../../../shared/store/b2bCategoryStore';
 import { useAuthStore } from '../../../shared/store/authStore';
 import { useB2BLocationStore } from '../../../shared/store/b2bLocationStore';
@@ -35,7 +36,7 @@ const ICONS = {
 const B2BLanding = () => {
     const navigate = useNavigate();
     const { categories, initialize: fetchCategories } = useB2BCategoryStore();
-    const { isAuthenticated, user } = useAuthStore();
+    const { isAuthenticated, user, updateProfile } = useAuthStore();
     const { isAuthenticated: isVendorAuthenticated } = useB2BVendorAuthStore();
 
     // Navigation helper: requires login for any navigation from landing page (except login/register)
@@ -96,12 +97,46 @@ const B2BLanding = () => {
     const [newAddress, setNewAddress] = useState({
         streetAddress: '',
         areaName: '',
-        city: '',
-        state: '',
+        city: 'Surat',
+        state: 'Gujarat',
         pincode: '',
+        zoneId: '',
         addressType: 'Home',
         isDefault: false
     });
+    const [isEditingAddress, setIsEditingAddress] = useState(false);
+
+    const handleAddNewAddressClick = () => {
+        setIsEditingAddress(false);
+        setNewAddress({
+            streetAddress: '', areaName: '', city: 'Surat', state: 'Gujarat', pincode: '', zoneId: '', addressType: 'Home', isDefault: false
+        });
+        setShowAddAddressForm(true);
+    };
+
+    const handleEditAddressClick = (addr, e) => {
+        e.stopPropagation();
+        setNewAddress({ ...addr });
+        setIsEditingAddress(true);
+        setShowAddAddressForm(true);
+    };
+
+    const handleDeleteAddress = async (addrId, e) => {
+        e.stopPropagation();
+        try {
+            const updatedAddresses = addresses.filter(addr => addr._id !== addrId);
+            const res = await updateProfile({ addresses: updatedAddresses });
+            if (res.success) {
+                setAddresses(res.user?.addresses || updatedAddresses);
+                if (selectedAddress?._id === addrId) setSelectedAddress(null);
+                toast.success('Address deleted successfully');
+            }
+        } catch (error) {
+            console.error('Error deleting address:', error);
+            toast.error('Failed to delete address');
+        }
+    };
+    const [zones, setZones] = useState([]);
 
     // Refs
     const searchRef = useRef(null);
@@ -153,33 +188,59 @@ const B2BLanding = () => {
     // Handle adding a new address
     const handleAddAddressSubmit = async (e) => {
         e.preventDefault();
-        if (!newAddress.streetAddress || !newAddress.city || !newAddress.state || !newAddress.pincode) {
+        if (!newAddress.streetAddress || !newAddress.pincode || !newAddress.zoneId || !newAddress.areaName) {
             toast.error('Please fill in all required fields');
             return;
         }
         try {
-            const res = await api.post('/user/addresses', newAddress);
-            if (res.success) {
-                toast.success('Address added successfully');
-                setAddresses(res.data || []);
-                const added = res.data && res.data[res.data.length - 1];
-                if (added) setSelectedAddress(added);
-                setShowAddAddressForm(false);
-                setNewAddress({
-                    streetAddress: '',
-                    areaName: '',
-                    city: '',
-                    state: '',
-                    pincode: '',
-                    addressType: 'Home',
-                    isDefault: false
-                });
+            if (isEditingAddress) {
+                const updatedAddresses = addresses.map(addr => 
+                    addr._id === newAddress._id ? { ...newAddress } : addr
+                );
+                const res = await updateProfile({ addresses: updatedAddresses });
+                if (res.success) {
+                    toast.success('Address updated successfully');
+                    setAddresses(res.user?.addresses || updatedAddresses);
+                    if (selectedAddress?._id === newAddress._id) setSelectedAddress(newAddress);
+                    setShowAddAddressForm(false);
+                    setIsEditingAddress(false);
+                    setNewAddress({
+                        streetAddress: '', areaName: '', city: 'Surat', state: 'Gujarat', pincode: '', zoneId: '', addressType: 'Home', isDefault: false
+                    });
+                }
+            } else {
+                const payload = {
+                    ...newAddress,
+                    isDefault: true
+                };
+                const res = await api.post('/user/addresses', payload);
+                if (res.success) {
+                    toast.success('Address added successfully');
+                    setAddresses(res.data || []);
+                    const added = res.data && res.data[res.data.length - 1];
+                    if (added) setSelectedAddress(added);
+                    setShowAddAddressForm(false);
+                    setNewAddress({
+                        streetAddress: '', areaName: '', city: 'Surat', state: 'Gujarat', pincode: '', zoneId: '', addressType: 'Home', isDefault: false
+                    });
+                }
             }
         } catch (error) {
-            console.error('Error adding address:', error);
-            toast.error('Failed to add address');
+            console.error('Error adding/updating address:', error);
+            toast.error('Failed to save address');
         }
     };
+
+    // Fetch zones when address form is opened
+    useEffect(() => {
+        if (showAddAddressForm && zones.length === 0) {
+            api.get('/zones/public/active')
+                .then(res => {
+                    if (res.success && res.data) setZones(res.data);
+                })
+                .catch(err => console.error("Failed to fetch zones:", err));
+        }
+    }, [showAddAddressForm, zones.length]);
 
     // 1. Mount effect for static data / configurations
     useEffect(() => {
@@ -212,7 +273,19 @@ const B2BLanding = () => {
 
         const fetchLiveReels = async () => {
             try {
-                const response = await api.get('/reels/feed', { params: { limit: 50 } });
+                const params = { limit: 50 };
+                if (selectedAddress) {
+                    params.city = selectedAddress.city;
+                    params.area = selectedAddress.areaName;
+                    if (selectedAddress.pincode) {
+                        params.deliveryArea = selectedAddress.areaName 
+                            ? `${selectedAddress.pincode}|${selectedAddress.areaName}`
+                            : selectedAddress.pincode;
+                    }
+                } else if (selectedCity && selectedCity !== 'All Cities') {
+                    params.city = selectedCity;
+                }
+                const response = await api.get('/reels/feed', { params });
                 if (response.success && response.data) {
                     const reels = Array.isArray(response.data) ? response.data : (response.data.reels || []);
                     const productReels = reels.filter(r => r.productId != null && r.productId !== "");
@@ -237,6 +310,9 @@ const B2BLanding = () => {
                     params.area = selectedAddress.areaName;
                     if (selectedAddress.pincode) {
                         params.pincode = selectedAddress.pincode;
+                        params.deliveryArea = selectedAddress.areaName 
+                            ? `${selectedAddress.pincode}|${selectedAddress.areaName}`
+                            : selectedAddress.pincode;
                     }
                 } else if (selectedCity && selectedCity !== 'All Cities') {
                     params.city = selectedCity;
@@ -261,8 +337,10 @@ const B2BLanding = () => {
                 if (selectedAddress) {
                     params.city = selectedAddress.city;
                     params.area = selectedAddress.areaName;
-                    if (selectedAddress.pincode && selectedAddress.areaName) {
-                        params.deliveryArea = `${selectedAddress.pincode}|${selectedAddress.areaName}`;
+                    if (selectedAddress.pincode) {
+                        params.deliveryArea = selectedAddress.areaName 
+                            ? `${selectedAddress.pincode}|${selectedAddress.areaName}`
+                            : selectedAddress.pincode;
                     }
                 } else if (selectedCity && selectedCity !== 'All Cities') {
                     params.city = selectedCity;
@@ -290,6 +368,11 @@ const B2BLanding = () => {
                 if (selectedAddress) {
                     params.city = selectedAddress.city;
                     params.area = selectedAddress.areaName;
+                    if (selectedAddress.pincode) {
+                        params.deliveryArea = selectedAddress.areaName 
+                            ? `${selectedAddress.pincode}|${selectedAddress.areaName}`
+                            : selectedAddress.pincode;
+                    }
                 } else if (selectedCity && selectedCity !== 'All Cities') {
                     params.city = selectedCity;
                 }
@@ -1082,13 +1165,250 @@ const B2BLanding = () => {
                 onSearchChange={setSearchQuery}
                 onSearchSubmit={(q) => handleSearchProductPopup(q)}
                 searchPlaceholder="Search products, stores, real estate..."
+                customNav={
+                    <div className="relative hidden lg:block" ref={cityDropdownDesktopRef}>
+                        <button 
+                            onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
+                            className="flex flex-col items-start px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors border border-gray-100 min-w-[140px] max-w-[200px]"
+                        >
+                            <div className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest w-full">
+                                <FiMapPin size={10} />
+                                <span>Deliver to</span>
+                            </div>
+                            <div className="flex items-center gap-1 w-full mt-0.5">
+                                <span className="text-xs font-black text-gray-800 truncate flex-1 text-left">
+                                    {selectedAddress 
+                                        ? `${selectedAddress.addressType || 'Work'}: ${selectedAddress.areaName || selectedAddress.city} (${selectedAddress.pincode})` 
+                                        : (selectedCity !== 'All Cities' ? selectedCity : 'Select Location')
+                                    }
+                                </span>
+                                <FiChevronDown size={14} className={`text-gray-400 shrink-0 transition-transform ${isCityDropdownOpen ? 'rotate-180' : ''}`} />
+                            </div>
+                        </button>
+
+                        <AnimatePresence>
+                            {isCityDropdownOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                                    className="absolute top-[calc(100%+0.5rem)] right-0 w-[320px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[100] p-4 max-h-[80vh] overflow-y-auto custom-scrollbar"
+                                >
+                                    {!showAddAddressForm ? (
+                                        <div className="space-y-4">
+                                            {/* Saved Addresses Section */}
+                                            <div>
+                                                <div className="flex justify-between items-center pb-2 border-b border-gray-100 mb-2">
+                                                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Delivery Addresses</span>
+                                                    {isAuthenticated && (
+                                                        <button 
+                                                            onClick={handleAddNewAddressClick} 
+                                                            className="text-[10px] font-black uppercase text-primary-600 hover:text-primary-700 tracking-wider"
+                                                        >
+                                                            + Add New
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {!isAuthenticated ? (
+                                                    <div className="py-4 text-center">
+                                                        <p className="text-xs text-gray-400 font-bold mb-2">Login to see your saved addresses</p>
+                                                        <button 
+                                                            onClick={() => navigate('/b2b/login')} 
+                                                            className="px-4 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/25"
+                                                        >
+                                                            Login
+                                                        </button>
+                                                    </div>
+                                                ) : addresses.length === 0 ? (
+                                                    <div className="py-4 text-center">
+                                                        <p className="text-xs text-gray-400 font-bold mb-2">No saved addresses found</p>
+                                                        <button 
+                                                            onClick={handleAddNewAddressClick} 
+                                                            className="px-4 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/25"
+                                                        >
+                                                            Add First Address
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        {addresses.map(addr => (
+                                                            <div key={addr._id} className="relative group">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedAddress(addr);
+                                                                        setIsCityDropdownOpen(false);
+                                                                    }}
+                                                                    className={`w-full text-left p-3 rounded-xl border transition-all flex items-start gap-3 ${
+                                                                        selectedAddress?._id === addr._id 
+                                                                            ? 'border-primary-600 bg-primary-50/50 text-primary-900 shadow-sm' 
+                                                                            : 'border-gray-100 hover:bg-gray-50 text-gray-700'
+                                                                    }`}
+                                                                >
+                                                                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${selectedAddress?._id === addr._id ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'}`}>
+                                                                        {selectedAddress?._id === addr._id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0 pr-16">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <span className="text-xs font-black uppercase tracking-wide">{addr.addressType || 'Work'}</span>
+                                                                            {addr.isDefault && <span className="bg-primary-100 text-primary-800 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Default</span>}
+                                                                        </div>
+                                                                        <p className="text-[11px] font-medium text-gray-500 truncate mt-0.5">{addr.streetAddress}</p>
+                                                                        <p className="text-[10px] font-black text-gray-800 uppercase tracking-tight mt-0.5">{addr.areaName || addr.city}, {addr.city} ({addr.pincode})</p>
+                                                                    </div>
+                                                                </button>
+                                                                <div className="absolute top-1/2 -translate-y-1/2 right-3 flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                                                    <button onClick={(e) => handleEditAddressClick(addr, e)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors bg-white">
+                                                                        <FiEdit2 size={14} />
+                                                                    </button>
+                                                                    <button onClick={(e) => handleDeleteAddress(addr._id, e)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors bg-white">
+                                                                        <FiTrash2 size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+
+                                        </div>
+                                    ) : (
+                                        /* Add New Address Form */
+                                        <form onSubmit={handleAddAddressSubmit} className="space-y-3.5">
+                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2 mb-3">
+                                                <span className="text-xs font-black uppercase text-gray-800 tracking-wider">Add Delivery Address</span>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setShowAddAddressForm(false)} 
+                                                    className="text-[10px] font-black uppercase text-gray-400 hover:text-gray-600 tracking-wider"
+                                                >
+                                                    Back
+                                                </button>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Street Address *</label>
+                                                <input 
+                                                    type="text" 
+                                                    required
+                                                    value={newAddress.streetAddress}
+                                                    onChange={e => setNewAddress({...newAddress, streetAddress: e.target.value})}
+                                                    placeholder="Shop No, Building, Street" 
+                                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 text-xs"
+                                                />
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">City *</label>
+                                                    <input 
+                                                        type="text" 
+                                                        readOnly
+                                                        value={newAddress.city}
+                                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 font-medium outline-none cursor-not-allowed text-xs"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Pincode *</label>
+                                                    <input 
+                                                        type="text" 
+                                                        required
+                                                        maxLength="6"
+                                                        value={newAddress.pincode}
+                                                        onChange={e => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            setNewAddress({...newAddress, pincode: val, zoneId: '', areaName: ''});
+                                                        }}
+                                                        placeholder="e.g. 395006" 
+                                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-bold text-xs"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {newAddress.pincode.length === 6 && (
+                                                <div className="space-y-3.5 pt-2 border-t border-gray-100">
+                                                    {(() => {
+                                                        const availableZones = zones.filter(z => z.pincodes?.some(p => p.code === newAddress.pincode));
+                                                        return availableZones.length > 0 ? (
+                                                            <>
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Select Zone *</label>
+                                                                    <select 
+                                                                        required
+                                                                        value={newAddress.zoneId}
+                                                                        onChange={e => setNewAddress({...newAddress, zoneId: e.target.value, areaName: ''})}
+                                                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-medium text-xs"
+                                                                    >
+                                                                        <option value="" disabled>Select your zone</option>
+                                                                        {availableZones.map(z => (
+                                                                            <option key={z._id} value={z._id}>{z.name}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+
+                                                                {newAddress.zoneId && (
+                                                                    <div className="space-y-1.5">
+                                                                        <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Select Area *</label>
+                                                                        <select 
+                                                                            required
+                                                                            value={newAddress.areaName}
+                                                                            onChange={e => setNewAddress({...newAddress, areaName: e.target.value})}
+                                                                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-medium text-xs"
+                                                                        >
+                                                                            <option value="" disabled>Select your area</option>
+                                                                            {(() => {
+                                                                                const zone = zones.find(z => z._id === newAddress.zoneId);
+                                                                                if (!zone) return [];
+                                                                                const pinData = zone.pincodes?.find(p => p.code === newAddress.pincode);
+                                                                                return (pinData?.areas || []).map(a => (
+                                                                                    <option key={a.name} value={a.name}>{a.name}</option>
+                                                                                ));
+                                                                            })()}
+                                                                        </select>
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <div className="bg-orange-50 text-orange-700 p-3 rounded-xl border border-orange-100 text-xs font-medium">
+                                                                No zones available for this pincode.
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            )}
+
+                                            <div className="flex gap-2 pt-2">
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setShowAddAddressForm(false)} 
+                                                    className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-gray-200"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button 
+                                                    type="submit" 
+                                                    disabled={!newAddress.areaName}
+                                                    className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/20 disabled:bg-gray-300 disabled:shadow-none"
+                                                >
+                                                    Save & Select
+                                                </button>
+                                            </div>
+                                        </form>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                }
             />
 
             {/* --- MAIN CONTENT START --- */}
             <div className="flex-1 overflow-y-auto pb-20">
 
                 {/* --- MOBILE LOCATION & SEARCH (Blinkit style) --- */}
-                <div className="lg:hidden w-full bg-gradient-to-b from-orange-50/80 to-white pt-2 pb-4 px-4 shadow-sm mb-1 relative">
+                <div 
+                    className="lg:hidden w-full bg-gradient-to-b from-orange-50/80 to-white pt-2 pb-4 px-4 shadow-sm mb-1 relative"
+                    ref={cityDropdownMobileRef}
+                >
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
@@ -1126,7 +1446,7 @@ const B2BLanding = () => {
                                                 <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Delivery Addresses</span>
                                                 {isAuthenticated && (
                                                     <button 
-                                                        onClick={() => setShowAddAddressForm(true)} 
+                                                        onClick={handleAddNewAddressClick} 
                                                         className="text-[10px] font-black uppercase text-primary-600 hover:text-primary-700 tracking-wider"
                                                     >
                                                         + Add New
@@ -1148,7 +1468,7 @@ const B2BLanding = () => {
                                                 <div className="py-4 text-center">
                                                     <p className="text-xs text-gray-400 font-bold mb-2">No saved addresses found</p>
                                                     <button 
-                                                        onClick={() => setShowAddAddressForm(true)} 
+                                                        onClick={handleAddNewAddressClick} 
                                                         className="px-4 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/25"
                                                     >
                                                         Add First Address
@@ -1157,54 +1477,45 @@ const B2BLanding = () => {
                                             ) : (
                                                 <div className="space-y-2">
                                                     {addresses.map(addr => (
-                                                        <button
-                                                            key={addr._id}
-                                                            onClick={() => {
-                                                                setSelectedAddress(addr);
-                                                                setIsCityDropdownOpen(false);
-                                                            }}
-                                                            className={`w-full text-left p-3 rounded-xl border transition-all flex items-start gap-3 ${
-                                                                selectedAddress?._id === addr._id 
-                                                                    ? 'border-primary-600 bg-primary-50/50 text-primary-900 shadow-sm' 
-                                                                    : 'border-gray-100 hover:bg-gray-50 text-gray-700'
-                                                            }`}
-                                                        >
-                                                            <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${selectedAddress?._id === addr._id ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'}`}>
-                                                                {selectedAddress?._id === addr._id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <span className="text-xs font-black uppercase tracking-wide">{addr.addressType || 'Work'}</span>
-                                                                    {addr.isDefault && <span className="bg-primary-100 text-primary-800 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Default</span>}
+                                                        <div key={addr._id} className="relative group">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedAddress(addr);
+                                                                    setIsCityDropdownOpen(false);
+                                                                }}
+                                                                className={`w-full text-left p-3 rounded-xl border transition-all flex items-start gap-3 ${
+                                                                    selectedAddress?._id === addr._id 
+                                                                        ? 'border-primary-600 bg-primary-50/50 text-primary-900 shadow-sm' 
+                                                                        : 'border-gray-100 hover:bg-gray-50 text-gray-700'
+                                                                }`}
+                                                            >
+                                                                <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${selectedAddress?._id === addr._id ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'}`}>
+                                                                    {selectedAddress?._id === addr._id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                                                                 </div>
-                                                                <p className="text-[11px] font-medium text-gray-500 truncate mt-0.5">{addr.streetAddress}</p>
-                                                                <p className="text-[10px] font-black text-gray-800 uppercase tracking-tight mt-0.5">{addr.areaName || addr.city}, {addr.city} ({addr.pincode})</p>
+                                                                <div className="flex-1 min-w-0 pr-16">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-xs font-black uppercase tracking-wide">{addr.addressType || 'Work'}</span>
+                                                                        {addr.isDefault && <span className="bg-primary-100 text-primary-800 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Default</span>}
+                                                                    </div>
+                                                                    <p className="text-[11px] font-medium text-gray-500 truncate mt-0.5">{addr.streetAddress}</p>
+                                                                    <p className="text-[10px] font-black text-gray-800 uppercase tracking-tight mt-0.5">{addr.areaName || addr.city}, {addr.city} ({addr.pincode})</p>
+                                                                </div>
+                                                            </button>
+                                                            <div className="absolute top-1/2 -translate-y-1/2 right-3 flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                                                <button onClick={(e) => handleEditAddressClick(addr, e)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors bg-white">
+                                                                    <FiEdit2 size={14} />
+                                                                </button>
+                                                                <button onClick={(e) => handleDeleteAddress(addr._id, e)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors bg-white">
+                                                                    <FiTrash2 size={14} />
+                                                                </button>
                                                             </div>
-                                                        </button>
+                                                        </div>
                                                     ))}
                                                 </div>
                                             )}
                                         </div>
 
-                                        {/* City/Region Dropdown fallback */}
-                                        <div className="pt-2 border-t border-gray-100">
-                                            <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Or Choose City</div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {['All Cities', 'Surat', 'Ahmedabad', 'Mumbai', 'Delhi', 'Bengaluru'].map(city => (
-                                                    <button
-                                                        key={city}
-                                                        onClick={() => {
-                                                            setSelectedAddress(null);
-                                                            setSelectedCity(city);
-                                                            setIsCityDropdownOpen(false);
-                                                        }}
-                                                        className={`text-center py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${selectedCity === city && !selectedAddress ? 'border-primary-600 text-primary-600 bg-primary-50' : 'border-gray-100 text-gray-700 hover:bg-gray-50'}`}
-                                                    >
-                                                        {city}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
+
                                     </div>
                                 ) : (
                                     /* Add New Address Form */
@@ -1220,81 +1531,96 @@ const B2BLanding = () => {
                                             </button>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Address Type</label>
-                                                <select 
-                                                    value={newAddress.addressType}
-                                                    onChange={(e) => setNewAddress({ ...newAddress, addressType: e.target.value })}
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none"
-                                                >
-                                                    <option value="Home">Home</option>
-                                                    <option value="Work">Work</option>
-                                                    <option value="Warehouse">Warehouse</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Pincode *</label>
-                                                <input 
-                                                    type="text" 
-                                                    required
-                                                    placeholder="395003"
-                                                    value={newAddress.pincode}
-                                                    onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value })}
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none focus:border-primary-300 focus:bg-white"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Street Address *</label>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Street Address *</label>
                                             <input 
                                                 type="text" 
                                                 required
-                                                placeholder="Shop No, Building Name, Street Address"
                                                 value={newAddress.streetAddress}
-                                                onChange={(e) => setNewAddress({ ...newAddress, streetAddress: e.target.value })}
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none focus:border-primary-300 focus:bg-white"
+                                                onChange={e => setNewAddress({...newAddress, streetAddress: e.target.value})}
+                                                placeholder="Shop No, Building, Street" 
+                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 text-xs"
                                             />
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Area Name *</label>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">City *</label>
                                                 <input 
                                                     type="text" 
-                                                    required
-                                                    placeholder="Ring Road"
-                                                    value={newAddress.areaName}
-                                                    onChange={(e) => setNewAddress({ ...newAddress, areaName: e.target.value })}
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none focus:border-primary-300 focus:bg-white"
+                                                    readOnly
+                                                    value={newAddress.city}
+                                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 font-medium outline-none cursor-not-allowed text-xs"
                                                 />
                                             </div>
-                                            <div>
-                                                <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">City *</label>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Pincode *</label>
                                                 <input 
                                                     type="text" 
                                                     required
-                                                    placeholder="Surat"
-                                                    value={newAddress.city}
-                                                    onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none focus:border-primary-300 focus:bg-white"
+                                                    maxLength="6"
+                                                    value={newAddress.pincode}
+                                                    onChange={e => {
+                                                        const val = e.target.value.replace(/\D/g, '');
+                                                        setNewAddress({...newAddress, pincode: val, zoneId: '', areaName: ''});
+                                                    }}
+                                                    placeholder="e.g. 395006" 
+                                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-bold text-xs"
                                                 />
                                             </div>
                                         </div>
 
-                                        <div>
-                                            <label className="block text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">State *</label>
-                                            <input 
-                                                type="text" 
-                                                required
-                                                placeholder="Gujarat"
-                                                value={newAddress.state}
-                                                onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-2 text-xs font-bold text-gray-800 outline-none focus:border-primary-300 focus:bg-white"
-                                            />
-                                        </div>
+                                        {newAddress.pincode.length === 6 && (
+                                            <div className="space-y-3.5 pt-2 border-t border-gray-100">
+                                                {(() => {
+                                                    const availableZones = zones.filter(z => z.pincodes?.some(p => p.code === newAddress.pincode));
+                                                    return availableZones.length > 0 ? (
+                                                        <>
+                                                            <div className="space-y-1.5">
+                                                                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Select Zone *</label>
+                                                                <select 
+                                                                    required
+                                                                    value={newAddress.zoneId}
+                                                                    onChange={e => setNewAddress({...newAddress, zoneId: e.target.value, areaName: ''})}
+                                                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-medium text-xs"
+                                                                >
+                                                                    <option value="" disabled>Select your zone</option>
+                                                                    {availableZones.map(z => (
+                                                                        <option key={z._id} value={z._id}>{z.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+
+                                                            {newAddress.zoneId && (
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Select Area *</label>
+                                                                    <select 
+                                                                        required
+                                                                        value={newAddress.areaName}
+                                                                        onChange={e => setNewAddress({...newAddress, areaName: e.target.value})}
+                                                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-medium text-xs"
+                                                                    >
+                                                                        <option value="" disabled>Select your area</option>
+                                                                        {(() => {
+                                                                            const zone = zones.find(z => z._id === newAddress.zoneId);
+                                                                            if (!zone) return [];
+                                                                            const pinData = zone.pincodes?.find(p => p.code === newAddress.pincode);
+                                                                            return (pinData?.areas || []).map(a => (
+                                                                                <option key={a.name} value={a.name}>{a.name}</option>
+                                                                            ));
+                                                                        })()}
+                                                                    </select>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <div className="bg-orange-50 text-orange-700 p-3 rounded-xl border border-orange-100 text-xs font-medium">
+                                                            No zones available for this pincode.
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
 
                                         <div className="flex gap-2 pt-2">
                                             <button 
@@ -1306,7 +1632,8 @@ const B2BLanding = () => {
                                             </button>
                                             <button 
                                                 type="submit" 
-                                                className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/20"
+                                                disabled={!newAddress.areaName}
+                                                className="flex-1 py-2.5 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/20 disabled:bg-gray-300 disabled:shadow-none"
                                             >
                                                 Save & Select
                                             </button>

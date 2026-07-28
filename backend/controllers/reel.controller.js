@@ -792,8 +792,9 @@ function isMongoId(id) {
  */
 export const getFeed = asyncHandler(async (req, res) => {
   const playlistId = process.env.YOUTUBE_REELS_PLAYLIST_ID;
+  const { deliveryArea, city, area } = req.query;
 
-  const isFiltering = req.query.propertyOnly || req.query.productOnly || req.query.category || req.query.categoryId || req.query.vendorId || req.query.search;
+  const isFiltering = req.query.propertyOnly || req.query.productOnly || req.query.category || req.query.categoryId || req.query.vendorId || req.query.search || deliveryArea || city || area;
 
   if (playlistId && !isFiltering) {
     // Reels from YouTube only – no DB storage, global general feed
@@ -976,16 +977,70 @@ export const getFeed = asyncHandler(async (req, res) => {
   } else {
     // Only fetch reels from currently active/approved vendors to prevent JavaScript-level filtering from breaking pagination
     // Include vendors where vendorType is missing (legacy data) or explicitly 'b2b'
-    const validVendors = await Vendor.find({
+    const validVendorQuery = {
       status: 'approved',
       isActive: true
-    }).select('_id').lean();
-    const validVendorIds = validVendors.map(v => v._id);
+    };
+
+    // Location Filter for Reels
+    let locationVendorIds = null;
+    let hasLocationFilter = false;
+
+    if (deliveryArea) {
+      hasLocationFilter = true;
+      const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
+      let deliveryQuery;
+      if (String(deliveryArea).includes('|')) {
+          deliveryQuery = deliveryArea;
+      } else {
+          deliveryQuery = { $regex: new RegExp(`^${deliveryArea}\\|`, 'i') };
+      }
+      const shopUnits = await ShopUnit.find({
+          deliveryZones: deliveryQuery
+      }).select('vendorId').lean();
+      locationVendorIds = shopUnits.map(s => s.vendorId).filter(Boolean);
+    }
+
+    if (city || area) {
+      hasLocationFilter = true;
+      const vendorQuery = { isActive: true };
+      if (city) {
+        const cityEscaped = String(city).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        vendorQuery['address.city'] = { $regex: new RegExp(`^\\s*${cityEscaped}\\s*$`, 'i') };
+      }
+      if (area) {
+        const areaEscaped = String(area).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        vendorQuery['address.area'] = { $regex: new RegExp(`^\\s*${areaEscaped}\\s*$`, 'i') };
+      }
+      const matchingVendors = await Vendor.find(vendorQuery).select('_id').lean();
+      const foundIds = matchingVendors.map(v => v._id);
+
+      if (locationVendorIds !== null) {
+        const set = new Set(locationVendorIds.map(id => id.toString()));
+        locationVendorIds = foundIds.filter(id => set.has(id.toString()));
+      } else {
+        locationVendorIds = foundIds;
+      }
+    }
+
+    let finalValidVendorIds = [];
+    if (hasLocationFilter) {
+      if (locationVendorIds && locationVendorIds.length > 0) {
+        validVendorQuery._id = { $in: locationVendorIds };
+        const validVendors = await Vendor.find(validVendorQuery).select('_id').lean();
+        finalValidVendorIds = validVendors.map(v => v._id);
+      } else {
+        finalValidVendorIds = [];
+      }
+    } else {
+      const validVendors = await Vendor.find(validVendorQuery).select('_id').lean();
+      finalValidVendorIds = validVendors.map(v => v._id);
+    }
 
     filter.$and.push({
       $or: [
         { uploaderType: { $ne: 'vendor' } },
-        { uploaderType: 'vendor', uploaderId: { $in: validVendorIds } }
+        { uploaderType: 'vendor', uploaderId: { $in: finalValidVendorIds } }
       ]
     });
   }

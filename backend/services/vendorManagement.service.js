@@ -83,6 +83,40 @@ export const getAllVendors = async (filters = {}) => {
       query['address.city'] = new RegExp('^' + cityEscaped + '$', 'i');
     }
 
+    let hasLocationFilter = false;
+    let locationVendorIds = null;
+
+    if (filters.deliveryArea) {
+      hasLocationFilter = true;
+      const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
+      let deliveryQuery;
+      if (String(filters.deliveryArea).includes('|')) {
+          deliveryQuery = filters.deliveryArea;
+      } else {
+          deliveryQuery = { $regex: new RegExp(`^${filters.deliveryArea}\\|`, 'i') };
+      }
+      const shopUnits = await ShopUnit.find({
+          deliveryZones: deliveryQuery
+      }).select('vendorId').lean();
+      locationVendorIds = shopUnits.map(s => s.vendorId).filter(Boolean);
+    }
+
+    if (hasLocationFilter) {
+      if (locationVendorIds.length === 0) {
+        return { vendors: [], total: 0, page: parseInt(page), limit: parseInt(limit), totalPages: 0 };
+      } else {
+        // Intersect with existing query._id if present, otherwise set it
+        if (query._id) {
+          if (query._id.$in) {
+            const locSet = new Set(locationVendorIds.map(id => id.toString()));
+            query._id.$in = query._id.$in.filter(id => locSet.has(id.toString()));
+          }
+        } else {
+          query._id = { $in: locationVendorIds };
+        }
+      }
+    }
+
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 

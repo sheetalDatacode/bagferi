@@ -261,7 +261,7 @@ const B2BCheckout = () => {
                                         <div>
                                             <p className="font-bold text-gray-900 mb-1">{addr.addressType || 'Home'} <span className="font-normal text-gray-500 text-sm ml-2">{addr.phone}</span></p>
                                             <p className="text-sm text-gray-600 leading-relaxed">
-                                                {addr.streetAddress}, {addr.city}, {addr.state} - {addr.pincode}
+                                                {addr.streetAddress}, {addr.areaName ? `${addr.areaName}, ` : ''}{addr.city}, {addr.state} - {addr.pincode}
                                             </p>
                                         </div>
                                     </div>
@@ -357,7 +357,7 @@ const B2BCheckout = () => {
 
                 {/* Right Column: Order Summary */}
                 <div className="w-full lg:w-[380px] flex-shrink-0">
-                    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.05)] border-t border-gray-100 p-4 lg:sticky lg:top-[100px] lg:shadow-sm lg:border lg:rounded-2xl lg:p-6 transition-all">
+                    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.05)] border-t border-gray-100 p-4 lg:sticky lg:top-[100px] lg:shadow-sm lg:border lg:rounded-2xl lg:p-6 transition-all" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 1rem)' }}>
                         <h3 className="hidden lg:block text-sm font-black text-gray-900 uppercase tracking-widest mb-6 border-b border-gray-100 pb-4">
                             Payment Summary
                         </h3>

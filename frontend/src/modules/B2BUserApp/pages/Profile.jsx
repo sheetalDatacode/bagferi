@@ -32,7 +32,7 @@ const Profile = () => {
 
     const menuItems = [
         { icon: FiShoppingBag, label: 'My Orders', desc: 'View your order history & status', path: '/b2b/orders' },
-        { icon: FiBriefcase, label: 'Company Profile', desc: 'Manage your business details & GST', path: '/b2b/company' },
+        { icon: FiUser, label: 'My Profile', desc: 'Manage your personal details & addresses', path: '/b2b/company' },
         { icon: FiBell, label: 'Notifications', desc: 'Manage inquiry alerts', path: '/b2b/notifications' },
         { icon: FiHelpCircle, label: 'Support & FAQs', desc: 'Get help with your bulk orders', path: '/b2b/support' },
         { icon: FiPlayCircle, label: 'How to Use', desc: 'Watch a guide to the platform', path: '/b2b/how-to-use' },

@@ -279,26 +279,28 @@ const B2BVendorRegister = () => {
         document.getElementById(type === 'aadhar' ? 'aadhar-camera' : 'pan-camera')?.click();
     };
 
-    const handleGalleryClick = (type) => {
+    const handleGalleryClick = async (type) => {
         if (isFlutterApp()) {
-            // Async bridge call
-            (async () => {
-                const result = await openFlutterGallery();
-                if (result) {
-                    const docData = { name: result.fileName, data: result.data, type: result.mimeType };
-                    if (type === 'aadhar') {
-                        setAadharCard(docData);
-                    } else {
-                        setPanCard(docData);
-                    }
-                    toast.success(`${type === 'aadhar' ? 'Aadhar Card' : docLabel} added`);
+            const result = await openFlutterGallery();
+            if (result) {
+                const docData = { name: result.name || result.fileName, data: result.data, type: result.mimeType || 'image/jpeg' };
+                if (type === 'aadhar') {
+                    setAadharCard(docData);
+                } else {
+                    setPanCard(docData);
                 }
-            })();
+                toast.success(`${type === 'aadhar' ? 'Aadhar Card' : docLabel} added`);
+            }
             return;
         }
-        
-        // Synchronous fallback (critical for mobile browsers)
-        document.getElementById(type === 'aadhar' ? 'aadhar-upload' : 'pan-upload')?.click();
+
+        // For normal mobile browsers / PWA: trigger the hidden file input
+        // Must be called synchronously within user gesture context
+        const inputId = type === 'aadhar' ? 'aadhar-upload' : 'pan-upload';
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.click();
+        }
     };
 
     const handleChange = (e) => {
@@ -642,10 +644,10 @@ const B2BVendorRegister = () => {
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="relative">
-                                                <input type="file" accept="image/png, image/jpeg, image/webp, video/*, application/pdf" onChange={(e) => {
+                                                <input type="file" accept="image/png, image/jpeg, image/webp, application/pdf" onChange={(e) => {
                                                     handleDocumentUpload(e, 'aadhar', false);
                                                     if (errors.aadharCard) setErrors(prev => ({ ...prev, aadharCard: '' }));
-                                                }} className="hidden" id="aadhar-upload" disabled={isUploadingDocs} />
+                                                }} style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }} id="aadhar-upload" disabled={isUploadingDocs} />
                                                 <button
                                                     type="button"
                                                     onClick={() => handleGalleryClick('aadhar')}
@@ -696,10 +698,10 @@ const B2BVendorRegister = () => {
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="relative">
-                                                <input type="file" accept="image/png, image/jpeg, image/webp, video/*, application/pdf" onChange={(e) => {
+                                                <input type="file" accept="image/png, image/jpeg, image/webp, application/pdf" onChange={(e) => {
                                                     handleDocumentUpload(e, 'pan', false);
                                                     if (errors.panCard) setErrors(prev => ({ ...prev, panCard: '' }));
-                                                }} className="hidden" id="pan-upload" disabled={isUploadingDocs} />
+                                                }} style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }} id="pan-upload" disabled={isUploadingDocs} />
                                                 <button
                                                     type="button"
                                                     onClick={() => handleGalleryClick('pan')}
