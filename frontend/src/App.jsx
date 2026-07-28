@@ -87,6 +87,9 @@ const AdminGroceryCategories = lazyWithRetry(
 const AdminGroceryProducts = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/GroceryProducts"),
 );
+const AdminGroceryProductDetail = lazyWithRetry(
+  () => import("./modules/Admin/pages/b2b-vendors/GroceryProductDetail"),
+);
 const AdminB2BBannerManagement = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/B2BBannerManagement"),
 );
@@ -476,6 +479,7 @@ const AppRoutes = () => {
           <Route path="b2b-home-features" element={<AdminB2BHomeSettings />} />
           <Route path="grocery-categories" element={<AdminGroceryCategories />} />
           <Route path="grocery-products" element={<AdminGroceryProducts />} />
+          <Route path="grocery-products/:id" element={<AdminGroceryProductDetail />} />
         </Route>
         {/* B2B User App Routes */}
         <Route path="/register" element={<RegisterRedirect />} />

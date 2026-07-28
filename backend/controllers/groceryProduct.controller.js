@@ -324,3 +324,19 @@ export const deleteGroceryProduct = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateGroceryProductStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const isVisible = status === 'approved';
+    const product = await GroceryProduct.findByIdAndUpdate(
+      req.params.id,
+      { isVisible },
+      { new: true }
+    );
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    res.status(200).json({ success: true, data: product, message: `Product status updated` });
+  } catch (error) {
+    next(error);
+  }
+};

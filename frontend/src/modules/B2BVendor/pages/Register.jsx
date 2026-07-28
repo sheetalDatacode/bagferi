@@ -279,23 +279,25 @@ const B2BVendorRegister = () => {
         document.getElementById(type === 'aadhar' ? 'aadhar-camera' : 'pan-camera')?.click();
     };
 
-    const handleGalleryClick = async (type) => {
+    const handleGalleryClick = (type) => {
         if (isFlutterApp()) {
-            const result = await openFlutterGallery();
-            if (result) {
-                const docData = { name: result.name || result.fileName, data: result.data, type: result.mimeType || 'image/jpeg' };
-                if (type === 'aadhar') {
-                    setAadharCard(docData);
-                } else {
-                    setPanCard(docData);
+            // Flutter: async is fine here since Flutter handles its own picker
+            openFlutterGallery().then(result => {
+                if (result) {
+                    const docData = { name: result.name || result.fileName, data: result.data, type: result.mimeType || 'image/jpeg' };
+                    if (type === 'aadhar') {
+                        setAadharCard(docData);
+                    } else {
+                        setPanCard(docData);
+                    }
+                    toast.success(`${type === 'aadhar' ? 'Aadhar Card' : docLabel} added`);
                 }
-                toast.success(`${type === 'aadhar' ? 'Aadhar Card' : docLabel} added`);
-            }
+            });
             return;
         }
 
-        // For normal mobile browsers / PWA: trigger the hidden file input
-        // Must be called synchronously within user gesture context
+        // For mobile browsers / PWA: MUST be synchronous inside user gesture context
+        // Using async keyword breaks this chain on Android Chrome
         const inputId = type === 'aadhar' ? 'aadhar-upload' : 'pan-upload';
         const input = document.getElementById(inputId);
         if (input) {

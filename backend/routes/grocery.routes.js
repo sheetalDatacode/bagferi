@@ -13,7 +13,8 @@ import {
     updateGroceryProduct, 
     deleteGroceryProduct,
     getVendorGroceryProducts,
-    getGroceryProductFilters
+    getGroceryProductFilters,
+    updateGroceryProductStatus
 } from '../controllers/groceryProduct.controller.js';
 import { upload } from '../utils/upload.util.js';
 import { authenticate } from '../middleware/auth.middleware.js';
@@ -35,6 +36,7 @@ router.delete('/categories/:id', authenticate, authorize('admin'), deleteGrocery
 
 // Admin can also manage products
 router.put('/admin/products/:id', authenticate, authorize('admin'), upload.single('image'), updateGroceryProduct);
+router.patch('/admin/products/:id/status', authenticate, authorize('admin'), updateGroceryProductStatus);
 router.delete('/admin/products/:id', authenticate, authorize('admin'), deleteGroceryProduct);
 
 // Vendor Routes (Product management)

@@ -104,7 +104,7 @@ const GroceryProducts = () => {
     );
 
     const actionsCell = (_, row) => (
-        <button onClick={() => navigate(`/admin/b2b-vendors/products/${row._id}`)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="View Details">
+        <button onClick={() => navigate(`/admin/grocery-products/${row._id}`)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="View Details">
             <FiEye />
         </button>
     );
