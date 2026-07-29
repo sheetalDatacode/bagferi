@@ -69,6 +69,7 @@ const orderSchema = new mongoose.Schema(
       city: String,
       state: String,
       pincode: String,
+      areaName: String,
     },
     status: {
       type: String,

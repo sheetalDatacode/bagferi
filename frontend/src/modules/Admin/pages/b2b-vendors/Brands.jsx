@@ -19,8 +19,8 @@ const Brands = () => {
         id: null,
         name: '',
         type: 'fashion',
-        category: '',
-        subcategory: '',
+        categories: [],
+        subcategories: [],
         imagePreview: null,
         file: null,
         isActive: true
@@ -29,6 +29,8 @@ const Brands = () => {
     // Data for dropdowns
     const [categories, setCategories] = useState([]);
     const [subcategories, setSubcategories] = useState([]);
+    const [catSearch, setCatSearch] = useState('');
+    const [subSearch, setSubSearch] = useState('');
 
     useEffect(() => {
         loadBrands();
@@ -66,22 +68,28 @@ const Brands = () => {
     }, [formData.type, view]);
 
     useEffect(() => {
-        if (formData.category && categories.length > 0) {
-            const cat = categories.find(c => (c._id || c.id) === formData.category);
-            setSubcategories(cat?.subcategories || []);
+        if (formData.categories.length > 0 && categories.length > 0) {
+            const selectedCats = categories.filter(c => formData.categories.includes(c._id || c.id));
+            const allSubs = selectedCats.flatMap(c => c.subcategories || []);
             
-            // Validate current subcategory
-            if (formData.subcategory) {
-                const isValid = (cat?.subcategories || []).some(s => (s._id || s.id) === formData.subcategory);
-                if (!isValid) {
-                    setFormData(prev => ({ ...prev, subcategory: '' }));
+            // Remove duplicates
+            const uniqueSubs = Array.from(new Map(allSubs.map(item => [item._id || item.id, item])).values());
+            setSubcategories(uniqueSubs);
+            
+            // Validate current subcategories
+            if (formData.subcategories.length > 0) {
+                const validSubcategories = formData.subcategories.filter(subId => 
+                    uniqueSubs.some(s => (s._id || s.id) === subId)
+                );
+                if (validSubcategories.length !== formData.subcategories.length) {
+                    setFormData(prev => ({ ...prev, subcategories: validSubcategories }));
                 }
             }
         } else {
             setSubcategories([]);
-            setFormData(prev => ({ ...prev, subcategory: '' }));
+            setFormData(prev => ({ ...prev, subcategories: [] }));
         }
-    }, [formData.category, categories]);
+    }, [formData.categories, categories]);
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -95,13 +103,15 @@ const Brands = () => {
     };
 
     const openEditor = (brand = null) => {
+        setCatSearch('');
+        setSubSearch('');
         if (brand) {
             setFormData({
                 id: brand._id,
                 name: brand.name,
                 type: brand.type,
-                category: brand.category,
-                subcategory: brand.subcategory || '',
+                categories: brand.categories || (brand.category ? [brand.category] : []),
+                subcategories: brand.subcategories || (brand.subcategory ? [brand.subcategory] : []),
                 imagePreview: brand.logo,
                 file: null,
                 isActive: brand.isActive
@@ -111,8 +121,8 @@ const Brands = () => {
                 id: null,
                 name: '',
                 type: 'fashion',
-                category: '',
-                subcategory: '',
+                categories: [],
+                subcategories: [],
                 imagePreview: null,
                 file: null,
                 isActive: true
@@ -123,8 +133,8 @@ const Brands = () => {
 
     const handleSave = async (e) => {
         e.preventDefault();
-        if (!formData.name || !formData.type || !formData.category) {
-            toast.error('Name, Type, and Category are required');
+        if (!formData.name || !formData.type || formData.categories.length === 0) {
+            toast.error('Name, Type, and at least one Category are required');
             return;
         }
 
@@ -133,8 +143,8 @@ const Brands = () => {
             const fd = new FormData();
             fd.append('name', formData.name);
             fd.append('type', formData.type);
-            fd.append('category', formData.category);
-            if (formData.subcategory) fd.append('subcategory', formData.subcategory);
+            fd.append('categories', JSON.stringify(formData.categories));
+            if (formData.subcategories.length > 0) fd.append('subcategories', JSON.stringify(formData.subcategories));
             fd.append('isActive', formData.isActive);
             if (formData.file) fd.append('logo', formData.file);
 
@@ -290,7 +300,7 @@ const Brands = () => {
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Module Type *</label>
                                     <select
                                         value={formData.type}
-                                        onChange={e => setFormData({ ...formData, type: e.target.value, category: '', subcategory: '' })}
+                                        onChange={e => setFormData({ ...formData, type: e.target.value, categories: [], subcategories: [] })}
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold text-gray-700"
                                     >
                                         <option value="fashion">Fashion</option>
@@ -314,32 +324,82 @@ const Brands = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Category *</label>
-                                    <select
-                                        value={formData.category}
-                                        onChange={e => setFormData({ ...formData, category: e.target.value, subcategory: '' })}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold text-gray-700"
-                                        required
-                                    >
-                                        <option value="">Select Category</option>
-                                        {categories.map(c => (
-                                            <option key={c._id || c.id} value={c._id || c.id}>{c.name}</option>
+                                    <div className="mb-2 relative">
+                                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search categories..."
+                                            value={catSearch}
+                                            onChange={e => setCatSearch(e.target.value)}
+                                            className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-semibold text-sm"
+                                        />
+                                    </div>
+                                    <div className="w-full h-32 overflow-y-auto px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 space-y-2">
+                                        {categories.filter(c => c.name.toLowerCase().includes(catSearch.toLowerCase())).map(c => (
+                                            <label key={c._id || c.id} className="flex items-center gap-3 cursor-pointer group">
+                                                <input 
+                                                    type="checkbox"
+                                                    checked={formData.categories.includes(c._id || c.id)}
+                                                    onChange={(e) => {
+                                                        const id = c._id || c.id;
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            categories: e.target.checked 
+                                                                ? [...prev.categories, id]
+                                                                : prev.categories.filter(catId => catId !== id)
+                                                        }));
+                                                    }}
+                                                    className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                                                />
+                                                <span className="font-bold text-gray-700 group-hover:text-blue-600 transition-colors">{c.name}</span>
+                                            </label>
                                         ))}
-                                    </select>
+                                        {categories.filter(c => c.name.toLowerCase().includes(catSearch.toLowerCase())).length === 0 && (
+                                            <span className="text-sm font-bold text-gray-400">No categories found</span>
+                                        )}
+                                    </div>
                                 </div>
                                 
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Subcategory (Optional)</label>
-                                    <select
-                                        value={formData.subcategory}
-                                        onChange={e => setFormData({ ...formData, subcategory: e.target.value })}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold text-gray-700"
-                                        disabled={!formData.category || subcategories.length === 0}
-                                    >
-                                        <option value="">All Subcategories</option>
-                                        {subcategories.map(c => (
-                                            <option key={c._id || c.id} value={c._id || c.id}>{c.name}</option>
+                                    <div className="mb-2 relative">
+                                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search subcategories..."
+                                            value={subSearch}
+                                            onChange={e => setSubSearch(e.target.value)}
+                                            disabled={!formData.categories.length || subcategories.length === 0}
+                                            className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-semibold text-sm disabled:opacity-50"
+                                        />
+                                    </div>
+                                    <div className={`w-full h-32 overflow-y-auto px-4 py-3 border rounded-xl space-y-2 transition-colors ${!formData.categories.length || subcategories.length === 0 ? 'bg-gray-100 border-gray-200 opacity-70' : 'bg-gray-50 border-gray-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100'}`}>
+                                        {subcategories.filter(c => c.name.toLowerCase().includes(subSearch.toLowerCase())).map(c => (
+                                            <label key={c._id || c.id} className="flex items-center gap-3 cursor-pointer group">
+                                                <input 
+                                                    type="checkbox"
+                                                    checked={formData.subcategories.includes(c._id || c.id)}
+                                                    onChange={(e) => {
+                                                        const id = c._id || c.id;
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            subcategories: e.target.checked 
+                                                                ? [...prev.subcategories, id]
+                                                                : prev.subcategories.filter(subId => subId !== id)
+                                                        }));
+                                                    }}
+                                                    disabled={!formData.categories.length || subcategories.length === 0}
+                                                    className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 cursor-pointer disabled:opacity-50"
+                                                />
+                                                <span className="font-bold text-gray-700 group-hover:text-blue-600 transition-colors">{c.name}</span>
+                                            </label>
                                         ))}
-                                    </select>
+                                        {(!formData.categories.length || subcategories.length === 0) ? (
+                                            <span className="text-sm font-bold text-gray-400">No subcategories available</span>
+                                        ) : subcategories.filter(c => c.name.toLowerCase().includes(subSearch.toLowerCase())).length === 0 ? (
+                                            <span className="text-sm font-bold text-gray-400">No subcategories found</span>
+                                        ) : null}
+                                    </div>
                                 </div>
                             </div>
 

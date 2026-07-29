@@ -3,7 +3,7 @@ import { uploadToCloudinary } from '../utils/cloudinary.util.js';
 
 export const createBrand = async (req, res) => {
   try {
-    const { name, type, category, subcategory } = req.body;
+    const { name, type, category, subcategory, categories, subcategories } = req.body;
     let logo = '';
 
     if (req.file) {
@@ -11,11 +11,25 @@ export const createBrand = async (req, res) => {
       logo = result.secure_url;
     }
 
+    let parsedCategories = [];
+    if (categories) {
+      parsedCategories = typeof categories === 'string' ? JSON.parse(categories) : categories;
+    } else if (category) {
+      parsedCategories = [category];
+    }
+
+    let parsedSubcategories = [];
+    if (subcategories) {
+      parsedSubcategories = typeof subcategories === 'string' ? JSON.parse(subcategories) : subcategories;
+    } else if (subcategory) {
+      parsedSubcategories = [subcategory];
+    }
+
     const brand = new Brand({
       name,
       type,
-      category,
-      subcategory: subcategory || undefined,
+      categories: parsedCategories,
+      subcategories: parsedSubcategories,
       logo
     });
 
@@ -33,8 +47,8 @@ export const getBrands = async (req, res) => {
     const filter = {};
 
     if (type) filter.type = type;
-    if (category) filter.category = category;
-    if (subcategory) filter.subcategory = subcategory;
+    if (category) filter.categories = category;
+    if (subcategory) filter.subcategories = subcategory;
 
     const brands = await Brand.find(filter).sort({ name: 1 });
     res.status(200).json({ success: true, data: brands });
@@ -46,8 +60,20 @@ export const getBrands = async (req, res) => {
 export const updateBrand = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, type, category, subcategory, isActive } = req.body;
-    let updateData = { name, type, category, subcategory, isActive };
+    const { name, type, category, subcategory, categories, subcategories, isActive } = req.body;
+    let updateData = { name, type, isActive };
+
+    if (categories) {
+      updateData.categories = typeof categories === 'string' ? JSON.parse(categories) : categories;
+    } else if (category) {
+      updateData.categories = [category];
+    }
+
+    if (subcategories) {
+      updateData.subcategories = typeof subcategories === 'string' ? JSON.parse(subcategories) : subcategories;
+    } else if (subcategory) {
+      updateData.subcategories = [subcategory];
+    }
 
     if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer, 'brands');

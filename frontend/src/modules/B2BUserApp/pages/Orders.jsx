@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { FiPackage, FiMapPin, FiPhoneCall, FiBox, FiClock, FiCheckCircle } from 'react-icons/fi';
+import { FiPackage, FiMapPin, FiPhoneCall, FiBox, FiClock, FiCheckCircle, FiPrinter, FiX } from 'react-icons/fi';
 import api from '../../../shared/utils/api';
 import toast from 'react-hot-toast';
 import B2BHeader from '../components/Layout/B2BHeader';
 import B2BBottomNav from '../components/Layout/B2BBottomNav';
+import { useAuthStore } from '../../../shared/store/authStore';
 
 const Orders = () => {
+    const { user } = useAuthStore();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [moduleFilter, setModuleFilter] = useState('All');
+    const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+    const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState(null);
+    const [expandedOrders, setExpandedOrders] = useState({});
+
+    const toggleOrderDetails = (orderId) => {
+        setExpandedOrders(prev => ({
+            ...prev,
+            [orderId]: !prev[orderId]
+        }));
+    };
 
     useEffect(() => {
         fetchOrders();
@@ -90,6 +102,21 @@ const Orders = () => {
                                             <p className="text-sm font-bold text-gray-900 mt-0.5">{new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                                         </div>
                                         <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
+                                            <button 
+                                                onClick={() => {
+                                                    setSelectedOrderForInvoice(order);
+                                                    setIsInvoiceModalOpen(true);
+                                                }}
+                                                className="px-3 py-1 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+                                            >
+                                                <FiPrinter size={12} /> Invoice
+                                            </button>
+                                            <button 
+                                                onClick={() => toggleOrderDetails(order._id)}
+                                                className="px-3 py-1 bg-primary-50 hover:bg-primary-100 border border-primary-200 text-primary-700 text-xs font-black uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+                                            >
+                                                {expandedOrders[order._id] ? 'Hide Details' : 'View Details'}
+                                            </button>
                                             <div className="text-left md:text-right">
                                                 <p className="text-[10px] font-bold text-gray-500 uppercase">Total Amount</p>
                                                 <p className="text-sm font-black text-primary-600">₹{order.totalAmount?.toLocaleString('en-IN')}</p>
@@ -100,7 +127,8 @@ const Orders = () => {
                                         </div>
                                     </div>
 
-                                    <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {expandedOrders[order._id] && (
+                                        <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-100 bg-white">
                                         <div className="space-y-4">
                                             <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                                                 <FiBox /> Items
@@ -201,12 +229,155 @@ const Orders = () => {
                                             </div>
                                         </div>
                                     </div>
+                                    )}
                                 </div>
                             );
                         })}
                     </div>
                 )}
             </div>
+
+            {/* Invoice Modal */}
+            {isInvoiceModalOpen && selectedOrderForInvoice && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto print:p-0">
+                    <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl my-8 print:my-0 print:shadow-none print:w-full">
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 print:hidden">
+                            <h3 className="font-black text-gray-900 uppercase tracking-tight flex items-center gap-2">
+                                <FiPrinter className="text-primary-600" /> Order Invoice
+                            </h3>
+                            <button 
+                                onClick={() => {
+                                    setIsInvoiceModalOpen(false);
+                                    setSelectedOrderForInvoice(null);
+                                }} 
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <FiX size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-6 print:p-0">
+                            {/* Invoice Header */}
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 pb-4 gap-4">
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900 tracking-tight">TAX INVOICE</h2>
+                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mt-1">Invoice ID: INV-{selectedOrderForInvoice.orderNumber}</p>
+                                </div>
+                                <div className="text-left sm:text-right">
+                                    <p className="text-xs text-gray-500 font-medium">Order Date: {new Date(selectedOrderForInvoice.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                    <span className="inline-block mt-2 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                        Status: {selectedOrderForInvoice.status}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Bill From & Bill To */}
+                            <div className="grid grid-cols-2 gap-6 bg-gray-50 p-5 rounded-2xl border border-gray-100 print:bg-transparent print:border-none print:p-0">
+                                {/* Bill From */}
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Bill From (Merchant / Shop)</p>
+                                    <p className="text-sm font-black text-gray-900">{selectedOrderForInvoice.vendor?.storeName || 'Bagferi Authorized Vendor'}</p>
+                                    <p className="text-xs text-gray-600 font-medium mt-1">{selectedOrderForInvoice.vendor?.businessType || 'B2B Merchant'}</p>
+                                    <p className="text-xs text-gray-600 font-medium">Mobile: {selectedOrderForInvoice.vendor?.phone || selectedOrderForInvoice.vendor?.mobile || 'N/A'}</p>
+                                    <p className="text-xs text-gray-600 font-medium">Email: {selectedOrderForInvoice.vendor?.email || 'N/A'}</p>
+                                </div>
+
+                                {/* Bill To */}
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Bill To (Customer)</p>
+                                    <p className="text-sm font-black text-gray-900">{selectedOrderForInvoice.shippingAddress?.fullName || 'Valued Customer'}</p>
+                                    <p className="text-xs text-gray-600 font-medium mt-1">
+                                        {selectedOrderForInvoice.shippingAddress?.addressLine1 || selectedOrderForInvoice.shippingAddress?.streetAddress || ''}
+                                    </p>
+                                    <p className="text-xs text-gray-600 font-medium">
+                                        {selectedOrderForInvoice.shippingAddress?.city || ''}, {selectedOrderForInvoice.shippingAddress?.state || ''} - {selectedOrderForInvoice.shippingAddress?.pincode || ''}
+                                    </p>
+                                    <p className="text-xs text-gray-600 font-medium">Area: {
+                                        selectedOrderForInvoice.shippingAddress?.areaName || 
+                                        user?.addresses?.find(addr => 
+                                            addr.pincode === selectedOrderForInvoice.shippingAddress?.pincode && 
+                                            (addr.streetAddress === selectedOrderForInvoice.shippingAddress?.addressLine1 || addr.streetAddress === selectedOrderForInvoice.shippingAddress?.streetAddress)
+                                        )?.areaName || 'N/A'
+                                    }</p>
+                                    <p className="text-xs text-gray-600 font-medium">Phone: {selectedOrderForInvoice.shippingAddress?.phone || selectedOrderForInvoice.user?.phone || selectedOrderForInvoice.userId?.phone || user?.phone || 'N/A'}</p>
+                                </div>
+                            </div>
+
+                            {/* Item Table */}
+                            <div>
+                                <h4 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Order Items Summary</h4>
+                                <table className="w-full text-left border-collapse border border-gray-200 rounded-xl overflow-hidden text-xs">
+                                    <thead>
+                                        <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-black uppercase">
+                                            <th className="p-3">#</th>
+                                            <th className="p-3">Item Description</th>
+                                            <th className="p-3 text-center">Qty</th>
+                                            <th className="p-3 text-right">Price</th>
+                                            <th className="p-3 text-right">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {selectedOrderForInvoice.items?.map((item, idx) => {
+                                            const qty = item.quantity || 1;
+                                            const price = item.price || 0;
+                                            return (
+                                                <tr key={idx} className="hover:bg-gray-50">
+                                                    <td className="p-3 text-gray-400 font-bold">{idx + 1}</td>
+                                                    <td className="p-3 font-bold text-gray-900">{item.product?.name || item.name || 'B2B Product'}</td>
+                                                    <td className="p-3 text-center font-bold">{qty}</td>
+                                                    <td className="p-3 text-right font-medium">₹{price.toLocaleString('en-IN')}</td>
+                                                    <td className="p-3 text-right font-bold text-gray-900">₹{(price * qty).toLocaleString('en-IN')}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Payment Breakdown Box */}
+                            <div className="flex justify-end">
+                                <div className="w-full sm:w-80 bg-slate-900 text-white p-5 rounded-2xl space-y-3 shadow-md print:bg-transparent print:text-slate-900 print:shadow-none print:border print:border-gray-200 print:p-4">
+                                    <div className="flex justify-between items-center text-xs text-slate-300 font-medium print:text-slate-700">
+                                        <span>Total Order Amount</span>
+                                        <span className="font-bold text-white print:text-slate-900">₹{selectedOrderForInvoice.totalAmount?.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs text-emerald-400 font-bold border-t border-slate-800 pt-2 print:border-gray-200 print:text-emerald-700">
+                                        <span>Paid Amount (Advance)</span>
+                                        <span>₹{(selectedOrderForInvoice.advancePayment || 0).toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm font-black text-amber-400 border-t border-slate-700 pt-2 print:border-gray-200 print:text-slate-900">
+                                        <span>Remaining Amount</span>
+                                        <span>₹{((selectedOrderForInvoice.totalAmount || 0) - (selectedOrderForInvoice.advancePayment || 0)).toLocaleString('en-IN')}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Terms & Footer */}
+                            <div className="border-t border-gray-100 pt-4 text-center">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Thank you for doing business with Bagferi B2B Marketplace!</p>
+                            </div>
+                        </div>
+
+                        {/* Footer bar */}
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 print:hidden">
+                            <button 
+                                onClick={() => {
+                                    setIsInvoiceModalOpen(false);
+                                    setSelectedOrderForInvoice(null);
+                                }} 
+                                className="px-5 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 transition-colors"
+                            >
+                                Close
+                            </button>
+                            <button 
+                                onClick={() => window.print()} 
+                                className="px-5 py-2 bg-primary-600 text-white text-xs font-bold rounded-xl shadow-sm hover:bg-primary-700 transition-colors flex items-center gap-1.5"
+                            >
+                                <FiPrinter size={14} /> Print Bill / Invoice
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="md:hidden">
                 <B2BBottomNav />

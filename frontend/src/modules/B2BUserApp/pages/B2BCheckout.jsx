@@ -138,11 +138,12 @@ const B2BCheckout = () => {
         const selectedAddress = addresses[selectedIndex];
         const shippingAddress = {
             fullName: user?.name || 'User',
-            phone: selectedAddress.phone,
+            phone: selectedAddress.phone || user?.phone,
             addressLine1: selectedAddress.streetAddress,
             city: selectedAddress.city,
             state: selectedAddress.state,
-            pincode: selectedAddress.pincode
+            pincode: selectedAddress.pincode,
+            areaName: selectedAddress.areaName
         };
 
         setIsPlacingOrder(true);

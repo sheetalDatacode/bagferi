@@ -53,24 +53,21 @@ const DeliveryAddressModal = () => {
         }
     };
 
-    // Filter zones based on entered pincode
-    const availableZones = zones.filter(z => 
-        z.pincodes?.some(p => p.code === formData.pincode)
-    );
-
-    // Get areas for the selected zone and pincode
+    // Get areas for the entered pincode from all matching zones
     const getAvailableAreas = () => {
-        if (!formData.zoneId || !formData.pincode) return [];
-        const zone = zones.find(z => z._id === formData.zoneId);
-        if (!zone) return [];
-        const pinData = zone.pincodes?.find(p => p.code === formData.pincode);
-        return pinData?.areas || [];
+        if (!formData.pincode || formData.pincode.length !== 6) return [];
+        const matchingPins = zones.flatMap(z => z.pincodes || []).filter(p => p.code === formData.pincode);
+        const allAreas = matchingPins.flatMap(p => p.areas || []);
+        // Remove duplicate area names
+        const uniqueAreas = Array.from(new Set(allAreas.map(a => a.name)))
+            .map(name => allAreas.find(a => a.name === name));
+        return uniqueAreas;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!formData.streetAddress || !formData.pincode || !formData.zoneId || !formData.areaName) {
+        if (!formData.streetAddress || !formData.pincode || !formData.areaName) {
             toast.error("Please fill all required fields");
             return;
         }
@@ -162,46 +159,39 @@ const DeliveryAddressModal = () => {
                         </div>
 
                         {formData.pincode.length === 6 && (
-                            <div className="space-y-5 pt-2 border-t border-gray-200">
-                                {availableZones.length > 0 ? (
-                                    <>
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Select Zone <span className="text-red-500">*</span></label>
-                                            <select 
-                                                required
-                                                value={formData.zoneId}
-                                                onChange={e => setFormData({...formData, zoneId: e.target.value, areaName: ''})}
-                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-medium appearance-none"
-                                            >
-                                                <option value="" disabled>Select your zone</option>
-                                                {availableZones.map(z => (
-                                                    <option key={z._id} value={z._id}>{z.name}</option>
-                                                ))}
-                                            </select>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Select Area / Locality <span className="text-red-500">*</span></label>
+                                {(() => {
+                                    const availableAreas = getAvailableAreas();
+                                    return availableAreas.length > 0 ? (
+                                        <select 
+                                            required
+                                            value={formData.areaName}
+                                            onChange={e => {
+                                                const matchedZone = zones.find(z => 
+                                                    z.pincodes?.some(p => 
+                                                        p.code === formData.pincode && p.areas?.some(a => a.name === e.target.value)
+                                                    )
+                                                );
+                                                setFormData({
+                                                    ...formData, 
+                                                    areaName: e.target.value,
+                                                    zoneId: matchedZone ? matchedZone._id : ''
+                                                });
+                                            }}
+                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-medium appearance-none"
+                                        >
+                                            <option value="" disabled>Select your area</option>
+                                            {availableAreas.map(a => (
+                                                <option key={a.name} value={a.name}>{a.name}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div className="bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100 text-sm font-medium">
+                                            Sorry, no areas available for this pincode.
                                         </div>
-
-                                        {formData.zoneId && (
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Select Area <span className="text-red-500">*</span></label>
-                                                <select 
-                                                    required
-                                                    value={formData.areaName}
-                                                    onChange={e => setFormData({...formData, areaName: e.target.value})}
-                                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-medium appearance-none"
-                                                >
-                                                    <option value="" disabled>Select your area</option>
-                                                    {getAvailableAreas().map(a => (
-                                                        <option key={a.name} value={a.name}>{a.name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        )}
-                                    </>
-                                ) : (
-                                    <div className="bg-orange-50 text-orange-700 p-4 rounded-xl border border-orange-100 text-sm font-medium">
-                                        Sorry, we currently do not have delivery zones available for this pincode.
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </div>
                         )}
 

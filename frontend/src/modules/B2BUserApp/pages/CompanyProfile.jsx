@@ -55,7 +55,7 @@ const CompanyProfile = () => {
 
     const handleAddAddressSubmit = async (e) => {
         e.preventDefault();
-        if (!newAddress.streetAddress || !newAddress.pincode || !newAddress.zoneId || !newAddress.areaName) {
+        if (!newAddress.streetAddress || !newAddress.pincode || !newAddress.areaName) {
             toast.error('Please fill in all required fields');
             return;
         }
@@ -324,51 +324,40 @@ const CompanyProfile = () => {
                                 </div>
 
                                 {newAddress.pincode.length === 6 && (
-                                    <div className="space-y-3.5 pt-2 border-t border-gray-100">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Select Area / Locality *</label>
                                         {(() => {
-                                            const availableZones = zones.filter(z => z.pincodes?.some(p => p.code === newAddress.pincode));
-                                            return availableZones.length > 0 ? (
-                                                <>
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Select Zone *</label>
-                                                        <select 
-                                                            required
-                                                            value={newAddress.zoneId}
-                                                            onChange={e => setNewAddress({...newAddress, zoneId: e.target.value, areaName: ''})}
-                                                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-medium text-xs"
-                                                        >
-                                                            <option value="" disabled>Select your zone</option>
-                                                            {availableZones.map(z => (
-                                                                <option key={z._id} value={z._id}>{z.name}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
+                                            const matchingPins = zones.flatMap(z => z.pincodes || []).filter(p => p.code === newAddress.pincode);
+                                            const allAreas = matchingPins.flatMap(p => p.areas || []);
+                                            const uniqueAreas = Array.from(new Set(allAreas.map(a => a.name)))
+                                                .map(name => allAreas.find(a => a.name === name));
 
-                                                    {newAddress.zoneId && (
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">Select Area *</label>
-                                                            <select 
-                                                                required
-                                                                value={newAddress.areaName}
-                                                                onChange={e => setNewAddress({...newAddress, areaName: e.target.value})}
-                                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-medium text-xs"
-                                                            >
-                                                                <option value="" disabled>Select your area</option>
-                                                                {(() => {
-                                                                    const zone = zones.find(z => z._id === newAddress.zoneId);
-                                                                    if (!zone) return [];
-                                                                    const pinData = zone.pincodes?.find(p => p.code === newAddress.pincode);
-                                                                    return (pinData?.areas || []).map(a => (
-                                                                        <option key={a.name} value={a.name}>{a.name}</option>
-                                                                    ));
-                                                                })()}
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                </>
+                                            return uniqueAreas.length > 0 ? (
+                                                <select 
+                                                    required
+                                                    value={newAddress.areaName}
+                                                    onChange={e => {
+                                                        const matchedZone = zones.find(z => 
+                                                            z.pincodes?.some(p => 
+                                                                p.code === newAddress.pincode && p.areas?.some(a => a.name === e.target.value)
+                                                            )
+                                                        );
+                                                        setNewAddress({
+                                                            ...newAddress, 
+                                                            areaName: e.target.value,
+                                                            zoneId: matchedZone ? matchedZone._id : ''
+                                                        });
+                                                    }}
+                                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all outline-none text-gray-700 font-medium text-xs"
+                                                >
+                                                    <option value="" disabled>Select your area</option>
+                                                    {uniqueAreas.map(a => (
+                                                        <option key={a.name} value={a.name}>{a.name}</option>
+                                                    ))}
+                                                </select>
                                             ) : (
                                                 <div className="bg-orange-50 text-orange-700 p-3 rounded-xl border border-orange-100 text-xs font-medium">
-                                                    No zones available for this pincode.
+                                                    No areas available for this pincode.
                                                 </div>
                                             );
                                         })()}

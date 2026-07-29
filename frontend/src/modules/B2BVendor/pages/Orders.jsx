@@ -20,7 +20,7 @@ const VendorOrders = () => {
     const [orderToDispatch, setOrderToDispatch] = useState(null);
     const [selectedStaffIndex, setSelectedStaffIndex] = useState('');
     const [isAddingStaff, setIsAddingStaff] = useState(false);
-    const [newStaff, setNewStaff] = useState({ name: '', mobile: '', post: 'Delivery Staff' });
+    const [newStaff, setNewStaff] = useState({ name: '', mobile: '', post: 'Delivery Staff', identityDocumentUrl: '' });
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [selectedOrderForDetail, setSelectedOrderForDetail] = useState(null);
 
@@ -82,6 +82,20 @@ const VendorOrders = () => {
         }
     };
 
+    const handleStaffDocChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setNewStaff(prev => ({ ...prev, identityDocumentUrl: reader.result }));
+            toast.success("Document attached");
+        };
+        reader.onerror = () => {
+            toast.error("Failed to read document file");
+        };
+        reader.readAsDataURL(file);
+    };
+
     const handleQuickAddStaff = async () => {
         if (!newStaff.name.trim() || !newStaff.mobile.trim()) {
             return toast.error("Name and mobile are required");
@@ -101,7 +115,7 @@ const VendorOrders = () => {
                 toast.success("Staff added successfully");
                 setShopDetails(res.data);
                 setIsAddingStaff(false);
-                setNewStaff({ name: '', mobile: '', post: 'Delivery Staff' });
+                setNewStaff({ name: '', mobile: '', post: 'Delivery Staff', identityDocumentUrl: '' });
                 // auto-select the newly added staff
                 setSelectedStaffIndex(String(updatedDetails.length - 1));
             } else {
@@ -200,6 +214,7 @@ const VendorOrders = () => {
                                     <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest min-w-[200px]">Items</th>
                                     <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-right">Amount</th>
                                     <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-center">Status</th>
+                                    <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-center">Delivery By</th>
                                     <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -254,6 +269,16 @@ const VendorOrders = () => {
                                             <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order.status)}`}>
                                                 {order.status}
                                             </span>
+                                        </td>
+                                        <td className="p-4 text-center text-xs font-medium text-gray-700">
+                                            {order.assignedStaff?.name ? (
+                                                <div>
+                                                    <p className="font-bold text-gray-950">{order.assignedStaff.name}</p>
+                                                    <p className="text-gray-500 mt-0.5">{order.assignedStaff.mobile}</p>
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Not Assigned</span>
+                                            )}
                                         </td>
                                         <td className="p-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
@@ -348,7 +373,7 @@ const VendorOrders = () => {
                                     </div>
                                     <div className="flex justify-end">
                                         <button 
-                                            onClick={() => navigate('/b2b-vendor/shop-listing')}
+                                            onClick={() => setIsAddingStaff(true)}
                                             className="text-xs font-bold text-primary-600 flex items-center gap-1 hover:underline"
                                         >
                                             <FiPlus /> Add New Staff
@@ -377,6 +402,32 @@ const VendorOrders = () => {
                                         onChange={(e) => setNewStaff({...newStaff, mobile: e.target.value})}
                                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none"
                                     />
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Identity Document (Optional)</label>
+                                        <div className="flex items-center gap-3">
+                                            <input 
+                                                type="file" 
+                                                accept="image/*" 
+                                                onChange={handleStaffDocChange}
+                                                className="hidden" 
+                                                id="quick-staff-doc"
+                                            />
+                                            <label 
+                                                htmlFor="quick-staff-doc"
+                                                className="cursor-pointer bg-white border border-gray-300 hover:border-primary-500 hover:text-primary-600 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all w-full justify-center"
+                                            >
+                                                {newStaff.identityDocumentUrl ? '✓ Document Selected' : 'Upload Document'}
+                                            </label>
+                                            {newStaff.identityDocumentUrl && (
+                                                <button 
+                                                    onClick={() => setNewStaff(prev => ({ ...prev, identityDocumentUrl: '' }))}
+                                                    className="px-2 py-2 bg-red-50 text-red-500 rounded-lg border border-red-100 hover:bg-red-100 text-xs"
+                                                >
+                                                    Remove
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                     <button 
                                         onClick={handleQuickAddStaff}
                                         className="w-full bg-gray-900 text-white font-bold text-xs py-2 rounded-lg uppercase tracking-wider hover:bg-gray-800 transition-colors"
@@ -431,16 +482,16 @@ const VendorOrders = () => {
                                     <div>
                                         <span className="text-[10px] font-bold text-gray-400 uppercase block">Phone Number</span>
                                         <span className="text-sm font-bold text-gray-900">
-                                            {selectedOrderForDetail.shippingAddress?.phone ? (
-                                                <a href={`tel:${selectedOrderForDetail.shippingAddress.phone}`} className="text-primary-600 hover:underline font-bold">
-                                                    {selectedOrderForDetail.shippingAddress.phone}
+                                            {selectedOrderForDetail.shippingAddress?.phone || selectedOrderForDetail.user?.phone || selectedOrderForDetail.userId?.phone ? (
+                                                <a href={`tel:${selectedOrderForDetail.shippingAddress?.phone || selectedOrderForDetail.user?.phone || selectedOrderForDetail.userId?.phone}`} className="text-primary-600 hover:underline font-bold">
+                                                    {selectedOrderForDetail.shippingAddress?.phone || selectedOrderForDetail.user?.phone || selectedOrderForDetail.userId?.phone}
                                                 </a>
                                             ) : 'N/A'}
                                         </span>
                                     </div>
                                     <div>
                                         <span className="text-[10px] font-bold text-gray-400 uppercase block">User Account (Email)</span>
-                                        <span className="text-sm font-bold text-gray-900">{selectedOrderForDetail.userId?.email || 'N/A'}</span>
+                                        <span className="text-sm font-bold text-gray-900">{selectedOrderForDetail.user?.email || selectedOrderForDetail.userId?.email || 'N/A'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -454,6 +505,10 @@ const VendorOrders = () => {
                                         <span className="text-sm font-medium text-gray-800">{selectedOrderForDetail.shippingAddress?.addressLine1 || selectedOrderForDetail.shippingAddress?.streetAddress || 'N/A'}</span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase block">Area</span>
+                                            <span className="text-sm font-bold text-gray-900">{selectedOrderForDetail.shippingAddress?.areaName || 'N/A'}</span>
+                                        </div>
                                         <div>
                                             <span className="text-[10px] font-bold text-gray-400 uppercase block">City</span>
                                             <span className="text-sm font-bold text-gray-900">{selectedOrderForDetail.shippingAddress?.city || 'N/A'}</span>
@@ -473,6 +528,25 @@ const VendorOrders = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Delivery Staff info */}
+                            {selectedOrderForDetail.assignedStaff?.name && (
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest text-left">Delivery By (Staff)</h4>
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3 text-left">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase block">Staff Name</span>
+                                                <span className="text-sm font-bold text-gray-900">{selectedOrderForDetail.assignedStaff.name}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase block">Phone / Mobile</span>
+                                                <span className="text-sm font-bold text-gray-900">{selectedOrderForDetail.assignedStaff.mobile}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
                             <button 
@@ -564,7 +638,14 @@ const VendorOrders = () => {
                                     <p className="text-xs text-gray-600 font-medium">
                                         {selectedOrderForInvoice.shippingAddress?.city || ''}, {selectedOrderForInvoice.shippingAddress?.state || ''} - {selectedOrderForInvoice.shippingAddress?.pincode || ''}
                                     </p>
-                                    <p className="text-xs text-gray-600 font-medium">Phone: {selectedOrderForInvoice.shippingAddress?.phone || 'N/A'}</p>
+                                    <p className="text-xs text-gray-600 font-medium">Area: {
+                                        selectedOrderForInvoice.shippingAddress?.areaName || 
+                                        (selectedOrderForInvoice.user || selectedOrderForInvoice.userId)?.addresses?.find(addr => 
+                                            addr.pincode === selectedOrderForInvoice.shippingAddress?.pincode && 
+                                            (addr.streetAddress === selectedOrderForInvoice.shippingAddress?.addressLine1 || addr.streetAddress === selectedOrderForInvoice.shippingAddress?.streetAddress)
+                                        )?.areaName || 'N/A'
+                                    }</p>
+                                    <p className="text-xs text-gray-600 font-medium">Phone: {selectedOrderForInvoice.shippingAddress?.phone || selectedOrderForInvoice.user?.phone || selectedOrderForInvoice.userId?.phone || 'N/A'}</p>
                                 </div>
                             </div>
 
@@ -593,8 +674,8 @@ const VendorOrders = () => {
                                                     <td className="p-3 text-right font-medium">₹{price.toLocaleString('en-IN')}</td>
                                                     <td className="p-3 text-right font-bold text-gray-900">₹{(price * qty).toLocaleString('en-IN')}</td>
                                                 </tr>
-                                            );}
-                                        )}
+                                            )
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

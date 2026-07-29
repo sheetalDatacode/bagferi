@@ -422,7 +422,14 @@ const Billing = () => {
                                     <p className="text-xs text-gray-600 font-medium">
                                         {selectedOrderForInvoice.shippingAddress?.city || ''}, {selectedOrderForInvoice.shippingAddress?.state || ''} - {selectedOrderForInvoice.shippingAddress?.pincode || ''}
                                     </p>
-                                    <p className="text-xs text-gray-600 font-medium">Phone: {selectedOrderForInvoice.shippingAddress?.phone || 'N/A'}</p>
+                                    <p className="text-xs text-gray-600 font-medium">Area: {
+                                        selectedOrderForInvoice.shippingAddress?.areaName || 
+                                        (selectedOrderForInvoice.user || selectedOrderForInvoice.userId)?.addresses?.find(addr => 
+                                            addr.pincode === selectedOrderForInvoice.shippingAddress?.pincode && 
+                                            (addr.streetAddress === selectedOrderForInvoice.shippingAddress?.addressLine1 || addr.streetAddress === selectedOrderForInvoice.shippingAddress?.streetAddress)
+                                        )?.areaName || 'N/A'
+                                    }</p>
+                                    <p className="text-xs text-gray-600 font-medium">Phone: {selectedOrderForInvoice.shippingAddress?.phone || selectedOrderForInvoice.user?.phone || selectedOrderForInvoice.userId?.phone || 'N/A'}</p>
                                 </div>
                             </div>
 

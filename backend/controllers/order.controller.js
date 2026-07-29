@@ -204,6 +204,7 @@ export const getMyOrders = async (req, res, next) => {
     const orders = await Order.find({ user: userId })
       .populate('items.product', 'name image price')
       .populate('vendor', 'storeName address phone mobile email')
+      .populate('user', 'name phone addresses')
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -220,7 +221,7 @@ export const getVendorOrders = async (req, res, next) => {
     const vendorId = req.user.vendorId || req.user._id || req.user.id;
     const orders = await Order.find({ vendor: vendorId })
       .populate('items.product', 'name images image')
-      .populate('user', 'name phone')
+      .populate('user', 'name phone addresses')
       .sort({ createdAt: -1 });
 
     res.status(200).json({

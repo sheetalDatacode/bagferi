@@ -301,9 +301,10 @@ const B2BProductDetail = () => {
 
     const getYouTubeId = (url) => {
         if (!url) return null;
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        // Handle all YouTube URL formats including youtu.be, watch?v=, embed/, shorts/, live/
+        const regExp = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
         const match = url.match(regExp);
-        return (match && match[2].length === 11) ? match[2] : null;
+        return match ? match[1] : null;
     };
     let videoLink = fixLegacyDynamicUrl(product.videoLink);
     if (videoLink && videoLink.includes('cloudinary.com') && !getYouTubeId(videoLink)) {
@@ -508,12 +509,14 @@ const B2BProductDetail = () => {
                                     >
                                         {ytId ? (
                                             <img 
-                                                src={`https://img.youtube.com/vi/${ytId}/default.jpg`} 
+                                                src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} 
                                                 alt="video" 
-                                                className="w-full h-full object-cover opacity-60"
+                                                className="w-full h-full object-cover opacity-70"
                                             />
                                         ) : (
-                                            <div className="w-full h-full bg-gray-900"></div>
+                                            <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                                                <svg className="w-6 h-6 text-white/60" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                            </div>
                                         )}
                                         {/* Play icon overlay */}
                                         <div className="absolute inset-0 flex items-center justify-center">
