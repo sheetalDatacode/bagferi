@@ -173,9 +173,16 @@ const B2BLanding = () => {
                 const res = await api.get('/user/addresses');
                 if (res.success && res.data) {
                     setAddresses(res.data);
-                    const defaultAddr = res.data.find(a => a.isDefault) || res.data[0];
-                    if (defaultAddr) {
-                        setSelectedAddress(defaultAddr);
+                    const savedAddrId = localStorage.getItem('selected-b2b-address-id');
+                    let targetAddr = null;
+                    if (savedAddrId) {
+                        targetAddr = res.data.find(a => a._id === savedAddrId);
+                    }
+                    if (!targetAddr) {
+                        targetAddr = res.data.find(a => a.isDefault) || res.data[0];
+                    }
+                    if (targetAddr) {
+                        setSelectedAddress(targetAddr);
                     }
                 }
             } catch (error) {
@@ -184,6 +191,13 @@ const B2BLanding = () => {
         };
         fetchSavedAddresses();
     }, [isAuthenticated]);
+
+    // Save selected address to localStorage whenever it changes
+    useEffect(() => {
+        if (selectedAddress && selectedAddress._id) {
+            localStorage.setItem('selected-b2b-address-id', selectedAddress._id);
+        }
+    }, [selectedAddress]);
 
     // Handle adding a new address
     const handleAddAddressSubmit = async (e) => {

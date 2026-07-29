@@ -108,9 +108,16 @@ api.interceptors.request.use(
                 const parsedAuth = JSON.parse(storedAuth);
                 const user = parsedAuth?.state?.user;
                 if (user?.role === 'user' && user?.addresses?.length > 0) {
-                    const defaultAddress = user.addresses.find(a => a.isDefault) || user.addresses[0];
-                    if (defaultAddress && defaultAddress.pincode && defaultAddress.areaName) {
-                        const deliveryArea = `${defaultAddress.pincode}|${defaultAddress.areaName}`;
+                    const savedAddrId = localStorage.getItem('selected-b2b-address-id');
+                    let targetAddress = null;
+                    if (savedAddrId) {
+                        targetAddress = user.addresses.find(a => a._id === savedAddrId || a.id === savedAddrId);
+                    }
+                    if (!targetAddress) {
+                        targetAddress = user.addresses.find(a => a.isDefault) || user.addresses[0];
+                    }
+                    if (targetAddress && targetAddress.pincode && targetAddress.areaName) {
+                        const deliveryArea = `${targetAddress.pincode}|${targetAddress.areaName}`;
                         config.params = { ...config.params, deliveryArea };
                     }
                 }
