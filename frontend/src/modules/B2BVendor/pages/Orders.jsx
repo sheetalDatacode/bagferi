@@ -463,7 +463,7 @@ const VendorOrders = () => {
             {/* Customer Detail Modal */}
             {isDetailModalOpen && selectedOrderForDetail && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+                    <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
                         <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                             <h3 className="font-black text-gray-900 uppercase tracking-tight flex items-center gap-2">
                                 <FiUser className="text-primary-600" /> Customer & Delivery Details
@@ -478,7 +478,7 @@ const VendorOrders = () => {
                                 <FiX size={20} />
                             </button>
                         </div>
-                        <div className="p-6 space-y-6">
+                        <div className="p-6 space-y-6 overflow-y-auto">
                             {/* Customer Profile info */}
                             <div className="space-y-4">
                                 <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest text-left">Customer Information</h4>
@@ -572,6 +572,13 @@ const VendorOrders = () => {
                                                     <p className="text-xs font-bold text-gray-900 line-clamp-2">{item.product?.name || 'Product'}</p>
                                                     <p className="text-[9px] text-teal-700 font-bold mt-1 uppercase tracking-wide">✓ Chosen by customer</p>
                                                     <p className="text-[9px] text-gray-500 mt-0.5">Qty: {item.quantity}</p>
+                                                    <div className="flex gap-1.5 mt-1 flex-wrap">
+                                                        {item.size && <span className="text-[9px] text-indigo-600 bg-indigo-50 px-1 py-0.2 rounded font-bold uppercase">Size: {item.size}</span>}
+                                                        {item.color && <span className="text-[9px] text-purple-600 bg-purple-50 px-1 py-0.2 rounded font-bold uppercase">Color: {item.color}</span>}
+                                                        {item.selectedVariants && Object.entries(item.selectedVariants).map(([key, val]) => (
+                                                            <span key={key} className="text-[9px] text-teal-600 bg-teal-50 px-1 py-0.2 rounded font-bold uppercase">{key}: {val}</span>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
