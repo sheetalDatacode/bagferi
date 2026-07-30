@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiCheck, FiClock, FiDollarSign, FiUser, FiInfo, FiSearch, FiCheckCircle, FiXCircle } from 'react-icons/fi';
-import api from '../../../shared/utils/api';
+import api from '../../../../shared/utils/api';
 import toast from 'react-hot-toast';
 
 const AdminOrderCancellations = () => {

@@ -19,9 +19,7 @@ import {
   registerFCMToken,
 } from "./services/pushNotificationService";
 import { ENABLE_FCM } from "./firebase";
-const ScrollToTop = lazyWithRetry(
-  () => import("./shared/components/ScrollToTop"),
-);
+import ScrollToTop from "./shared/components/ScrollToTop";
 const AdminLogin = lazyWithRetry(() => import("./modules/Admin/pages/Login"));
 const AdminProtectedRoute = lazyWithRetry(
   () => import("./modules/Admin/components/AdminProtectedRoute"),

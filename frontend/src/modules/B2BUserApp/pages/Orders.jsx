@@ -157,6 +157,7 @@ const Orders = () => {
                                             <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order.status)}`}>
                                                 {order.status}
                                             </span>
+                                        </div>
                                     </div>
 
                                     {order.status === 'Cancelled' && (
