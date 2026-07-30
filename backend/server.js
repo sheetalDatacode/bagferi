@@ -86,6 +86,7 @@ import vendorWalletRoutes from "./routes/vendorWallet.routes.js";
 import zoneRoutes from "./routes/zone.routes.js";
 import staffAuthRoutes from "./routes/staffAuth.routes.js";
 import staffRoutes from "./routes/staff.routes.js";
+import adminCancellationRoutes from "./routes/adminCancellation.routes.js";
 
 // Initialize Express app
 const app = express();
@@ -299,6 +300,7 @@ app.use("/api/admin/b2b-vendors", adminB2BVendorManagementRoutes);
 app.use("/api/admin/b2b-categories", adminB2BCategoryManagementRoutes);
 app.use("/api/admin/b2b-products", adminB2BProductManagementRoutes);
 app.use("/api/admin/orders", adminOrderRoutes);
+app.use("/api/admin/cancellation-refunds", adminCancellationRoutes);
 app.use("/api/vendor/dashboard", vendorDashboardRoutes);
 
 app.use("/api/staff", staffRoutes);

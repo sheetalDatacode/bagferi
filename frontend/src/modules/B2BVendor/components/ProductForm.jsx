@@ -971,8 +971,14 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                     const isSelected = currentVals.some(v => String(v).toLowerCase() === String(opt).toLowerCase());
 
                                                     return (
-                                                        <label
+                                                        <div
                                                             key={opt}
+                                                            onClick={() => {
+                                                                const newVals = isSelected
+                                                                    ? currentVals.filter(v => String(v).toLowerCase() !== String(opt).toLowerCase())
+                                                                    : [...currentVals, opt];
+                                                                setDynamicValues(p => ({ ...p, [f.label]: newVals }));
+                                                            }}
                                                             className={`flex items-center gap-2 p-2.5 rounded-xl cursor-pointer transition-all border ${isSelected
                                                                 ? 'bg-primary-50 border-primary-200 text-primary-700 shadow-sm'
                                                                 : 'bg-white border-transparent hover:border-gray-300 text-gray-600'
@@ -982,19 +988,8 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                                 }`}>
                                                                 {isSelected && <div className="w-2.5 h-1.5 border-l-2 border-b-2 border-white -rotate-45 mb-0.5"></div>}
                                                             </div>
-                                                            <input
-                                                                type="checkbox"
-                                                                className="hidden"
-                                                                checked={isSelected}
-                                                                onChange={(e) => {
-                                                                    const newVals = e.target.checked
-                                                                        ? [...currentVals, opt]
-                                                                        : currentVals.filter(v => String(v).toLowerCase() !== String(opt).toLowerCase());
-                                                                    setDynamicValues(p => ({ ...p, [f.label]: newVals }));
-                                                                }}
-                                                            />
                                                             <span className="text-xs font-bold select-none whitespace-normal break-words">{opt}</span>
-                                                        </label>
+                                                        </div>
                                                     );
                                                 })}
                                                 {(f.options || []).length === 0 && (

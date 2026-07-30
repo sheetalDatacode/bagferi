@@ -4,7 +4,8 @@ const fieldSchema = new mongoose.Schema({
   label: { type: String, required: true },
   type: { type: String, enum: ['text', 'number', 'select', 'multi-select'], required: true },
   options: { type: [String], default: [] },
-  required: { type: Boolean, default: false }
+  required: { type: Boolean, default: false },
+  isVariant: { type: Boolean, default: false }
 }, { _id: false });
 
 const b2bCategorySchema = new mongoose.Schema({

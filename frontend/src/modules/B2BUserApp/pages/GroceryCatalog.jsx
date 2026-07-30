@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiSearch, FiPackage, FiArrowLeft, FiFilter, FiChevronDown, FiCheck } from "react-icons/fi";
 import B2BHeader from "../components/Layout/B2BHeader";
@@ -12,6 +12,26 @@ import CompactProductCard from "../components/CompactProductCard";
 const GroceryCatalog = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const [selectedAddress, setSelectedAddress] = useState(() => {
+    try {
+      const stored = localStorage.getItem('selected-b2b-address');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('selected-b2b-address');
+      if (stored) {
+        setSelectedAddress(JSON.parse(stored));
+      } else {
+        setSelectedAddress(null);
+      }
+    } catch (e) {}
+  }, [location.key]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
@@ -71,13 +91,23 @@ const GroceryCatalog = () => {
       if (!selectedRootId) return;
       try {
         setLoadingProducts(true);
-        let url = `/grocery/products?category=${selectedRootId}&limit=20&sort=${sortBy}`;
+        let url = `/grocery/products?category=${selectedRootId}&limit=20&sort=${sortBy}&_t=${Date.now()}`;
         if (debouncedMinPrice) url += `&minPrice=${debouncedMinPrice}`;
         if (debouncedMaxPrice) url += `&maxPrice=${debouncedMaxPrice}`;
         if (maxMoq) url += `&maxMoq=${maxMoq}`;
         if (selectedBrands.length > 0) url += `&brands=${encodeURIComponent(selectedBrands.join(','))}`;
         if (selectedWeights.length > 0) url += `&weights=${encodeURIComponent(selectedWeights.join(','))}`;
         
+        if (selectedAddress) {
+          if (selectedAddress.pincode) {
+            const delArea = selectedAddress.areaName
+              ? `${selectedAddress.pincode}|${selectedAddress.areaName}`
+              : selectedAddress.pincode;
+            url += `&deliveryArea=${encodeURIComponent(delArea)}`;
+          }
+          url += `&city=${encodeURIComponent(selectedAddress.city)}`;
+        }
+
         const res = await api.get(url);
         if (res.success) {
           setProducts(res.data.products || res.data || []);
@@ -92,7 +122,7 @@ const GroceryCatalog = () => {
     const fetchFilters = async () => {
       if (!selectedRootId) return;
       try {
-        const res = await api.get(`/grocery/products/filters?category=${selectedRootId}`);
+        const res = await api.get(`/grocery/products/filters?category=${selectedRootId}&_t=${Date.now()}`);
         if (res.success) {
           setAvailableFilters(res.data || { brands: [], weights: [] });
         }
@@ -103,7 +133,7 @@ const GroceryCatalog = () => {
 
     fetchProducts();
     fetchFilters();
-  }, [selectedRootId, sortBy, debouncedMinPrice, debouncedMaxPrice, selectedBrands, selectedWeights, maxMoq]);
+  }, [selectedRootId, sortBy, debouncedMinPrice, debouncedMaxPrice, selectedBrands, selectedWeights, maxMoq, selectedAddress?._id]);
 
   const selectedRoot = categories.find(c => c._id === selectedRootId) || null;
 

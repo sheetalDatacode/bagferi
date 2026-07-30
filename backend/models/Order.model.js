@@ -22,6 +22,23 @@ const orderItemSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    size: {
+      type: String,
+      default: null,
+    },
+    color: {
+      type: String,
+      default: null,
+    },
+    selectedVariants: {
+      type: Map,
+      of: String,
+      default: {},
+    },
+    selectedImageUrl: {
+      type: String,
+      default: null,
+    },
   },
   { _id: false }
 );
@@ -100,6 +117,29 @@ const orderSchema = new mongoose.Schema(
     deliveryOtp: {
       type: String,
       default: null,
+    },
+    cancellationReason: {
+      type: String,
+      default: null,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    cancelledBy: {
+      type: String,
+      enum: ['user', 'vendor', 'admin'],
+      default: null,
+    },
+    refundMethod: {
+      type: String,
+      enum: ['wallet', 'bank_transfer', null],
+      default: null,
+    },
+    refundStatus: {
+      type: String,
+      enum: ['na', 'pending', 'processing', 'completed'],
+      default: 'na',
     },
   },
   { timestamps: true }

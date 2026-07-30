@@ -112,7 +112,21 @@ const B2BGroceryCategoryView = () => {
       if (selectedBrands.length > 0) params.append('brands', selectedBrands.join(','));
       if (selectedWeights.length > 0) params.append('weights', selectedWeights.join(','));
 
-      const res = await api.get(`/grocery/products?${params.toString()}`);
+      const storedAddress = localStorage.getItem('selected-b2b-address');
+      if (storedAddress) {
+        try {
+          const parsed = JSON.parse(storedAddress);
+          if (parsed.pincode) {
+            const delArea = parsed.areaName ? `${parsed.pincode}|${parsed.areaName}` : parsed.pincode;
+            params.append('deliveryArea', delArea);
+          }
+          if (parsed.city) {
+            params.append('city', parsed.city);
+          }
+        } catch(e) {}
+      }
+
+      const res = await api.get(`/grocery/products?${params.toString()}&_t=${Date.now()}`);
       if (res.success) {
         const newProducts = res.data.products || res.data || [];
         if (isNew) {
@@ -139,7 +153,7 @@ const B2BGroceryCategoryView = () => {
       } else {
         params.append('subcategory', selectedSub._id);
       }
-      const res = await api.get(`/grocery/products/filters?${params.toString()}`);
+      const res = await api.get(`/grocery/products/filters?${params.toString()}&_t=${Date.now()}`);
       if (res.success) {
         setAvailableFilters(res.data || { brands: [], weights: [] });
       }

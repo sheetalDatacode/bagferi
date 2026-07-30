@@ -45,6 +45,11 @@
     "children": []
   },
   {
+    "title": "Manual Refunds",
+    "route": "/admin/cancellations",
+    "children": []
+  },
+  {
     "title": "Categories",
     "route": "/admin/b2b-vendors/categories",
     "children": []

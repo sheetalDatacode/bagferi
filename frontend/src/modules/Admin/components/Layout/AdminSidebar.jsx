@@ -48,6 +48,7 @@ const iconMap = {
   Wallet: FiShoppingBag,
   Analytics: FiBarChart2,
   Orders: FiShoppingBag,
+  "Manual Refunds": FiRotateCcw,
   Brands: FiTag,
   "Add-on Plans": FiPackage,
   Categories: FiLayers,

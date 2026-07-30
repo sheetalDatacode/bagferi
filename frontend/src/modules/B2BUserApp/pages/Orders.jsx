@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import B2BHeader from '../components/Layout/B2BHeader';
 import B2BBottomNav from '../components/Layout/B2BBottomNav';
 import { useAuthStore } from '../../../shared/store/authStore';
+import CancelOrderModal from '../components/CancelOrderModal';
 
 const Orders = () => {
     const { user } = useAuthStore();
@@ -14,6 +15,25 @@ const Orders = () => {
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState(null);
     const [expandedOrders, setExpandedOrders] = useState({});
+    
+    // Cancellation states
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [selectedOrderForCancel, setSelectedOrderForCancel] = useState(null);
+
+    async function fetchOrders() {
+        try {
+            setLoading(true);
+            const res = await api.get('/order/my-orders');
+            if (res.success) {
+                setOrders(res.data);
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to load orders');
+        } finally {
+            setLoading(false);
+        }
+    }
 
     const toggleOrderDetails = (orderId) => {
         setExpandedOrders(prev => ({
@@ -26,18 +46,20 @@ const Orders = () => {
         fetchOrders();
     }, []);
 
-    const fetchOrders = async () => {
+    const handleCancelOrderSubmit = async (cancelData) => {
         try {
-            setLoading(true);
-            const res = await api.get('/order/my-orders');
+            const res = await api.post(`/order/${selectedOrderForCancel._id}/cancel`, cancelData);
             if (res.success) {
-                setOrders(res.data);
+                toast.success(res.message);
+                setIsCancelModalOpen(false);
+                setSelectedOrderForCancel(null);
+                fetchOrders();
+            } else {
+                toast.error(res.message || 'Failed to cancel order');
             }
         } catch (error) {
             console.error(error);
-            toast.error('Failed to load orders');
-        } finally {
-            setLoading(false);
+            toast.error(error.response?.data?.message || 'Failed to cancel order');
         }
     };
 
@@ -111,6 +133,17 @@ const Orders = () => {
                                             >
                                                 <FiPrinter size={12} /> Invoice
                                             </button>
+                                            {!['Dispatched', 'Completed', 'Cancelled'].includes(order.status) && (
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedOrderForCancel(order);
+                                                        setIsCancelModalOpen(true);
+                                                    }}
+                                                    className="px-3 py-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-black uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
                                             <button 
                                                 onClick={() => toggleOrderDetails(order._id)}
                                                 className="px-3 py-1 bg-primary-50 hover:bg-primary-100 border border-primary-200 text-primary-700 text-xs font-black uppercase tracking-wider rounded-lg transition-colors shadow-sm"
@@ -124,8 +157,29 @@ const Orders = () => {
                                             <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order.status)}`}>
                                                 {order.status}
                                             </span>
-                                        </div>
                                     </div>
+
+                                    {order.status === 'Cancelled' && (
+                                        <div className="bg-rose-50 border-b border-rose-100 px-4 py-3.5 text-xs text-rose-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-bold">
+                                            <div className="flex items-center gap-1.5 text-left">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" />
+                                                <span>This order has been cancelled.</span>
+                                            </div>
+                                            {order.advancePayment > 0 && (
+                                                <div className="flex items-center gap-1.5">
+                                                    {order.refundMethod === 'wallet' ? (
+                                                        <span className="bg-emerald-600 text-white px-2.5 py-0.8 rounded text-[9px] uppercase font-black tracking-wide">
+                                                            ₹{order.advancePayment} Refunded to Wallet (Completed)
+                                                        </span>
+                                                    ) : (
+                                                        <span className="bg-amber-600 text-white px-2.5 py-0.8 rounded text-[9px] uppercase font-black tracking-wide">
+                                                            ₹{order.advancePayment} Refund via Bank (Status: {order.refundStatus || 'Pending'})
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {expandedOrders[order._id] && (
                                         <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-100 bg-white">
@@ -136,15 +190,27 @@ const Orders = () => {
                                             <div className="space-y-3">
                                                 {order.items.map((item, idx) => (
                                                     <div key={idx} className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
-                                                            {item.product?.image ? (
-                                                                <img src={item.product.image} className="w-full h-full object-cover" alt="" />
+                                                        <div className="relative w-14 h-14 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
+                                                            {(item.selectedImageUrl || item.product?.image) ? (
+                                                                <img src={item.selectedImageUrl || item.product.image} className="w-full h-full object-cover" alt="" />
                                                             ) : (
                                                                 <FiPackage className="w-full h-full p-3 text-gray-400" />
                                                             )}
+                                                            {item.selectedImageUrl && (
+                                                                <div className="absolute bottom-0 left-0 right-0 bg-teal-500/80 text-white text-[7px] font-bold text-center py-0.5 uppercase tracking-wide">
+                                                                    Selected
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                                                        <div>
+                                                        <div>
                                                             <p className="text-sm font-bold text-gray-900 line-clamp-1">{item.product?.name || 'Product'}</p>
+                                                            <div className="flex gap-2 my-0.5 flex-wrap">
+                                                                {item.size && <span className="text-[9px] text-indigo-600 bg-indigo-50 px-1 py-0.2 rounded font-bold uppercase">Size: {item.size}</span>}
+                                                                {item.color && <span className="text-[9px] text-purple-600 bg-purple-50 px-1 py-0.2 rounded font-bold uppercase">Color: {item.color}</span>}
+                                                                {item.selectedVariants && Object.entries(item.selectedVariants).map(([key, val]) => (
+                                                                    <span key={key} className="text-[9px] text-teal-600 bg-teal-50 px-1 py-0.2 rounded font-bold uppercase">{key}: {val}</span>
+                                                                ))}
+                                                            </div>
                                                             <p className="text-xs text-gray-500 font-medium">
                                                                 ₹{item.price} × {item.quantity} = <span className="font-bold text-gray-800">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                                                             </p>
@@ -322,7 +388,16 @@ const Orders = () => {
                                             return (
                                                 <tr key={idx} className="hover:bg-gray-50">
                                                     <td className="p-3 text-gray-400 font-bold">{idx + 1}</td>
-                                                    <td className="p-3 font-bold text-gray-900">{item.product?.name || item.name || 'B2B Product'}</td>
+                                                     <td className="p-3 font-bold text-gray-900">
+                                                         <div>{item.product?.name || item.name || 'B2B Product'}</div>
+                                                         <div className="flex gap-2 mt-0.5 print:mt-1 font-semibold text-[10px] flex-wrap">
+                                                             {item.size && <span className="text-indigo-600">Size: {item.size}</span>}
+                                                             {item.color && <span className="text-purple-600">Color: {item.color}</span>}
+                                                             {item.selectedVariants && Object.entries(item.selectedVariants).map(([key, val]) => (
+                                                                 <span key={key} className="text-teal-600">{key}: {val}</span>
+                                                             ))}
+                                                         </div>
+                                                     </td>
                                                     <td className="p-3 text-center font-bold">{qty}</td>
                                                     <td className="p-3 text-right font-medium">₹{price.toLocaleString('en-IN')}</td>
                                                     <td className="p-3 text-right font-bold text-gray-900">₹{(price * qty).toLocaleString('en-IN')}</td>
@@ -378,6 +453,16 @@ const Orders = () => {
                     </div>
                 </div>
             )}
+
+            <CancelOrderModal
+                isOpen={isCancelModalOpen}
+                onClose={() => {
+                    setIsCancelModalOpen(false);
+                    setSelectedOrderForCancel(null);
+                }}
+                onSubmit={handleCancelOrderSubmit}
+                order={selectedOrderForCancel}
+            />
 
             <div className="md:hidden">
                 <B2BBottomNav />

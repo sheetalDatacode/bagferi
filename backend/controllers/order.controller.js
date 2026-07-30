@@ -5,6 +5,8 @@ import crypto from 'crypto';
 import B2BSettings from '../models/B2BSettings.model.js';
 import PlatformLedger from '../models/PlatformLedger.model.js';
 import vendorWalletService from '../services/vendorWallet.service.js';
+import userWalletService from '../services/userWallet.service.js';
+import CancellationRequest from '../models/CancellationRequest.model.js';
 
 // Initialize Razorpay (assuming keys are in env)
 // Note: If Razorpay keys aren't in env, this won't crash until used.
@@ -28,9 +30,14 @@ export const initiateCheckout = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cart is empty' });
     }
 
+    const selectedItems = cart.items.filter(item => item.selected !== false);
+    if (selectedItems.length === 0) {
+      return res.status(400).json({ success: false, message: 'No items selected for checkout' });
+    }
+
     // Group items by vendor and module
     const itemsByGroup = {};
-    cart.items.forEach(item => {
+    selectedItems.forEach(item => {
       const vId = item.vendor.toString();
       const module = item.productModel === 'GroceryProduct' ? 'grocery' : 'fashion';
       const groupKey = `${vId}_${module}`;
@@ -109,9 +116,14 @@ export const verifyCheckoutPayment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cart is empty' });
     }
 
+    const selectedItems = cart.items.filter(item => item.selected !== false);
+    if (selectedItems.length === 0) {
+      return res.status(400).json({ success: false, message: 'No items selected for checkout' });
+    }
+
     // Group items by vendor and module
     const itemsByGroup = {};
-    cart.items.forEach(item => {
+    selectedItems.forEach(item => {
       const vId = item.vendor.toString();
       const module = item.productModel === 'GroceryProduct' ? 'grocery' : 'fashion';
       const groupKey = `${vId}_${module}`;
@@ -145,6 +157,10 @@ export const verifyCheckoutPayment = async (req, res, next) => {
           productModel: i.productModel,
           quantity: i.quantity,
           price: i.price,
+          size: i.size,
+          color: i.color,
+          selectedVariants: i.selectedVariants ? (i.selectedVariants instanceof Map ? Object.fromEntries(i.selectedVariants) : i.selectedVariants) : {},
+          selectedImageUrl: i.selectedImageUrl || null,
         })),
         totalAmount,
         advancePayment: advancePerOrder,
@@ -183,8 +199,8 @@ export const verifyCheckoutPayment = async (req, res, next) => {
       );
     }
 
-    // Clear cart after successful order creation
-    cart.items = [];
+    // Clear selected items from cart after successful order creation
+    cart.items = cart.items.filter(item => item.selected === false);
     await cart.save();
 
     res.status(200).json({
@@ -265,6 +281,107 @@ export const updateVendorOrderStatus = async (req, res, next) => {
       success: true,
       message: 'Order status updated successfully',
       data: order
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/order/:orderId/cancel
+ * User cancels an order that hasn't been dispatched yet
+ */
+export const cancelOrder = async (req, res, next) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const { orderId } = req.params;
+    const { cancellationReason, refundMethod, bankDetails } = req.body;
+
+    const order = await Order.findOne({ _id: orderId, user: userId });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Only allow cancellation before dispatch
+    if (['Dispatched', 'Completed', 'Cancelled'].includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Order cannot be cancelled. Current status: ${order.status}`,
+      });
+    }
+
+    // Validate refund method
+    if (!refundMethod || !['wallet', 'bank_transfer'].includes(refundMethod)) {
+      return res.status(400).json({ success: false, message: 'Please choose a refund method: wallet or bank_transfer' });
+    }
+
+    const refundAmount = order.advancePayment || 0;
+
+    // Mark order as cancelled
+    order.status = 'Cancelled';
+    order.cancellationReason = cancellationReason || 'Cancelled by customer';
+    order.cancelledAt = new Date();
+    order.cancelledBy = 'user';
+    order.refundMethod = refundMethod;
+    order.refundStatus = refundAmount > 0 ? 'pending' : 'na';
+    await order.save();
+
+    // Handle refund
+    if (refundAmount > 0) {
+      if (refundMethod === 'wallet') {
+        // Instant wallet credit
+        await userWalletService.creditWallet(
+          userId,
+          refundAmount,
+          `Refund for cancelled order #${order.orderNumber}`,
+          order._id,
+          'order_cancellation'
+        );
+        order.refundStatus = 'completed';
+        await order.save();
+      } else {
+        // Bank transfer — create a pending cancellation request for admin
+        await CancellationRequest.create({
+          orderId: order._id,
+          userId,
+          orderNumber: order.orderNumber,
+          refundAmount,
+          refundMethod: 'bank_transfer',
+          bankDetails: bankDetails || {},
+          cancellationReason: cancellationReason || 'Cancelled by customer',
+          status: 'pending',
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: refundAmount > 0
+        ? refundMethod === 'wallet'
+          ? `Order cancelled. ₹${refundAmount} has been credited to your wallet.`
+          : `Order cancelled. Refund of ₹${refundAmount} will be transferred to your bank/UPI within 3-5 business days.`
+        : 'Order cancelled successfully.',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/order/wallet/balance
+ * Get user wallet balance and recent transactions
+ */
+export const getUserWalletBalance = async (req, res, next) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const { wallet, transactions } = await userWalletService.getWalletWithHistory(userId, 30);
+    res.status(200).json({
+      success: true,
+      data: {
+        balance: wallet.balance || 0,
+        transactions,
+      },
     });
   } catch (error) {
     next(error);

@@ -989,19 +989,27 @@ export const getFeed = asyncHandler(async (req, res) => {
     if (deliveryArea) {
       hasLocationFilter = true;
       const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
-      let deliveryQuery;
-      if (String(deliveryArea).includes('|')) {
-          deliveryQuery = deliveryArea;
+      let deliveryRegex;
+      const rawDeliveryArea = Array.isArray(deliveryArea) ? deliveryArea[0] : deliveryArea;
+      const deliveryAreaStr = String(rawDeliveryArea);
+
+      if (deliveryAreaStr.includes('|')) {
+          const parts = deliveryAreaStr.split('|');
+          const areaName = parts[1] || '';
+          const escaped = areaName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          deliveryRegex = new RegExp(`\\|${escaped}$`, 'i');
       } else {
-          deliveryQuery = { $regex: new RegExp(`^${deliveryArea}\\|`, 'i') };
+          const pinEscaped = deliveryAreaStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          deliveryRegex = new RegExp(`^${pinEscaped}\\|`, 'i');
       }
       const shopUnits = await ShopUnit.find({
-          deliveryZones: deliveryQuery
+          deliveryZones: deliveryRegex
       }).select('vendorId').lean();
       locationVendorIds = shopUnits.map(s => s.vendorId).filter(Boolean);
     }
 
-    if (city || area) {
+    // Only apply city/area vendor filter when deliveryArea is NOT provided.
+    if (!deliveryArea && (city || area)) {
       hasLocationFilter = true;
       const vendorQuery = { isActive: true };
       if (city) {

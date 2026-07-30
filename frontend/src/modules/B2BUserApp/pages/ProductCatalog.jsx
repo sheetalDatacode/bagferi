@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiFilter,
@@ -78,6 +78,27 @@ const ProductCatalog = () => {
   const [selectedGender, setSelectedGender] = useState(
     searchParams.get("gender") || "All"
   );
+
+  const location = useLocation();
+  const [selectedAddress, setSelectedAddress] = useState(() => {
+    try {
+      const stored = localStorage.getItem('selected-b2b-address');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('selected-b2b-address');
+      if (stored) {
+        setSelectedAddress(JSON.parse(stored));
+      } else {
+        setSelectedAddress(null);
+      }
+    } catch (e) {}
+  }, [location.key]);
 
   const BUSINESS_CATEGORIES = ['Manufacturing', 'Exporter', 'Wholesaler', 'Semi wholesaler', 'Retailers', 'Trading', 'Traders', 'Agency', 'Supplier'];
 
@@ -819,10 +840,19 @@ const ProductCatalog = () => {
           };
 
           // Add current city/state context to vendor search if applicable
-          if (selectedCity && selectedCity !== "All Cities")
-            shopParams.city = selectedCity;
-          if (selectedState && selectedState !== "All States")
-            shopParams.state = selectedState;
+          if (selectedAddress) {
+            if (selectedAddress.pincode) {
+              shopParams.deliveryArea = selectedAddress.areaName
+                ? `${selectedAddress.pincode}|${selectedAddress.areaName}`
+                : selectedAddress.pincode;
+            }
+            shopParams.city = selectedAddress.city;
+          } else {
+            if (selectedCity && selectedCity !== "All Cities")
+              shopParams.city = selectedCity;
+            if (selectedState && selectedState !== "All States")
+              shopParams.state = selectedState;
+          }
 
           // Respect selected business type in vendor search
           if (selectedBusinessType)
@@ -849,23 +879,26 @@ const ProductCatalog = () => {
       }
 
       // Add location filters if selected
-      if (selectedState !== "All States") {
-        params.state = selectedState;
-      }
-      if (selectedCity !== "All Cities") {
-        params.city = selectedCity;
-      }
-
-      // Add Item Type Filter (Lot/Slot vs Regular)
-      if (selectedItemType) {
-        params.itemType = selectedItemType;
-      }
-
-      if (selectedArea) {
-        params.area = selectedArea;
-      }
-      if (selectedMarket) {
-        params.market = selectedMarket.trim();
+      if (selectedAddress) {
+        if (selectedAddress.pincode) {
+          params.deliveryArea = selectedAddress.areaName
+            ? `${selectedAddress.pincode}|${selectedAddress.areaName}`
+            : selectedAddress.pincode;
+        }
+        params.city = selectedAddress.city;
+      } else {
+        if (selectedState !== "All States") {
+          params.state = selectedState;
+        }
+        if (selectedCity !== "All Cities") {
+          params.city = selectedCity;
+        }
+        if (selectedArea) {
+          params.area = selectedArea;
+        }
+        if (selectedMarket) {
+          params.market = selectedMarket.trim();
+        }
       }
 
       // Category & Subcategory Filters (Backend)
@@ -1180,7 +1213,8 @@ const ProductCatalog = () => {
         strict: searchParams.get("strict"),
         sortBy,
         sortOrder,
-        categoryCount: allCategories.length
+        categoryCount: allCategories.length,
+        selectedAddressId: selectedAddress?._id
       });
 
       // ONLY fetch if the selection has actually changed.
@@ -1211,6 +1245,7 @@ const ProductCatalog = () => {
     searchParams.get("strict"),
     sortBy,
     sortOrder,
+    selectedAddress
   ]);
 
   // Debug: Log state and cities changes
@@ -1981,103 +2016,7 @@ const ProductCatalog = () => {
           {/* Category playlist removed: reels are shown as cards below */}
 
           {/* Full Width Subcategory Explorer Card */}
-          <AnimatePresence mode="wait">
-            {expandedCategory && (typeof window !== "undefined" && (window.innerWidth >= 1024 || showMobileSubcategoryCard)) && (
-              <motion.div
-                initial={{ height: 0, opacity: 0, scale: 0.98 }}
-                animate={{ height: "auto", opacity: 1, scale: 1 }}
-                exit={{ height: 0, opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
-                className="overflow-hidden"
-                data-expanded-category-card>
-                <div className="bg-gradient-to-br from-white to-primary-50/30 rounded-[2.5rem] p-6 lg:p-8 border border-primary-100/50 shadow-2xl shadow-primary-100/10 mb-2 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary-100/20 blur-3xl rounded-full -mr-16 -mt-16"></div>
-                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary-100/20 blur-2xl rounded-full -ml-12 -mb-12"></div>
 
-                  <div className="flex items-center justify-between mb-6 relative z-10">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200">
-                        <FiFilter className="text-white text-xl" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-black text-gray-800 tracking-tight leading-tight">
-                          {expandedCategory} Collections
-                        </h3>
-                        <p className="text-sm text-gray-500 font-medium">
-                          Select a variety to explore
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setExpandedCategory(null);
-                        setShowMobileSubcategoryCard(false);
-                        closeMobileOverlays();
-                      }}
-                      className="p-3 hover:bg-white rounded-2xl text-gray-400 transition-all hover:text-gray-600 shadow-sm border border-transparent hover:border-gray-100">
-                      <FiX size={24} />
-                    </button>
-                  </div>
-
-                    <div className="flex flex-wrap gap-3 relative z-10">
-                      <button
-                        data-subcategory-button
-                        data-prevent-category-collapse
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSubcategoryClick(null, expandedCategory);
-                        }}
-                        className={`px-6 py-3 rounded-xl text-sm font-extrabold transition-all border ${!selectedSubcategory &&
-                          selectedCategory === expandedCategory
-                          ? "bg-primary-600 text-white shadow-lg shadow-primary-200 border-primary-600"
-                          : "bg-white text-gray-600 border-gray-100 hover:border-primary-100 hover:bg-white hover:shadow-md"
-                          }`}>
-                        All {expandedCategory}
-                      </button>
-
-                      <div className="w-full mb-2">
-                        <div className="relative max-w-md">
-                          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
-                          <input
-                            type="text"
-                            placeholder={`Search in ${expandedCategory}...`}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-xs font-bold focus:ring-1 focus:ring-primary-500 outline-none transition-all shadow-sm"
-                            value={subcategorySearchQuery}
-                            onChange={(e) => setSubcategorySearchQuery(e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      </div>
-
-                      {categories
-                        .find((c) => c.name === expandedCategory)
-                        ?.subcategories
-                        .filter(sub => {
-                          if (!subcategorySearchQuery) return true;
-                          return (typeof sub === 'string' ? sub : sub?.name || '').toLowerCase().includes(subcategorySearchQuery.toLowerCase());
-                        })
-                        .map((sub, idx) => (
-                          <button
-                            key={idx}
-                            data-subcategory-button
-                            data-prevent-category-collapse
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSubcategoryClick(sub, expandedCategory);
-                            }}
-                            className={`px-6 py-3 rounded-xl text-sm font-extrabold transition-all border ${selectedSubcategory === sub &&
-                              selectedCategory === expandedCategory
-                              ? "bg-primary-600 text-white shadow-lg shadow-primary-200 border-primary-600"
-                              : "bg-white text-gray-600 border-gray-100 hover:border-primary-100 hover:bg-white hover:shadow-md"
-                              }`}>
-                            {sub}
-                          </button>
-                        ))}
-                    </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
         <div className="mt-2">

@@ -91,7 +91,10 @@ export const getAllVendors = async (filters = {}) => {
       const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
       let deliveryQuery;
       if (String(filters.deliveryArea).includes('|')) {
-          deliveryQuery = filters.deliveryArea;
+          const parts = String(filters.deliveryArea).split('|');
+          const areaName = parts[1] || '';
+          const escaped = areaName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          deliveryQuery = { $regex: new RegExp(`\\|${escaped}$`, 'i') };
       } else {
           deliveryQuery = { $regex: new RegExp(`^${filters.deliveryArea}\\|`, 'i') };
       }

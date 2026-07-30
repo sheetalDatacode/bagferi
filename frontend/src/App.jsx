@@ -99,6 +99,9 @@ const AdminB2BBannerDetail = lazyWithRetry(
 const AdminDefaultBannerManagement = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/DefaultBannerManagement"),
 );
+const AdminOrderCancellations = lazyWithRetry(
+  () => import("./modules/Admin/pages/b2b-vendors/AdminOrderCancellations"),
+);
 const AdminBusinessTypeConfiguration = lazyWithRetry(
   () => import("./modules/Admin/pages/b2b-vendors/BusinessTypeConfiguration"),
 );
@@ -313,6 +316,9 @@ const B2BProductDetail = lazyWithRetry(
 const B2BWishlist = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/Wishlist"),
 );
+const B2BUserWallet = lazyWithRetry(
+  () => import("./modules/B2BUserApp/pages/B2BWallet"),
+);
 const B2BCart = lazyWithRetry(
   () => import("./modules/B2BUserApp/pages/B2BCart"),
 );
@@ -472,6 +478,7 @@ const AppRoutes = () => {
           <Route path="support-settings" element={<SupportSettings />} />
           <Route path="transactions" element={<AdminTransactions />} />
           <Route path="orders" element={<AdminOrders />} />
+          <Route path="cancellations" element={<AdminOrderCancellations />} />
           <Route path="feedbacks" element={<AdminFeedbacks />} />
           <Route path="reels" element={<AdminReelModeration />} />
           <Route path="reel-reports" element={<AdminReelReports />} />
@@ -673,6 +680,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <B2BOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/b2b/wallet"
+          element={
+            <ProtectedRoute>
+              <B2BUserWallet />
             </ProtectedRoute>
           }
         />

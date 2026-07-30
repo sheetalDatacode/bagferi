@@ -456,6 +456,8 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
       brand,
       availability,
       stockQuantity: payloadStockQuantity,
+      sizes,
+      colors,
     } = productData;
 
     // Update fields
@@ -467,6 +469,8 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
     if (description !== undefined) updateData.description = description || '';
     if (brand !== undefined) updateData.brandName = brand || '';
     if (productData.unit !== undefined) updateData.unit = productData.unit;
+    if (sizes !== undefined) updateData.sizes = sizes;
+    if (colors !== undefined) updateData.colors = colors;
 
 
     // Process images if provided

@@ -244,16 +244,24 @@ const VendorOrders = () => {
                                             <div className="flex flex-col gap-2">
                                                 {order.items.map((item, idx) => (
                                                     <div key={idx} className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
-                                                            {item.product?.images?.length > 0 ? (
-                                                                <img src={item.product.images[0]} className="w-full h-full object-cover" alt="" />
+                                                        <div className="relative w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
+                                                            {(item.selectedImageUrl || item.product?.images?.length > 0) ? (
+                                                                <img src={item.selectedImageUrl || item.product.images[0]} className="w-full h-full object-cover" alt="" />
                                                             ) : (
                                                                 <FiPackage className="w-full h-full p-2 text-gray-400" />
+                                                            )}
+                                                            {item.selectedImageUrl && (
+                                                                <div className="absolute bottom-0 left-0 right-0 bg-teal-500 text-white text-[6px] font-black text-center py-0.5 uppercase tracking-wide">
+                                                                    Chosen
+                                                                </div>
                                                             )}
                                                         </div>
                                                         <div>
                                                             <p className="text-xs font-bold text-gray-900 line-clamp-1">{item.product?.name || 'Product'}</p>
                                                             <p className="text-[10px] text-gray-500 font-bold uppercase">Qty: {item.quantity}</p>
+                                                            {item.selectedImageUrl && (
+                                                                <p className="text-[9px] text-teal-600 font-bold mt-0.5">&#10003; Customer selected image</p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -544,6 +552,29 @@ const VendorOrders = () => {
                                                 <span className="text-sm font-bold text-gray-900">{selectedOrderForDetail.assignedStaff.mobile}</span>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Customer selected images */}
+                            {selectedOrderForDetail.items?.some(i => i.selectedImageUrl) && (
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-black text-teal-600 uppercase tracking-widest text-left flex items-center gap-1.5">
+                                        <FiCheckCircle /> Customer's Selected Images
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {selectedOrderForDetail.items.filter(i => i.selectedImageUrl).map((item, idx) => (
+                                            <div key={idx} className="bg-teal-50 border border-teal-100 rounded-xl p-3 flex gap-3 items-center">
+                                                <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-teal-300 flex-shrink-0">
+                                                    <img src={item.selectedImageUrl} className="w-full h-full object-cover" alt="" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-gray-900 line-clamp-2">{item.product?.name || 'Product'}</p>
+                                                    <p className="text-[9px] text-teal-700 font-bold mt-1 uppercase tracking-wide">✓ Chosen by customer</p>
+                                                    <p className="text-[9px] text-gray-500 mt-0.5">Qty: {item.quantity}</p>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}

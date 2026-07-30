@@ -20,13 +20,15 @@ export const useCartStore = create((set, get) => ({
     }
   },
 
-  addToCart: async (productId, quantity = 1) => {
+  addToCart: async (productId, quantity = 1, size = null, color = null, selectedVariants = {}, selectedImageUrl = null, buyNow = false) => {
     set({ loading: true });
     try {
-      const response = await api.post('/cart/add', { productId, quantity });
+      const response = await api.post('/cart/add', { productId, quantity, size, color, selectedVariants, selectedImageUrl, buyNow });
       if (response.success) {
         set({ cart: response.data });
-        toast.success('Added to Cart!');
+        if (!buyNow) {
+          toast.success('Added to Cart!');
+        }
       }
     } catch (error) {
       console.error('Failed to add to cart:', error);
@@ -36,10 +38,10 @@ export const useCartStore = create((set, get) => ({
     }
   },
 
-  updateQuantity: async (productId, quantity) => {
+  updateQuantity: async (productId, quantity, size = null, color = null, selectedVariants = {}, selectedImageUrl = null) => {
     set({ loading: true });
     try {
-      const response = await api.put('/cart/update', { productId, quantity });
+      const response = await api.put('/cart/update', { productId, quantity, size, color, selectedVariants, selectedImageUrl });
       if (response.success) {
         set({ cart: response.data });
       }
@@ -51,10 +53,28 @@ export const useCartStore = create((set, get) => ({
     }
   },
 
-  removeFromCart: async (productId) => {
+  toggleSelection: async (productId, size = null, color = null, selectedVariants = {}, selected = true) => {
     set({ loading: true });
     try {
-      const response = await api.delete(`/cart/remove/${productId}`);
+      const response = await api.put('/cart/update', { productId, size, color, selectedVariants, selected });
+      if (response.success) {
+        set({ cart: response.data });
+      }
+    } catch (error) {
+      console.error('Failed to toggle selection:', error);
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  removeFromCart: async (productId, size = null, color = null, selectedVariants = {}) => {
+    set({ loading: true });
+    try {
+      const params = {};
+      if (size) params.size = size;
+      if (color) params.color = color;
+      if (selectedVariants) params.selectedVariants = JSON.stringify(selectedVariants);
+      const response = await api.delete(`/cart/remove/${productId}`, { params });
       if (response.success) {
         set({ cart: response.data });
         toast.success('Item removed from cart');

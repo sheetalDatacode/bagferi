@@ -29,7 +29,7 @@ export const getCart = async (req, res, next) => {
 export const addToCart = async (req, res, next) => {
   try {
     const userId = req.user._id || req.user.id;
-    const { productId, quantity, module: productModule } = req.body;
+    const { productId, quantity, module: productModule, size, color, selectedVariants, selectedImageUrl, buyNow } = req.body;
 
     const isGrocery = productModule === 'grocery';
     const productModel = isGrocery ? 'GroceryProduct' : 'Product';
@@ -53,15 +53,36 @@ export const addToCart = async (req, res, next) => {
     if (!cart) {
       cart = new Cart({
         user: userId,
-        items: [{ product: productId, productModel, vendor: vendorId, quantity, price }],
+        items: [{ product: productId, productModel, vendor: vendorId, quantity, price, size: size || null, color: color || null, selectedVariants: selectedVariants || {}, selectedImageUrl: selectedImageUrl || null, selected: true }],
       });
     } else {
-      const itemIndex = cart.items.findIndex(p => p.product.toString() === productId);
+      if (buyNow) {
+        cart.items.forEach(item => {
+          item.selected = false;
+        });
+      }
+      const itemIndex = cart.items.findIndex(p => {
+        const isProductMatch = p.product.toString() === productId;
+        const isSizeMatch = size ? p.size === size : !p.size;
+        const isColorMatch = color ? p.color === color : !p.color;
+        
+        const pVariants = p.selectedVariants ? (p.selectedVariants instanceof Map ? Object.fromEntries(p.selectedVariants) : p.selectedVariants) : {};
+        const reqVariants = selectedVariants || {};
+        const isVariantsMatch = Object.keys(pVariants).length === Object.keys(reqVariants).length &&
+          Object.keys(pVariants).every(k => String(pVariants[k]) === String(reqVariants[k]));
+        
+        return isProductMatch && isSizeMatch && isColorMatch && isVariantsMatch;
+      });
       if (itemIndex > -1) {
-        cart.items[itemIndex].quantity += quantity;
+        if (buyNow) {
+          cart.items[itemIndex].quantity = quantity; // override quantity for direct buy
+        } else {
+          cart.items[itemIndex].quantity += quantity;
+        }
         cart.items[itemIndex].price = price;
+        cart.items[itemIndex].selected = true;
       } else {
-        cart.items.push({ product: productId, productModel, vendor: vendorId, quantity, price });
+        cart.items.push({ product: productId, productModel, vendor: vendorId, quantity, price, size: size || null, color: color || null, selectedVariants: selectedVariants || {}, selectedImageUrl: selectedImageUrl || null, selected: true });
       }
     }
 
@@ -85,23 +106,38 @@ export const addToCart = async (req, res, next) => {
     next(error);
   }
 };
-
 export const updateCartItem = async (req, res, next) => {
   try {
     const userId = req.user._id || req.user.id;
-    const { productId, quantity } = req.body;
+    const { productId, quantity, size, color, selectedVariants, selected } = req.body;
 
     const cart = await Cart.findOne({ user: userId });
     if (!cart) {
       return res.status(404).json({ success: false, message: 'Cart not found' });
     }
 
-    const itemIndex = cart.items.findIndex(p => p.product.toString() === productId);
+    const itemIndex = cart.items.findIndex(p => {
+      const isProductMatch = p.product.toString() === productId;
+      const isSizeMatch = size ? p.size === size : !p.size;
+      const isColorMatch = color ? p.color === color : !p.color;
+      
+      const pVariants = p.selectedVariants ? (p.selectedVariants instanceof Map ? Object.fromEntries(p.selectedVariants) : p.selectedVariants) : {};
+      const reqVariants = selectedVariants || {};
+      const isVariantsMatch = Object.keys(pVariants).length === Object.keys(reqVariants).length &&
+        Object.keys(pVariants).every(k => String(pVariants[k]) === String(reqVariants[k]));
+      
+      return isProductMatch && isSizeMatch && isColorMatch && isVariantsMatch;
+    });
     if (itemIndex > -1) {
-      if (quantity <= 0) {
-        cart.items.splice(itemIndex, 1);
-      } else {
-        cart.items[itemIndex].quantity = quantity;
+      if (quantity !== undefined) {
+        if (quantity <= 0) {
+          cart.items.splice(itemIndex, 1);
+        } else {
+          cart.items[itemIndex].quantity = quantity;
+        }
+      }
+      if (selected !== undefined) {
+        cart.items[itemIndex].selected = selected;
       }
       await cart.save();
       
@@ -130,13 +166,32 @@ export const removeFromCart = async (req, res, next) => {
   try {
     const userId = req.user._id || req.user.id;
     const { productId } = req.params;
+    const { size, color, selectedVariants: selectedVariantsStr } = req.query;
+    
+    let selectedVariants = {};
+    if (selectedVariantsStr) {
+      try {
+        selectedVariants = JSON.parse(selectedVariantsStr);
+      } catch (e) {}
+    }
 
     const cart = await Cart.findOne({ user: userId });
     if (!cart) {
       return res.status(404).json({ success: false, message: 'Cart not found' });
     }
 
-    cart.items = cart.items.filter(item => item.product.toString() !== productId);
+    cart.items = cart.items.filter(item => {
+      const isProductMatch = item.product.toString() === productId;
+      const isSizeMatch = size ? item.size === size : !item.size;
+      const isColorMatch = color ? item.color === color : !item.color;
+      
+      const pVariants = item.selectedVariants ? (item.selectedVariants instanceof Map ? Object.fromEntries(item.selectedVariants) : item.selectedVariants) : {};
+      const reqVariants = selectedVariants || {};
+      const isVariantsMatch = Object.keys(pVariants).length === Object.keys(reqVariants).length &&
+        Object.keys(pVariants).every(k => String(pVariants[k]) === String(reqVariants[k]));
+      
+      return !(isProductMatch && isSizeMatch && isColorMatch && isVariantsMatch);
+    });
     await cart.save();
     
     const populatedCart = await Cart.findById(cart._id).populate({

@@ -106,7 +106,7 @@ const B2BCheckout = () => {
         }
     };
 
-    const cartItems = cart?.items || [];
+    const cartItems = (cart?.items || []).filter(item => item.selected !== false);
     const hasItems = cartItems.length > 0;
 
     // Group items by vendor to calculate the number of orders
@@ -123,10 +123,10 @@ const B2BCheckout = () => {
     const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const remainingBalance = subtotal - totalAdvance > 0 ? subtotal - totalAdvance : 0;
 
-    const handleQuantityChange = async (productId, currentQty, change) => {
+    const handleQuantityChange = async (productId, currentQty, change, size = null, color = null, selectedVariants = {}) => {
         const newQty = currentQty + change;
         if (newQty < 1) return;
-        await updateQuantity(productId, newQty);
+        await updateQuantity(productId, newQty, size, color, selectedVariants);
     };
 
     const handleCheckout = async () => {
@@ -189,8 +189,8 @@ const B2BCheckout = () => {
 
                         if (verifyRes.success) {
                             toast.success('Orders placed successfully!');
-                            await clearCart();
-                            navigate('/b2b/landing');
+                             await fetchCart();
+                             navigate('/b2b/landing');
                         } else {
                             toast.error('Payment verification failed');
                         }
@@ -313,7 +313,7 @@ const B2BCheckout = () => {
                                 const imgUrl = images.length > 0 ? images[0] : (prod.image || prod.media?.[0]?.url);
                                 
                                 return (
-                                    <div key={prod._id || item._id} className="py-4 flex flex-row gap-4 first:pt-0 last:pb-0">
+                                    <div key={`${prod._id || item._id}_${item.size || ''}_${item.color || ''}_${JSON.stringify(item.selectedVariants || {})}`} className="py-4 flex flex-row gap-4 first:pt-0 last:pb-0">
                                         <div className="w-20 h-20 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50">
                                             {hasImage ? (
                                                 <img src={imgUrl} alt={prod.name || prod.title} className="w-full h-full object-cover mix-blend-multiply" />
@@ -328,11 +328,19 @@ const B2BCheckout = () => {
                                             <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{prod.name || prod.title}</h3>
                                             <p className="text-xs text-gray-400 mt-1 uppercase font-bold tracking-wider">Sold by: {item.vendor?.storeName || item.vendor?.name || 'Vendor'}</p>
                                             
+                                            <div className="flex gap-2 mt-1 flex-wrap">
+                                                {item.size && <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Size: {item.size}</span>}
+                                                {item.color && <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Color: {item.color}</span>}
+                                                {item.selectedVariants && Object.entries(item.selectedVariants).map(([key, val]) => (
+                                                    <span key={key} className="text-[10px] text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{key}: {val}</span>
+                                                ))}
+                                            </div>
+
                                             <div className="mt-auto flex items-center justify-between">
                                                 {/* Quantity Selector */}
                                                 <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-lg p-0.5 scale-90 origin-left">
                                                     <button 
-                                                        onClick={() => handleQuantityChange(prod._id || item._id, item.quantity, -1)}
+                                                        onClick={() => handleQuantityChange(prod._id || item._id, item.quantity, -1, item.size, item.color, item.selectedVariants)}
                                                         className="w-6 h-6 rounded bg-white hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 border border-gray-100 shadow-sm transition-colors disabled:opacity-50"
                                                         disabled={item.quantity <= 1}
                                                     >
@@ -340,7 +348,7 @@ const B2BCheckout = () => {
                                                     </button>
                                                     <span className="w-6 text-center text-xs font-black text-slate-800">{item.quantity}</span>
                                                     <button 
-                                                        onClick={() => handleQuantityChange(prod._id || item._id, item.quantity, 1)}
+                                                        onClick={() => handleQuantityChange(prod._id || item._id, item.quantity, 1, item.size, item.color, item.selectedVariants)}
                                                         className="w-6 h-6 rounded bg-white hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 border border-gray-100 shadow-sm transition-colors"
                                                     >
                                                         <FiPlus size={12} />

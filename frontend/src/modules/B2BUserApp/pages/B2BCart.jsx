@@ -4,11 +4,12 @@ import { FiTrash2, FiMinus, FiPlus, FiArrowRight, FiShoppingBag, FiShield, FiTru
 import { useCartStore } from '../../../shared/store/cartStore';
 import { useAuthStore } from '../../../shared/store/authStore';
 import B2BHeader from '../components/Layout/B2BHeader';
+import toast from 'react-hot-toast';
 
 const B2BCart = () => {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuthStore();
-    const { cart, loading, fetchCart, updateQuantity, removeFromCart } = useCartStore();
+    const { cart, loading, fetchCart, updateQuantity, removeFromCart, toggleSelection } = useCartStore();
     const [updatingItemId, setUpdatingItemId] = useState(null);
 
     useEffect(() => {
@@ -19,27 +20,28 @@ const B2BCart = () => {
         }
     }, [isAuthenticated, fetchCart, navigate]);
 
-    const handleQuantityChange = async (productId, currentQty, change) => {
+    const handleQuantityChange = async (productId, currentQty, change, size = null, color = null, selectedVariants = {}) => {
         const newQty = currentQty + change;
         if (newQty < 1) return;
-        setUpdatingItemId(productId);
-        await updateQuantity(productId, newQty);
+        setUpdatingItemId(`${productId}_${size || ''}_${color || ''}_${JSON.stringify(selectedVariants)}`);
+        await updateQuantity(productId, newQty, size, color, selectedVariants);
         setUpdatingItemId(null);
     };
 
-    const handleRemoveItem = async (productId) => {
-        setUpdatingItemId(productId);
-        await removeFromCart(productId);
+    const handleRemoveItem = async (productId, size = null, color = null, selectedVariants = {}) => {
+        setUpdatingItemId(`${productId}_${size || ''}_${color || ''}_${JSON.stringify(selectedVariants)}`);
+        await removeFromCart(productId, size, color, selectedVariants);
         setUpdatingItemId(null);
     };
 
     const cartItems = cart?.items || [];
     const hasItems = cartItems.length > 0;
 
-    // Calculations
-    const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const tax = 0; // Temporarily disabled dummy tax to avoid confusion
-    const deliveryFee = 0; // Temporarily disabled delivery fee to avoid confusion
+    // Calculations based on selected items only
+    const selectedCartItems = cartItems.filter(item => item.selected !== false);
+    const subtotal = selectedCartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const tax = 0; 
+    const deliveryFee = 0; 
     const total = subtotal + tax + (subtotal > 0 ? deliveryFee : 0);
 
     // Group items by vendor
@@ -98,76 +100,108 @@ const B2BCart = () => {
                                     </div>
                                     
                                     <div className="divide-y divide-gray-100">
-                                        {group.items.map((item) => (
-                                            <div key={item.product._id || item.product} className="p-4 md:p-6 flex flex-row gap-4 md:gap-6 group/item relative">
-                                                {updatingItemId === (item.product._id || item.product) && <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10" />}
-                                                
-                                                {/* Product Image */}
-                                                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50 cursor-pointer" onClick={() => navigate(item.module === 'grocery' ? `/b2b/grocery/product/${item.product._id || item.product}` : `/b2b/product/${item.product._id || item.product}`)}>
-                                                    {(item.product.images && item.product.images.length > 0) || item.product.image || item.product.media ? (
-                                                        <img src={item.product.images?.length > 0 ? item.product.images[0] : (item.product.image || item.product.media?.[0]?.url)} alt={item.product.name || item.product.title} className="w-full h-full object-cover mix-blend-multiply" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                                            <FiShoppingBag size={24} />
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Product Details */}
-                                                <div className="flex-1 flex flex-col">
-                                                    <div className="flex justify-between items-start gap-4 mb-2">
-                                                        <h3 
-                                                            className="text-sm md:text-base font-bold text-gray-900 leading-tight hover:text-primary-600 cursor-pointer line-clamp-2"
-                                                            onClick={() => navigate(item.module === 'grocery' ? `/b2b/grocery/product/${item.product._id || item.product}` : `/b2b/product/${item.product._id || item.product}`)}
-                                                        >
-                                                            {item.product.name || item.product.title}
-                                                        </h3>
-                                                        <button 
-                                                            onClick={() => handleRemoveItem(item.product._id || item.product)}
-                                                            className="text-gray-400 hover:text-red-500 p-1 transition-colors bg-gray-50 rounded-lg"
-                                                            title="Remove Item"
-                                                        >
-                                                            <FiTrash2 size={16} />
-                                                        </button>
-                                                    </div>
+                                        {group.items.map((item) => {
+                                            const itemKey = `${item.product._id || item.product}_${item.size || ''}_${item.color || ''}_${JSON.stringify(item.selectedVariants || {})}`;
+                                            return (
+                                                <div key={itemKey} className="p-4 md:p-6 flex flex-row items-center gap-4 md:gap-6 group/item relative">
+                                                    {updatingItemId === itemKey && <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10" />}
                                                     
-                                                    <div className="flex items-center gap-2 mb-4">
-                                                        <span className="text-[10px] text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded uppercase tracking-widest">
-                                                            Min Qty: {item.product.moq || 1}
-                                                        </span>
+                                                    {/* Selection Checkbox */}
+                                                    <div className="flex-shrink-0 flex items-center justify-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={item.selected !== false}
+                                                            onChange={async (e) => {
+                                                                setUpdatingItemId(itemKey);
+                                                                await toggleSelection(item.product._id || item.product, item.size, item.color, item.selectedVariants, e.target.checked);
+                                                                setUpdatingItemId(null);
+                                                            }}
+                                                            className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                                                        />
                                                     </div>
 
-                                                    <div className="mt-auto flex items-center justify-between">
-                                                        {/* Price */}
-                                                        <div>
-                                                            <span className="text-lg md:text-xl font-black text-gray-900 tracking-tight">₹{item.price?.toLocaleString('en-IN') || 0}</span>
-                                                            <span className="text-[10px] md:text-xs text-gray-500 font-bold ml-1 uppercase">/ unit</span>
+                                                    {/* Product Image */}
+                                                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50 cursor-pointer" onClick={() => navigate(item.module === 'grocery' ? `/b2b/grocery/product/${item.product._id || item.product}` : `/b2b/product/${item.product._id || item.product}`)}>
+                                                        {(item.product.images && item.product.images.length > 0) || item.product.image || item.product.media ? (
+                                                            <img src={item.product.images?.length > 0 ? item.product.images[0] : (item.product.image || item.product.media?.[0]?.url)} alt={item.product.name || item.product.title} className="w-full h-full object-cover mix-blend-multiply" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                                 <FiShoppingBag size={24} />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Product Details */}
+                                                    <div className="flex-1 flex flex-col">
+                                                        <div className="flex justify-between items-start gap-4 mb-2">
+                                                            <h3 
+                                                                className="text-sm md:text-base font-bold text-gray-900 leading-tight hover:text-primary-600 cursor-pointer line-clamp-2"
+                                                                onClick={() => navigate(item.module === 'grocery' ? `/b2b/grocery/product/${item.product._id || item.product}` : `/b2b/product/${item.product._id || item.product}`)}
+                                                            >
+                                                                {item.product.name || item.product.title}
+                                                            </h3>
+                                                            <button 
+                                                                onClick={() => handleRemoveItem(item.product._id || item.product, item.size, item.color, item.selectedVariants)}
+                                                                className="text-gray-400 hover:text-red-500 p-1 transition-colors bg-gray-50 rounded-lg"
+                                                                title="Remove Item"
+                                                            >
+                                                                <FiTrash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+                                                            <span className="text-[10px] text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded uppercase tracking-widest">
+                                                                Min Qty: {item.product.moq || 1}
+                                                            </span>
+                                                            {item.size && (
+                                                                <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                                                                    Size: {item.size}
+                                                                </span>
+                                                            )}
+                                                            {item.color && (
+                                                                <span className="text-[10px] text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                                                                    Color: {item.color}
+                                                                </span>
+                                                            )}
+                                                            {item.selectedVariants && Object.entries(item.selectedVariants).map(([key, val]) => (
+                                                                <span key={key} className="text-[10px] text-teal-600 font-bold bg-teal-50 px-2 py-0.5 rounded uppercase tracking-widest">
+                                                                    {key}: {val}
+                                                                </span>
+                                                            ))}
                                                         </div>
 
-                                                        {/* Quantity Controls */}
-                                                        <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 border border-gray-200">
-                                                            <button 
-                                                                onClick={() => handleQuantityChange(item.product._id || item.product, item.quantity, -1)}
-                                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                                                                disabled={item.quantity <= (item.product.moq || 1) || loading}
-                                                            >
-                                                                <FiMinus size={14} />
-                                                            </button>
-                                                            <span className="w-8 text-center text-sm font-black text-gray-900">
-                                                                {item.quantity}
-                                                            </span>
-                                                            <button 
-                                                                onClick={() => handleQuantityChange(item.product._id || item.product, item.quantity, 1)}
-                                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                                                                disabled={loading}
-                                                            >
-                                                                <FiPlus size={14} />
-                                                            </button>
+                                                        <div className="mt-auto flex items-center justify-between">
+                                                            {/* Price */}
+                                                            <div>
+                                                                <span className="text-lg md:text-xl font-black text-gray-900 tracking-tight">₹{item.price?.toLocaleString('en-IN') || 0}</span>
+                                                                <span className="text-[10px] md:text-xs text-gray-500 font-bold ml-1 uppercase">/ unit</span>
+                                                            </div>
+
+                                                            {/* Quantity Controls */}
+                                                            <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 border border-gray-200">
+                                                                <button 
+                                                                    onClick={() => handleQuantityChange(item.product._id || item.product, item.quantity, -1, item.size, item.color, item.selectedVariants)}
+                                                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                                                                    disabled={item.quantity <= (item.product.moq || 1) || loading}
+                                                                >
+                                                                    <FiMinus size={14} />
+                                                                </button>
+                                                                <span className="w-8 text-center text-sm font-black text-gray-900">
+                                                                    {item.quantity}
+                                                                </span>
+                                                                <button 
+                                                                    onClick={() => handleQuantityChange(item.product._id || item.product, item.quantity, 1, item.size, item.color, item.selectedVariants)}
+                                                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                                                                    disabled={loading}
+                                                                >
+                                                                    <FiPlus size={14} />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ))}
@@ -218,8 +252,15 @@ const B2BCart = () => {
                                 </div>
 
                                 <button 
-                                    onClick={() => navigate('/b2b/checkout')}
-                                    className="w-full bg-[#ff6b00] text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-[#e66000] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-orange-200"
+                                    onClick={() => {
+                                        if (selectedCartItems.length === 0) {
+                                            toast.error('Please select at least one item to purchase.');
+                                            return;
+                                        }
+                                        navigate('/b2b/checkout');
+                                    }}
+                                    disabled={selectedCartItems.length === 0}
+                                    className="w-full bg-[#ff6b00] disabled:bg-gray-300 disabled:shadow-none text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-[#e66000] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-orange-200"
                                 >
                                     Proceed to Checkout
                                     <FiArrowRight size={18} />

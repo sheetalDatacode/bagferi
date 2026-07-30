@@ -3,7 +3,17 @@ import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinary.ut
 import Vendor from '../models/Vendor.model.js';
 
 export const getGroceryProducts = async (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
+    try {
+      const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
+      const allShops = await ShopUnit.find({}).lean();
+      const fs = await import('fs');
+      fs.appendFileSync('debug_query.log', `[DIAGNOSTIC] All Shops: ${JSON.stringify(allShops.map(s => ({ name: s.name, vendorId: s.vendorId, zones: s.deliveryZones, isActive: s.isActive })))} \n`);
+    } catch (e) {}
+
     const { 
       page = 1, 
       limit = 20, 
@@ -24,8 +34,43 @@ export const getGroceryProducts = async (req, res, next) => {
 
     const query = { isActive: true, isVisible: true };
     if (search) query.name = { $regex: search, $options: 'i' };
-    if (category) query.category = category;
-    if (subcategory) query.subcategory = subcategory;
+    
+    if (subcategory) {
+      const mongoose = (await import('mongoose')).default;
+      const subIdStr = subcategory.toString();
+      let subIdObj;
+      try {
+        subIdObj = new mongoose.Types.ObjectId(subIdStr);
+      } catch (e) {}
+      
+      query.subcategory = subIdObj ? { $in: [subIdStr, subIdObj] } : subIdStr;
+    } else if (category) {
+      const GroceryCategory = (await import('../models/GroceryCategory.model.js')).default;
+      const mongoose = (await import('mongoose')).default;
+      const catIdStr = category.toString();
+      let catIdObj;
+      try {
+        catIdObj = new mongoose.Types.ObjectId(catIdStr);
+      } catch (e) {}
+
+      const parentId = catIdObj || catIdStr;
+      const subcats = await GroceryCategory.find({ parent: parentId }).select('_id').lean();
+      
+      const catIds = [catIdStr];
+      if (catIdObj) catIds.push(catIdObj);
+      
+      subcats.forEach(s => {
+        catIds.push(s._id.toString());
+        try {
+          catIds.push(new mongoose.Types.ObjectId(s._id));
+        } catch (e) {}
+      });
+
+      query.$or = [
+        { category: { $in: catIds } },
+        { subcategory: { $in: catIds } }
+      ];
+    }
 
     // Location Filter for Grocery Products
     let locationVendorIds = null;
@@ -34,19 +79,30 @@ export const getGroceryProducts = async (req, res, next) => {
     if (deliveryArea) {
       hasLocationFilter = true;
       const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
-      let deliveryQuery;
-      if (String(deliveryArea).includes('|')) {
-          deliveryQuery = deliveryArea;
+      let deliveryRegex;
+      const rawDeliveryArea = Array.isArray(deliveryArea) ? deliveryArea[0] : deliveryArea;
+      const deliveryAreaStr = String(rawDeliveryArea);
+
+      if (deliveryAreaStr.includes('|')) {
+          const parts = deliveryAreaStr.split('|');
+          const areaName = parts[1] || '';
+          const escaped = areaName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          deliveryRegex = new RegExp(`\\|${escaped}$`, 'i');
       } else {
-          deliveryQuery = { $regex: new RegExp(`^${deliveryArea}\\|`, 'i') };
+          const pinEscaped = deliveryAreaStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          deliveryRegex = new RegExp(`^${pinEscaped}\\|`, 'i');
       }
       const shopUnits = await ShopUnit.find({
-          deliveryZones: deliveryQuery
+          deliveryZones: deliveryRegex
       }).select('vendorId').lean();
       locationVendorIds = shopUnits.map(s => s.vendorId).filter(Boolean);
     }
 
-    if (city || area) {
+    // Only apply city/area vendor filter if deliveryArea was NOT provided.
+    // deliveryArea (zone-based) is the authoritative location filter — adding a city
+    // intersection on top causes products to disappear when vendor's registered city
+    // doesn't perfectly match the user's address city.
+    if (!deliveryArea && (city || area)) {
       hasLocationFilter = true;
       const vendorQuery = { isActive: true };
       if (city) {
@@ -144,6 +200,12 @@ export const getGroceryProducts = async (req, res, next) => {
 
     const total = await GroceryProduct.countDocuments(query);
 
+    try {
+      const fs = await import('fs');
+      const logMsg = `[${new Date().toISOString()}] Query: ${JSON.stringify(query)} | Total found: ${total} | Products count: ${products.length}\n`;
+      fs.appendFileSync('debug_query.log', logMsg);
+    } catch (err) {}
+
     res.status(200).json({
       success: true,
       data: products,
@@ -154,6 +216,10 @@ export const getGroceryProducts = async (req, res, next) => {
       }
     });
   } catch (error) {
+    try {
+      const fs = await import('fs');
+      fs.appendFileSync('debug_query.log', `[${new Date().toISOString()}] ERROR: ${error.message}\n${error.stack}\n`);
+    } catch (e) {}
     next(error);
   }
 };
@@ -171,11 +237,49 @@ export const getGroceryProductById = async (req, res, next) => {
 };
 
 export const getGroceryProductFilters = async (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const { category, subcategory } = req.query;
     const query = { isActive: true, isVisible: true };
-    if (category) query.category = category;
-    if (subcategory) query.subcategory = subcategory;
+    
+    if (subcategory) {
+      const mongoose = (await import('mongoose')).default;
+      const subIdStr = subcategory.toString();
+      let subIdObj;
+      try {
+        subIdObj = new mongoose.Types.ObjectId(subIdStr);
+      } catch (e) {}
+      
+      query.subcategory = subIdObj ? { $in: [subIdStr, subIdObj] } : subIdStr;
+    } else if (category) {
+      const GroceryCategory = (await import('../models/GroceryCategory.model.js')).default;
+      const mongoose = (await import('mongoose')).default;
+      const catIdStr = category.toString();
+      let catIdObj;
+      try {
+        catIdObj = new mongoose.Types.ObjectId(catIdStr);
+      } catch (e) {}
+
+      const parentId = catIdObj || catIdStr;
+      const subcats = await GroceryCategory.find({ parent: parentId }).select('_id').lean();
+      
+      const catIds = [catIdStr];
+      if (catIdObj) catIds.push(catIdObj);
+      
+      subcats.forEach(s => {
+        catIds.push(s._id.toString());
+        try {
+          catIds.push(new mongoose.Types.ObjectId(s._id));
+        } catch (e) {}
+      });
+
+      query.$or = [
+        { category: { $in: catIds } },
+        { subcategory: { $in: catIds } }
+      ];
+    }
 
     const [brands, weights] = await Promise.all([
       GroceryProduct.distinct('brandName', { ...query, brandName: { $ne: '', $exists: true } }),
@@ -197,6 +301,10 @@ export const getGroceryProductFilters = async (req, res, next) => {
       }
     });
   } catch (error) {
+    try {
+      const fs = await import('fs');
+      fs.appendFileSync('debug_query.log', `[${new Date().toISOString()}] FILTERS ERROR: ${error.message}\n${error.stack}\n`);
+    } catch (e) {}
     next(error);
   }
 };

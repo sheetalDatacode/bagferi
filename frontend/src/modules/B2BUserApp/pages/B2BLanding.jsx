@@ -92,7 +92,14 @@ const B2BLanding = () => {
     
     // Address & delivery zone filtering states
     const [addresses, setAddresses] = useState([]);
-    const [selectedAddress, setSelectedAddress] = useState(null);
+    const [selectedAddress, setSelectedAddress] = useState(() => {
+        try {
+            const saved = localStorage.getItem('selected-b2b-address');
+            return saved ? JSON.parse(saved) : null;
+        } catch (e) {
+            return null;
+        }
+    });
     const [showAddAddressForm, setShowAddAddressForm] = useState(false);
     const [newAddress, setNewAddress] = useState({
         streetAddress: '',
@@ -166,7 +173,6 @@ const B2BLanding = () => {
         const fetchSavedAddresses = async () => {
             if (!isAuthenticated) {
                 setAddresses([]);
-                setSelectedAddress(null);
                 return;
             }
             try {
@@ -176,10 +182,18 @@ const B2BLanding = () => {
                     const savedAddrId = localStorage.getItem('selected-b2b-address-id');
                     let targetAddr = null;
                     if (savedAddrId) {
-                        targetAddr = res.data.find(a => a._id === savedAddrId);
+                        // Use toString() to handle ObjectId vs string comparison safely
+                        targetAddr = res.data.find(a => String(a._id) === String(savedAddrId));
                     }
                     if (!targetAddr) {
-                        targetAddr = res.data.find(a => a.isDefault) || res.data[0];
+                        // Only fall back to default if user had no previously saved choice
+                        if (!savedAddrId) {
+                            targetAddr = res.data.find(a => a.isDefault) || res.data[0];
+                        }
+                        // If savedAddrId existed but address wasn't found (deleted?), pick default
+                        if (savedAddrId && !targetAddr) {
+                            targetAddr = res.data.find(a => a.isDefault) || res.data[0];
+                        }
                     }
                     if (targetAddr) {
                         setSelectedAddress(targetAddr);
@@ -196,6 +210,10 @@ const B2BLanding = () => {
     useEffect(() => {
         if (selectedAddress && selectedAddress._id) {
             localStorage.setItem('selected-b2b-address-id', selectedAddress._id);
+            localStorage.setItem('selected-b2b-address', JSON.stringify(selectedAddress));
+        } else {
+            localStorage.removeItem('selected-b2b-address-id');
+            localStorage.removeItem('selected-b2b-address');
         }
     }, [selectedAddress]);
 
@@ -323,8 +341,11 @@ const B2BLanding = () => {
                 const params = { limit: 50, vendorType: 'b2b', nocache: 1 };
                 
                 if (selectedAddress) {
-                    // Use city filtering for landing page discovery (not strict deliveryArea)
-                    // deliveryArea is too strict - most vendors may not have zones set up
+                    if (selectedAddress.pincode) {
+                        params.deliveryArea = selectedAddress.areaName 
+                            ? `${selectedAddress.pincode}|${selectedAddress.areaName}`
+                            : selectedAddress.pincode;
+                    }
                     params.city = selectedAddress.city;
                 } else if (selectedCity && selectedCity !== 'All Cities') {
                     params.city = selectedCity;
@@ -347,7 +368,11 @@ const B2BLanding = () => {
                 const params = { limit: 10, vendorType: 'b2b' };
                 
                 if (selectedAddress) {
-                    // City-level filtering on landing page for better discovery
+                    if (selectedAddress.pincode) {
+                        params.deliveryArea = selectedAddress.areaName 
+                            ? `${selectedAddress.pincode}|${selectedAddress.areaName}`
+                            : selectedAddress.pincode;
+                    }
                     params.city = selectedAddress.city;
                 } else if (selectedCity && selectedCity !== 'All Cities') {
                     params.city = selectedCity;
@@ -370,9 +395,13 @@ const B2BLanding = () => {
                     setGroceryCategories(catRes.data || []);
                 }
                 
-                // Filter grocery products by city when address is set
                 const params = { limit: 10 };
                 if (selectedAddress) {
+                    if (selectedAddress.pincode) {
+                        params.deliveryArea = selectedAddress.areaName 
+                            ? `${selectedAddress.pincode}|${selectedAddress.areaName}`
+                            : selectedAddress.pincode;
+                    }
                     params.city = selectedAddress.city;
                 } else if (selectedCity && selectedCity !== 'All Cities') {
                     params.city = selectedCity;

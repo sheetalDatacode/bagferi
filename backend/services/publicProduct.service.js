@@ -194,20 +194,31 @@ export const getPublicProducts = async (filters) => {
 
     if (deliveryArea) {
         hasLocationFilter = true;
-        let deliveryQuery;
-        if (String(deliveryArea).includes('|')) {
-            deliveryQuery = deliveryArea;
+        let deliveryRegex;
+        const rawDeliveryArea = Array.isArray(deliveryArea) ? deliveryArea[0] : deliveryArea;
+        const deliveryAreaStr = String(rawDeliveryArea);
+
+        if (deliveryAreaStr.includes('|')) {
+            const parts = deliveryAreaStr.split('|');
+            const areaName = parts[1] || '';
+            const escaped = areaName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            deliveryRegex = new RegExp(`\\|${escaped}$`, 'i');
         } else {
             // Match any zone starting with the pincode followed by |
-            deliveryQuery = { $regex: new RegExp(`^${deliveryArea}\\|`, 'i') };
+            const pinEscaped = deliveryAreaStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            deliveryRegex = new RegExp(`^${pinEscaped}\\|`, 'i');
         }
+        // Use RegExp directly (not wrapped in $regex) for array element matching
         const shopUnits = await ShopUnit.find({
-            deliveryZones: deliveryQuery
+            deliveryZones: deliveryRegex
         }).select('vendorId').lean();
         locationVendorIds = shopUnits.map(s => s.vendorId).filter(Boolean);
     }
 
-    if (state || city || area || market || businessType || excludeBusinessTypes) {
+    // Only apply state/city/area/market/businessType vendor filter when deliveryArea is NOT provided.
+    // When deliveryArea is provided, it already narrows down to exact vendors that service that zone.
+    // Intersecting with city causes products to vanish when vendor's registered city doesn't match.
+    if (!deliveryArea && (state || city || area || market || businessType || excludeBusinessTypes)) {
         hasLocationFilter = true;
         const vendorQuery = { isActive: true };
 
@@ -257,6 +268,25 @@ export const getPublicProducts = async (filters) => {
         // If market filter is applied but no vendors found, return empty results
         if (market && locationVendorIds.length === 0) {
             locationVendorIds = []; // Empty array will result in no products
+        }
+    } else if (deliveryArea && (businessType || excludeBusinessTypes)) {
+        // When deliveryArea is used, still allow businessType filtering on top of zone-matched vendors
+        const vendorQuery = { isActive: true };
+        if (businessType) {
+            vendorQuery.businessType = { $regex: new RegExp(`^${String(businessType).trim()}$`, 'i') };
+        } else if (excludeBusinessTypes) {
+            const excludeArr = Array.isArray(excludeBusinessTypes) ? excludeBusinessTypes : String(excludeBusinessTypes).split(',').map(t => t.trim());
+            if (excludeArr.length > 0) {
+                vendorQuery.businessType = { $nin: excludeArr.map(t => new RegExp(`^${t}$`, 'i')) };
+            }
+        }
+        const matchingVendors = await Vendor.find(vendorQuery).select('_id').lean();
+        const foundIds = matchingVendors.map(v => v._id);
+        if (locationVendorIds !== null) {
+            const set = new Set(locationVendorIds.map(id => id.toString()));
+            locationVendorIds = foundIds.filter(id => set.has(id.toString()));
+        } else {
+            locationVendorIds = foundIds;
         }
     }
 
@@ -488,6 +518,9 @@ export const getPublicProducts = async (filters) => {
 export const getPublicProductById = async (id) => {
     let item = await Product.findOne({ _id: id, isActive: true })
         .populate('vendorId', 'name storeName description logo phone address mfgOfWork')
+        .populate('category', 'name fields')
+        .populate('subcategory', 'name fields')
+        .populate('subSubcategory', 'name fields')
         .lean();
 
     let isLotSlot = false;

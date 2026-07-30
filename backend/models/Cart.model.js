@@ -28,6 +28,27 @@ const cartItemSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    size: {
+      type: String,
+      default: null,
+    },
+    color: {
+      type: String,
+      default: null,
+    },
+    selectedVariants: {
+      type: Map,
+      of: String,
+      default: {},
+    },
+    selectedImageUrl: {
+      type: String,
+      default: null,
+    },
+    selected: {
+      type: Boolean,
+      default: true,
+    },
   },
   { _id: false }
 );

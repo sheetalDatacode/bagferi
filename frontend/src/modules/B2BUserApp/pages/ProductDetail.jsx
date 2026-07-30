@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -28,6 +28,9 @@ const B2BProductDetail = () => {
     const [loading, setLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState(0);
     const [selectedMedia, setSelectedMedia] = useState('image'); // 'image' | 'video'
+    const [selectedSize, setSelectedSize] = useState(null);
+    const [selectedColor, setSelectedColor] = useState(null);
+    const [selectedVariants, setSelectedVariants] = useState({});
     const videoRef = useRef(null);
 
     useEffect(() => {
@@ -189,6 +192,40 @@ const B2BProductDetail = () => {
                 }
 
                 setProduct(productData);
+                 if (productData.sizes && productData.sizes.length > 0) {
+                    setSelectedSize(productData.sizes[0]);
+                }
+                if (productData.colors && productData.colors.length > 0) {
+                    setSelectedColor(productData.colors[0]);
+                }
+                
+                // Initialize selected variants for dynamic category multi-select fields
+                const initialVariants = {};
+                const dynamicMultiFields = [];
+                const addFields = (cat) => {
+                    if (cat && Array.isArray(cat.fields)) {
+                        cat.fields.forEach(f => {
+                            if (f.type === 'multi-select' && f.isVariant && f.label && !['color', 'colors', 'size', 'sizes'].includes(f.label.toLowerCase())) {
+                                dynamicMultiFields.push(f);
+                            }
+                        });
+                    }
+                };
+                addFields(productData.category);
+                addFields(productData.subcategory);
+                addFields(productData.subSubcategory);
+
+                dynamicMultiFields.forEach(f => {
+                    const spec = (productData.specifications || []).find(s => s.name?.toLowerCase() === f.label?.toLowerCase());
+                    if (spec && spec.value) {
+                        const opts = String(spec.value).split(',').map(v => v.trim()).filter(Boolean);
+                        if (opts.length > 0) {
+                            initialVariants[f.label] = opts[0];
+                        }
+                    }
+                });
+                setSelectedVariants(initialVariants);
+
                 const status = response.data.enquiryStatus || productData.vendorId?.enquiryStatus;
                 if (status) {
                     setEnquiryStatus(status);
@@ -316,6 +353,7 @@ const B2BProductDetail = () => {
 
     const getCategoryName = () => {
         if (product.formType === 'shop-listing') return 'Shop Listing';
+        if (product.category && typeof product.category === 'object') return product.category.name || 'Product';
         if (product.category) return product.category; // LotSlot string field
         if (product.categoryId?.name) return product.categoryId.name;
         const categoryAttr = product.attributes?.find(attr =>
@@ -482,52 +520,67 @@ const B2BProductDetail = () => {
 
                         {/* Thumbnail Strip: images + video */}
                         {(productImages.length > 1 || (productImages.length >= 1 && videoLink)) && (
-                            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                                {productImages.map((img, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => { setSelectedImage(idx); setSelectedMedia('image'); }}
-                                        className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-white ${
-                                            selectedMedia === 'image' && safeSelectedImage === idx 
-                                                ? 'border-teal-500' 
-                                                : 'border-gray-100 hover:border-gray-200'
-                                        }`}
-                                    >
-                                        <img src={img} alt="" className="w-full h-full object-cover" />
-                                    </button>
-                                ))}
-
-                                {/* Video Thumbnail */}
-                                {videoLink && (
-                                    <button
-                                        onClick={() => setSelectedMedia('video')}
-                                        className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-black relative flex items-center justify-center ${
-                                            selectedMedia === 'video' 
-                                                ? 'border-teal-500' 
-                                                : 'border-gray-100 hover:border-gray-300'
-                                        }`}
-                                    >
-                                        {ytId ? (
-                                            <img 
-                                                src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} 
-                                                alt="video" 
-                                                className="w-full h-full object-cover opacity-70"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                                                <svg className="w-6 h-6 text-white/60" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                            </div>
-                                        )}
-                                        {/* Play icon overlay */}
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow">
-                                                <svg className="w-3 h-3 text-gray-900 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M8 5v14l11-7z"/>
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    </button>
+                            <div>
+                                {productImages.length > 1 && (
+                                    <div className="mb-2 flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
+                                        <FiCheckCircle className="text-xs" />
+                                        <span>Tap an image to select it — your choice will be shown to the vendor with your order</span>
+                                    </div>
                                 )}
+                                <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                                    {productImages.map((img, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => { setSelectedImage(idx); setSelectedMedia('image'); }}
+                                            className={`relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-white ${
+                                                selectedMedia === 'image' && safeSelectedImage === idx 
+                                                    ? 'border-teal-500 ring-2 ring-teal-300 ring-offset-1' 
+                                                    : 'border-gray-100 hover:border-gray-200'
+                                            }`}
+                                        >
+                                            <img src={img} alt="" className="w-full h-full object-cover" />
+                                            {selectedMedia === 'image' && safeSelectedImage === idx && (
+                                                <div className="absolute inset-0 bg-teal-500/10 flex items-end justify-end p-1">
+                                                    <div className="w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center shadow">
+                                                        <FiCheckCircle className="text-white text-[10px]" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+
+                                    {/* Video Thumbnail */}
+                                    {videoLink && (
+                                        <button
+                                            onClick={() => setSelectedMedia('video')}
+                                            className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all bg-black relative flex items-center justify-center ${
+                                                selectedMedia === 'video' 
+                                                    ? 'border-teal-500' 
+                                                    : 'border-gray-100 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {ytId ? (
+                                                <img 
+                                                    src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} 
+                                                    alt="video" 
+                                                    className="w-full h-full object-cover opacity-70"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                                                    <svg className="w-6 h-6 text-white/60" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                </div>
+                                            )}
+                                            {/* Play icon overlay */}
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow">
+                                                    <svg className="w-3 h-3 text-gray-900 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M8 5v14l11-7z"/>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -581,7 +634,17 @@ const B2BProductDetail = () => {
                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sizes</span>
                                 <div className="flex flex-wrap gap-2 mt-2">
                                     {product.sizes.map((s, idx) => (
-                                        <span key={idx} className="px-3 py-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg">{s}</span>
+                                        <button
+                                            key={idx}
+                                            onClick={() => setSelectedSize(s)}
+                                            className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
+                                                selectedSize === s
+                                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            {s}
+                                        </button>
                                     ))}
                                 </div>
                             </div>
@@ -592,27 +655,87 @@ const B2BProductDetail = () => {
                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Colors</span>
                                 <div className="flex flex-wrap gap-2 mt-2">
                                     {product.colors.map((c, idx) => (
-                                        <span key={idx} className="px-3 py-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg">{c}</span>
+                                        <button
+                                            key={idx}
+                                            onClick={() => setSelectedColor(c)}
+                                            className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
+                                                selectedColor === c
+                                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            {c}
+                                        </button>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {/* Summary Grid */}
+                        {/* Dynamic Multi-Select Variant Selectors */}
+                        {(() => {
+                            const fields = [];
+                            const addFields = (cat) => {
+                                if (cat && Array.isArray(cat.fields)) {
+                                    cat.fields.forEach(f => {
+                                        if (f.type === 'multi-select' && f.isVariant && f.label && !['color', 'colors', 'size', 'sizes'].includes(f.label.toLowerCase())) {
+                                            fields.push(f);
+                                        }
+                                    });
+                                }
+                            };
+                            addFields(product.category);
+                            addFields(product.subcategory);
+                            addFields(product.subSubcategory);
+
+                            return fields.map((field) => {
+                                const spec = specifications.find(s => s.name?.toLowerCase() === field.label?.toLowerCase());
+                                if (!spec || !spec.value) return null;
+                                const opts = String(spec.value).split(',').map(v => v.trim()).filter(Boolean);
+                                if (opts.length === 0) return null;
+
+                                return (
+                                    <div key={field.label} className="mt-4">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{field.label}</span>
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {opts.map((opt, idx) => {
+                                                const isSelected = selectedVariants[field.label] === opt;
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        type="button"
+                                                        onClick={() => setSelectedVariants(p => ({ ...p, [field.label]: opt }))}
+                                                        className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
+                                                            isSelected
+                                                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                                        }`}
+                                                    >
+                                                        {opt}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            });
+                        })()}
+
+                        {/* Summary Grid / Specifications */}
                         <div className="mt-8 border-t border-b border-gray-100 py-4 grid grid-cols-[1fr_2fr] gap-y-3 text-sm">
-                            <span className="text-slate-400 font-medium">Material</span>
-                            <span className="text-slate-700 font-bold">{specifications.find(s => s.name.toLowerCase().includes('material'))?.value || 'N/A'}</span>
+                            <span className="text-slate-400 font-medium uppercase text-[11px] tracking-wider">Brand</span>
+                            <span className="text-slate-800 font-bold">{product.brandName || product.brand || 'Local'}</span>
 
-                            <span className="text-slate-400 font-medium">Finish</span>
-                            <span className="text-slate-700 font-bold">{specifications.find(s => s.name.toLowerCase().includes('finish'))?.value || 'Matte'}</span>
+                            <span className="text-slate-400 font-medium uppercase text-[11px] tracking-wider">Category</span>
+                            <span className="text-slate-800 font-bold">{getCategoryName()}</span>
 
-                            <span className="text-slate-400 font-medium">Thickness</span>
-                            <span className="text-slate-700 font-bold">{specifications.find(s => s.name.toLowerCase().includes('thickness'))?.value || 'N/A'}</span>
+                            {specifications.map((s, idx) => (
+                                <React.Fragment key={idx}>
+                                    <span className="text-slate-400 font-medium uppercase text-[11px] tracking-wider">{s.name}</span>
+                                    <span className="text-slate-800 font-bold">{Array.isArray(s.value) ? s.value.join(', ') : s.value}</span>
+                                </React.Fragment>
+                            ))}
 
-                            <span className="text-slate-400 font-medium">SKU</span>
-                            <span className="text-slate-700 font-bold">{product.sku || 'N/A'}</span>
-
-                            <span className="text-slate-400 font-medium">Stock</span>
+                            <span className="text-slate-400 font-medium uppercase text-[11px] tracking-wider">Stock</span>
                             <div>
                                 {product.stock === 'out_of_stock' ? (
                                     <span className="text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-bold">Out of Stock</span>
@@ -641,7 +764,8 @@ const B2BProductDetail = () => {
                                         toast.error('Please login first');
                                         return navigate('/b2b/login');
                                     }
-                                    addToCart(product._id, quantity);
+                                    const selectedImgUrl = selectedMedia === 'image' ? (productImages[safeSelectedImage] || null) : null;
+                                    addToCart(product._id, quantity, selectedSize, selectedColor, selectedVariants, selectedImgUrl);
                                 }}
                                 className="bg-[#ff6b00] hover:bg-[#e66000] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
                             >
@@ -653,7 +777,8 @@ const B2BProductDetail = () => {
                                         toast.error('Please login first');
                                         return navigate('/b2b/login');
                                     }
-                                    await addToCart(product._id, quantity);
+                                    const selectedImgUrl = selectedMedia === 'image' ? (productImages[safeSelectedImage] || null) : null;
+                                    await addToCart(product._id, quantity, selectedSize, selectedColor, selectedVariants, selectedImgUrl, true);
                                     navigate('/b2b/checkout');
                                 }}
                                 className="bg-[#04439c] hover:bg-[#03367c] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
@@ -694,37 +819,6 @@ const B2BProductDetail = () => {
 
                 {/* Accordion Sections */}
                 <div className="border border-gray-100 rounded-lg overflow-hidden bg-white shadow-sm mb-16">
-                    {/* Specifications Accordion */}
-                    <div>
-                        <button
-                            onClick={() => toggleSection('specifications')}
-                            className="w-full flex items-center justify-between p-6 bg-white hover:bg-gray-50 transition-colors"
-                        >
-                            <span className="font-bold text-slate-900 tracking-wide">SPECIFICATIONS</span>
-                            {openSections.specifications ? <FiChevronUp className="text-slate-400" /> : <FiChevronDown className="text-slate-400" />}
-                        </button>
-                        {openSections.specifications && (
-                            <div className="px-6 pb-6 pt-2 border-t border-gray-100 bg-gray-50/30">
-                                <div className="space-y-4 text-sm mt-4">
-                                    <div className="grid grid-cols-[1fr_2fr] pb-4 border-b border-gray-100">
-                                        <span className="text-slate-400 font-medium uppercase text-xs tracking-wider">Brand</span>
-                                        <span className="text-slate-800 font-bold">{product.brandName || product.brand || 'Local'}</span>
-                                    </div>
-                                    <div className="grid grid-cols-[1fr_2fr] pb-4 border-b border-gray-100">
-                                        <span className="text-slate-400 font-medium uppercase text-xs tracking-wider">Category</span>
-                                        <span className="text-slate-800 font-bold">{getCategoryName()}</span>
-                                    </div>
-                                    {specifications.map((s, idx) => (
-                                        <div key={idx} className="grid grid-cols-[1fr_2fr] pb-4 border-b border-gray-100 last:border-0 last:pb-0">
-                                            <span className="text-slate-400 font-medium uppercase text-xs tracking-wider">{s.name}</span>
-                                            <span className="text-slate-800 font-bold">{Array.isArray(s.value) ? s.value.join(', ') : s.value}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
                     {/* Material & Build Accordion */}
                     <div className="border-t border-gray-100">
                         <button
