@@ -5,6 +5,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .DS_Store
-
+*.log
+debug_query.log
 
 firebase-service-account.json
