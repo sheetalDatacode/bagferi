@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiMapPin, FiPlus, FiCheckCircle, FiShield, FiShoppingBag, FiMinus } from 'react-icons/fi';
+import { FiMapPin, FiPlus, FiCheckCircle, FiShield, FiShoppingBag, FiMinus, FiTrash } from 'react-icons/fi';
 import { useCartStore } from '../../../shared/store/cartStore';
 import { useAuthStore } from '../../../shared/store/authStore';
 import B2BHeader from '../components/Layout/B2BHeader';
@@ -20,7 +20,7 @@ const loadRazorpay = () => {
 const B2BCheckout = () => {
     const navigate = useNavigate();
     const { isAuthenticated, user } = useAuthStore();
-    const { cart, loading, fetchCart, clearCart, updateQuantity } = useCartStore();
+    const { cart, loading, fetchCart, clearCart, updateQuantity, removeFromCart, toggleSelection } = useCartStore();
 
     const [addresses, setAddresses] = useState([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -106,8 +106,9 @@ const B2BCheckout = () => {
         }
     };
 
-    const cartItems = (cart?.items || []).filter(item => item.selected !== false);
-    const hasItems = cartItems.length > 0;
+    const allCartItems = cart?.items || [];
+    const cartItems = allCartItems.filter(item => item.selected !== false);
+    const hasItems = allCartItems.length > 0;
 
     // Group items by vendor to calculate the number of orders
     const groupedItems = cartItems.reduce((acc, item) => {
@@ -117,10 +118,17 @@ const B2BCheckout = () => {
         return acc;
     }, {});
     
-    const numberOfOrders = Object.keys(groupedItems).length;
-    const totalAdvance = numberOfOrders * advancePerOrder;
-
     const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+    // Calculate total advance capped by each vendor group subtotal
+    let totalAdvance = 0;
+    Object.keys(groupedItems).forEach(vendorId => {
+        const items = groupedItems[vendorId];
+        const groupSubtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        totalAdvance += Math.min(advancePerOrder, groupSubtotal);
+    });
+
+    const numberOfOrders = Object.keys(groupedItems).length;
     const remainingBalance = subtotal - totalAdvance > 0 ? subtotal - totalAdvance : 0;
 
     const handleQuantityChange = async (productId, currentQty, change, size = null, color = null, selectedVariants = {}) => {
@@ -306,14 +314,22 @@ const B2BCheckout = () => {
                         </h2>
                         
                         <div className="divide-y divide-gray-100">
-                            {cartItems.map((item) => {
+                            {allCartItems.map((item) => {
                                 const prod = item.product || {};
                                 const images = prod.images || [];
                                 const hasImage = images.length > 0 || prod.image || prod.media?.length > 0;
                                 const imgUrl = images.length > 0 ? images[0] : (prod.image || prod.media?.[0]?.url);
                                 
                                 return (
-                                    <div key={`${prod._id || item._id}_${item.size || ''}_${item.color || ''}_${JSON.stringify(item.selectedVariants || {})}`} className="py-4 flex flex-row gap-4 first:pt-0 last:pb-0">
+                                    <div key={`${prod._id || item._id}_${item.size || ''}_${item.color || ''}_${JSON.stringify(item.selectedVariants || {})}`} className="py-4 flex flex-row gap-4 items-center first:pt-0 last:pb-0">
+                                        {/* Selection Checkbox */}
+                                        <input
+                                            type="checkbox"
+                                            checked={item.selected !== false}
+                                            onChange={(e) => toggleSelection(prod._id || item._id, item.size, item.color, item.selectedVariants, e.target.checked)}
+                                            className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 mr-1 flex-shrink-0 cursor-pointer"
+                                        />
+
                                         <div className="w-20 h-20 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50">
                                             {hasImage ? (
                                                 <img src={imgUrl} alt={prod.name || prod.title} className="w-full h-full object-cover mix-blend-multiply" />
@@ -325,7 +341,16 @@ const B2BCheckout = () => {
                                         </div>
                                         
                                         <div className="flex-1 min-w-0 flex flex-col">
-                                            <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{prod.name || prod.title}</h3>
+                                            <div className="flex justify-between items-start gap-2">
+                                                <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{prod.name || prod.title}</h3>
+                                                <button
+                                                    onClick={() => removeFromCart(prod._id || item._id, item.size, item.color, item.selectedVariants)}
+                                                    className="text-gray-400 hover:text-red-500 p-1 transition-colors flex-shrink-0"
+                                                    title="Remove item"
+                                                >
+                                                    <FiTrash size={15} />
+                                                </button>
+                                            </div>
                                             <p className="text-xs text-gray-400 mt-1 uppercase font-bold tracking-wider">Sold by: {item.vendor?.storeName || item.vendor?.name || 'Vendor'}</p>
                                             
                                             <div className="flex gap-2 mt-1 flex-wrap">
@@ -411,8 +436,8 @@ const B2BCheckout = () => {
 
                         <button 
                             onClick={handleCheckout}
-                            disabled={selectedIndex === null || selectedIndex >= addresses.length || isPlacingOrder}
-                            className={`w-full text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-colors flex items-center justify-center gap-2 shadow-lg ${selectedIndex === null || selectedIndex >= addresses.length || isPlacingOrder ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-[#ff6b00] hover:bg-[#e66000] shadow-orange-200'}`}
+                            disabled={selectedIndex === null || selectedIndex >= addresses.length || isPlacingOrder || cartItems.length === 0}
+                            className={`w-full text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-colors flex items-center justify-center gap-2 shadow-lg ${selectedIndex === null || selectedIndex >= addresses.length || isPlacingOrder || cartItems.length === 0 ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-[#ff6b00] hover:bg-[#e66000] shadow-orange-200'}`}
                         >
                             {isPlacingOrder ? 'Processing...' : `Pay ₹${totalAdvance.toLocaleString('en-IN')} & Place Order`}
                         </button>

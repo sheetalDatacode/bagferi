@@ -44,7 +44,19 @@ const B2BProductDetail = () => {
 
     const handleQuantityChange = (type) => {
         const moq = Number(product?.moq || product?.minimumOrderQuantity || 1);
-        if (type === 'inc' && quantity < (product?.stockQuantity || 999)) {
+        const hasVariants = product?.variants && product.variants.length > 0;
+        const availableColors = hasVariants
+            ? Array.from(new Set(product.variants.filter(v => v.size === selectedSize).map(v => v.color).filter(Boolean)))
+            : (product?.colors || []);
+        const activeVariant = hasVariants
+            ? product.variants.find(v => 
+                v.size === selectedSize && 
+                (availableColors.length === 0 || v.color === selectedColor)
+              )
+            : null;
+        const currentStockQty = activeVariant ? activeVariant.stockQuantity : (product?.stockQuantity || 999);
+
+        if (type === 'inc' && quantity < currentStockQty) {
             setQuantity(prev => prev + 1);
         } else if (type === 'dec' && quantity > moq) {
             setQuantity(prev => prev - 1);
@@ -202,12 +214,23 @@ const B2BProductDetail = () => {
                 }
 
                 setProduct(productData);
-                 if (productData.sizes && productData.sizes.length > 0) {
-                    setSelectedSize(productData.sizes[0]);
-                }
-                if (productData.colors && productData.colors.length > 0) {
-                    setSelectedColor(productData.colors[0]);
-                }
+                 if (productData.variants && productData.variants.length > 0) {
+                     const uniqueSizes = Array.from(new Set(productData.variants.map(v => v.size).filter(Boolean)));
+                     if (uniqueSizes.length > 0) {
+                         setSelectedSize(uniqueSizes[0]);
+                         const uniqueColorsForSize = Array.from(new Set(productData.variants.filter(v => v.size === uniqueSizes[0]).map(v => v.color).filter(Boolean)));
+                         if (uniqueColorsForSize.length > 0) {
+                             setSelectedColor(uniqueColorsForSize[0]);
+                         }
+                     }
+                 } else {
+                     if (productData.sizes && productData.sizes.length > 0) {
+                        setSelectedSize(productData.sizes[0]);
+                     }
+                     if (productData.colors && productData.colors.length > 0) {
+                        setSelectedColor(productData.colors[0]);
+                     }
+                 }
                 
                 // Initialize selected variants for dynamic category multi-select fields
                 const initialVariants = {};
@@ -253,8 +276,6 @@ const B2BProductDetail = () => {
     };
 
     // Track vendor contact clicks (call or whatsapp)
-
-
 
     const handleWhatsAppClick = () => {
         if (!enquiryStatus.canAcceptEnquiries) return;
@@ -424,7 +445,26 @@ const B2BProductDetail = () => {
     };
 
     const specifications = getSpecifications();
-    const currentPrice = product.price || 0;
+
+    const hasVariants = product.variants && product.variants.length > 0;
+    const availableSizes = hasVariants 
+        ? Array.from(new Set(product.variants.map(v => v.size).filter(Boolean)))
+        : (product.sizes || []);
+        
+    const availableColors = hasVariants
+        ? Array.from(new Set(product.variants.filter(v => v.size === selectedSize).map(v => v.color).filter(Boolean)))
+        : (product.colors || []);
+
+    const activeVariant = hasVariants
+        ? product.variants.find(v => 
+            v.size === selectedSize && 
+            (availableColors.length === 0 || v.color === selectedColor)
+          )
+        : null;
+
+    const currentPrice = activeVariant ? activeVariant.price : (product.price || 0);
+    const currentMrp = activeVariant ? activeVariant.mrp : product.mrp;
+    const currentStockQty = activeVariant ? activeVariant.stockQuantity : product.stockQuantity;
 
     return (
         <div className="min-h-screen bg-white pb-24 font-sans text-gray-800">
@@ -621,10 +661,15 @@ const B2BProductDetail = () => {
                             <span className="text-3xl md:text-4xl font-black text-slate-900">
                                 ₹{currentPrice}
                             </span>
-                            {product.mrp && product.mrp > currentPrice && (
-                                <span className="text-xl font-medium text-slate-400 line-through ml-2">
-                                    ₹{product.mrp}
-                                </span>
+                            {currentMrp && currentMrp > currentPrice && (
+                                <>
+                                    <span className="text-xl font-medium text-slate-400 line-through ml-2">
+                                        ₹{currentMrp}
+                                    </span>
+                                    <span className="text-[11px] font-black text-[#10b981] bg-[#10b981]/10 px-2 py-0.5 rounded-lg ml-2">
+                                        ₹{currentMrp - currentPrice} OFF
+                                    </span>
+                                </>
                             )}
                             <span className="text-sm font-medium text-slate-400">
                                 / {product.formType === 'shop-listing' && product.items?.[0] ? product.items[0].unit : (product.unit || 'piece')}
@@ -639,47 +684,56 @@ const B2BProductDetail = () => {
                             {product.unitDetails?.description || product.description || (product.formType === 'shop-listing' && product.items?.[0]?.description) || 'No description provided.'}
                         </p>
 
-                        {product.sizes && product.sizes.length > 0 && (
-                            <div className="mt-4">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sizes</span>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {product.sizes.map((s, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={() => setSelectedSize(s)}
-                                            className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
-                                                selectedSize === s
-                                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                                            }`}
-                                        >
-                                            {s}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                         {availableSizes && availableSizes.length > 0 && (
+                             <div className="mt-4">
+                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sizes</span>
+                                 <div className="flex flex-wrap gap-2 mt-2">
+                                     {availableSizes.map((s, idx) => (
+                                         <button
+                                             key={idx}
+                                             onClick={() => {
+                                                 setSelectedSize(s);
+                                                 if (hasVariants) {
+                                                     // Auto select first color for the newly selected size
+                                                     const colorsForSize = Array.from(new Set(product.variants.filter(v => v.size === s).map(v => v.color).filter(Boolean)));
+                                                     if (colorsForSize.length > 0) {
+                                                         setSelectedColor(colorsForSize[0]);
+                                                     }
+                                                 }
+                                             }}
+                                             className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
+                                                 selectedSize === s
+                                                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                             }`}
+                                         >
+                                             {s}
+                                         </button>
+                                     ))}
+                                 </div>
+                             </div>
+                         )}
 
-                        {product.colors && product.colors.length > 0 && (
-                            <div className="mt-4">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Colors</span>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {product.colors.map((c, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={() => setSelectedColor(c)}
-                                            className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
-                                                selectedColor === c
-                                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                                            }`}
-                                        >
-                                            {c}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                         {availableColors && availableColors.length > 0 && (
+                             <div className="mt-4">
+                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Colors</span>
+                                 <div className="flex flex-wrap gap-2 mt-2">
+                                     {availableColors.map((c, idx) => (
+                                         <button
+                                             key={idx}
+                                             onClick={() => setSelectedColor(c)}
+                                             className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
+                                                 selectedColor === c
+                                                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                             }`}
+                                         >
+                                             {c}
+                                         </button>
+                                     ))}
+                                 </div>
+                             </div>
+                         )}
 
                         {/* Dynamic Multi-Select Variant Selectors */}
                         {(() => {
@@ -747,13 +801,13 @@ const B2BProductDetail = () => {
 
                             <span className="text-slate-400 font-medium uppercase text-[11px] tracking-wider">Stock</span>
                             <div>
-                                {product.stock === 'out_of_stock' ? (
+                                {product.stock === 'out_of_stock' || currentStockQty === 0 ? (
                                     <span className="text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-bold">Out of Stock</span>
                                 ) : product.stock === 'pre_order' ? (
                                     <span className="text-orange-600 bg-orange-50 px-2 py-1 rounded text-xs font-bold">Pre-Order</span>
                                 ) : (
                                     <span className="text-[#10b981] bg-[#10b981]/10 px-2 py-1 rounded text-xs font-bold">
-                                        In Stock {product.stockQuantity ? `(${product.stockQuantity})` : ''}
+                                        In Stock {currentStockQty ? `(${currentStockQty})` : ''}
                                     </span>
                                 )}
                             </div>
@@ -785,7 +839,7 @@ const B2BProductDetail = () => {
                                 />
                                 <button 
                                     onClick={() => handleQuantityChange('inc')}
-                                    disabled={quantity >= (product.stockQuantity || 999)}
+                                    disabled={quantity >= (currentStockQty || 999)}
                                     className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
                                 >
                                     <FiPlus />

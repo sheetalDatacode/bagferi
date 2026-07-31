@@ -2,6 +2,7 @@ import { getApprovedVendors, getVendorById } from '../services/vendorManagement.
 import Product from '../models/Product.model.js';
 import redisService from '../services/redis.service.js';
 import { getRatingSummaries, getRatingSummary } from '../services/rating.service.js';
+import ShopUnit from '../models/ShopUnit.model.js';
 
 
 /**
@@ -191,7 +192,12 @@ export const getPublicVendor = async (req, res, next) => {
 
     // Increment vendor views in Redis with 24h TTL (to prevent memory leaks)
     // The cron job will sync these views to MongoDB every 5 minutes
-    const viewCount = await redisService.incrWithExpire(`vendor:views:${id}`, 86400);
+    let viewCount = 0;
+    try {
+      viewCount = await redisService.incrWithExpire(`vendor:views:${id}`, 86400);
+    } catch (cacheError) {
+      console.error('Redis INCR error (getPublicVendor):', cacheError);
+    }
 
     // Get product count
     const productCount = await Product.countDocuments({
@@ -200,18 +206,9 @@ export const getPublicVendor = async (req, res, next) => {
     });
 
     // Get shop unit details for B2B vendors
-    const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
     const shopUnit = await ShopUnit.findOne({ vendorId: vendor._id }).lean();
 
-    // Check subscription for shop slideshow allowance
-    const VendorSubscription = (await import('../models/VendorSubscription.model.js')).default;
-    const activeSub = await VendorSubscription.findOne({
-      vendorId: vendor._id,
-      status: 'active',
-      endDate: { $gt: new Date() }
-    }).populate('planId').lean();
-
-    const canUseSlideshow = activeSub?.planId?.shopSlideshow || false;
+    const canUseSlideshow = true;
     if (shopUnit && !canUseSlideshow && shopUnit.images && shopUnit.images.length > 1) {
       shopUnit.images = [shopUnit.images[0]];
     }

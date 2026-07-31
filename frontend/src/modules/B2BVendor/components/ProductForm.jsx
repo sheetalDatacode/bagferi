@@ -65,24 +65,33 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
         };
     }, []);
 
-    const [formData, setFormData] = useState(initialData || {
-        name: "",
-        category: "",
-        subcategory: "",
-        subSubcategory: "",
-        mrp: "",
-        price: "", 
-        description: "",
-        images: [],
-        specifications: [{ name: "", value: "" }],
-        brand: "",
-        availability: "In Stock",
-        unit: "pieces", // Fix: initialize to a valid option to match UI and pass validation
-        videoLink: "",
-        sizes: [],
-        colors: [],
-        gender: "All",
-        stockQuantity: "",
+    const [formData, setFormData] = useState(() => {
+        if (initialData) {
+            return {
+                ...initialData,
+                variants: initialData.variants || [],
+            };
+        }
+        return {
+            name: "",
+            category: "",
+            subcategory: "",
+            subSubcategory: "",
+            mrp: "",
+            price: "", 
+            description: "",
+            images: [],
+            specifications: [{ name: "", value: "" }],
+            brand: "",
+            availability: "In Stock",
+            unit: "pieces", // Fix: initialize to a valid option to match UI and pass validation
+            videoLink: "",
+            sizes: [],
+            colors: [],
+            gender: "All",
+            stockQuantity: "",
+            variants: [],
+        };
     });
 
     const [categories, setCategories] = useState(categoriesCache || []);
@@ -549,8 +558,24 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
         });
 
         if (!formData.category) newErrors.category = "Category is required";
-        if (!formData.price) newErrors.price = "Base price is required";
+        if (!formData.price && (!formData.variants || formData.variants.length === 0)) {
+            newErrors.price = "Base price is required when no variants are added";
+        }
         if (!formData.unit) newErrors.unit = "Unit is required";
+
+        if (formData.variants && formData.variants.length > 0) {
+            formData.variants.forEach((v, idx) => {
+                if (!v.size?.trim()) {
+                    newErrors[`variant_size_${idx}`] = "Size is required";
+                }
+                if (!v.price || isNaN(v.price) || parseFloat(v.price) <= 0) {
+                    newErrors[`variant_price_${idx}`] = "Valid price is required";
+                }
+                if (!v.mrp || isNaN(v.mrp) || parseFloat(v.mrp) <= 0) {
+                    newErrors[`variant_mrp_${idx}`] = "Valid MRP is required";
+                }
+            });
+        }
 
         if (formData.images.length === 0 && !formData.videoLink?.trim()) {
             newErrors.images = "At least one product image or a video link is required";
@@ -625,14 +650,49 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 value: Array.isArray(spec.value) ? spec.value.join(', ') : String(spec.value || '')
             }));
 
+            // Clean up and validate variants payload
+            const formattedVariants = (formData.variants || []).map(v => ({
+                size: v.size?.trim(),
+                color: v.color?.trim() || null,
+                price: parseFloat(v.price),
+                mrp: parseFloat(v.mrp),
+                stockQuantity: parseInt(v.stockQuantity) || 0,
+                sku: v.sku?.trim() || null
+            })).filter(v => v.size && !isNaN(v.price) && !isNaN(v.mrp));
+
+            let basePrice = parseFloat(formData.price);
+            let baseMrp = formData.mrp ? parseFloat(formData.mrp) : undefined;
+            let baseStock = formData.stockQuantity !== "" ? parseInt(formData.stockQuantity) : "";
+
+            if (formattedVariants.length > 0) {
+                if (isNaN(basePrice)) {
+                    basePrice = Math.min(...formattedVariants.map(v => v.price));
+                }
+                if (baseMrp === undefined || isNaN(baseMrp)) {
+                    baseMrp = Math.min(...formattedVariants.map(v => v.mrp));
+                }
+                if (baseStock === "" || isNaN(baseStock)) {
+                    baseStock = formattedVariants.reduce((sum, v) => sum + v.stockQuantity, 0);
+                }
+            }
+
+            // Derive sizes and colors from variants
+            const derivedSizes = formattedVariants.length > 0 
+                ? Array.from(new Set(formattedVariants.map(v => v.size).filter(Boolean)))
+                : (typeof formData.sizes === 'string' ? formData.sizes.split(',') : (formData.sizes || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean);
+
+            const derivedColors = formattedVariants.length > 0
+                ? Array.from(new Set(formattedVariants.map(v => v.color).filter(Boolean)))
+                : (typeof formData.colors === 'string' ? formData.colors.split(',') : (formData.colors || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean);
+
             // Prepare data for API
             const productPayload = {
                 name: formData.name,
                 category: formData.category,
                 subcategory: formData.subcategory || "",
                 subSubcategory: formData.subSubcategory || "",
-                mrp: formData.mrp || undefined,
-                price: parseFloat(formData.price),
+                mrp: baseMrp,
+                price: basePrice,
                 description: formData.description || "",
                 images: formData.images,
                 specifications: finalSpecs,
@@ -640,9 +700,10 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 availability: formData.availability || "In Stock",
                 unit: formData.unit || "Pcs",
                 videoLink: formData.videoLink || "",
-                sizes: (typeof formData.sizes === 'string' ? formData.sizes.split(',') : (formData.sizes || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean),
-                colors: (typeof formData.colors === 'string' ? formData.colors.split(',') : (formData.colors || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean),
-                stockQuantity: formData.stockQuantity !== "" ? parseInt(formData.stockQuantity) : "",
+                sizes: derivedSizes,
+                colors: derivedColors,
+                stockQuantity: baseStock !== "" ? parseInt(baseStock) : "",
+                variants: formattedVariants,
             };
 
             if (isEdit && productId) {
@@ -1163,29 +1224,162 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 </select>
                             </div>
 
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Sizes (Comma separated)</label>
-                                <input
-                                    type="text"
-                                    value={Array.isArray(formData.sizes) ? formData.sizes.join(', ') : (formData.sizes || '')}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, sizes: e.target.value }))}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
-                                    placeholder="e.g. S, M, L, XL"
-                                />
-                            </div>
-
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Colors (Comma separated)</label>
-                                <input
-                                    type="text"
-                                    value={Array.isArray(formData.colors) ? formData.colors.join(', ') : (formData.colors || '')}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, colors: e.target.value }))}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
-                                    placeholder="e.g. Red, Blue, Green"
-                                />
-                            </div>
-
                         </div>
+                    </motion.div>
+
+                    {/* Dynamic Variant Matrix Section */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-6"
+                    >
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm">
+                                    <FiTag />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-800">Product Variants (Size & Color Matrix)</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        variants: [...(prev.variants || []), { size: "", color: "", price: "", mrp: "", stockQuantity: "", sku: "" }]
+                                    }));
+                                }}
+                                className="flex items-center gap-1 text-xs font-black text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100/80 px-3 py-2 rounded-xl transition-all"
+                            >
+                                <FiPlus /> Add Variant Combination
+                            </button>
+                        </div>
+
+                        {(!formData.variants || formData.variants.length === 0) ? (
+                            <div className="text-center py-6 border border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">No variants configured yet</p>
+                                <p className="text-[11px] text-gray-400 mt-1">If this product has multiple sizes or colors, add them here to track rates & inventory per variant.</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse min-w-[700px]">
+                                    <thead>
+                                        <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                            <th className="pb-3 pr-2">Size *</th>
+                                            <th className="pb-3 px-2">Color</th>
+                                            <th className="pb-3 px-2">Rate/Price *</th>
+                                            <th className="pb-3 px-2">MRP *</th>
+                                            <th className="pb-3 px-2">Stock Qty</th>
+                                            <th className="pb-3 px-2">SKU</th>
+                                            <th className="pb-3 pl-2 text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {formData.variants.map((v, idx) => (
+                                            <tr key={idx} className="group">
+                                                <td className="py-3 pr-2">
+                                                    <input
+                                                        type="text"
+                                                        value={v.size}
+                                                        placeholder="e.g. L"
+                                                        onChange={(e) => {
+                                                            const newVariants = [...formData.variants];
+                                                            newVariants[idx].size = e.target.value;
+                                                            setFormData({ ...formData, variants: newVariants });
+                                                        }}
+                                                        className={`w-full px-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_size_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
+                                                    />
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                    <input
+                                                        type="text"
+                                                        value={v.color || ""}
+                                                        placeholder="e.g. Red"
+                                                        onChange={(e) => {
+                                                            const newVariants = [...formData.variants];
+                                                            newVariants[idx].color = e.target.value;
+                                                            setFormData({ ...formData, variants: newVariants });
+                                                        }}
+                                                        className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-gray-200 rounded-lg focus:border-indigo-500 focus:bg-white outline-none"
+                                                    />
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                    <div className="relative">
+                                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">₹</span>
+                                                        <input
+                                                            type="number"
+                                                            value={v.price}
+                                                            placeholder="0.00"
+                                                            onChange={(e) => {
+                                                                const newVariants = [...formData.variants];
+                                                                newVariants[idx].price = e.target.value;
+                                                                setFormData({ ...formData, variants: newVariants });
+                                                            }}
+                                                            className={`w-full pl-6 pr-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_price_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                    <div className="relative">
+                                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">₹</span>
+                                                        <input
+                                                            type="number"
+                                                            value={v.mrp}
+                                                            placeholder="0.00"
+                                                            onChange={(e) => {
+                                                                const newVariants = [...formData.variants];
+                                                                newVariants[idx].mrp = e.target.value;
+                                                                setFormData({ ...formData, variants: newVariants });
+                                                            }}
+                                                            className={`w-full pl-6 pr-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_mrp_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                    <input
+                                                        type="number"
+                                                        value={v.stockQuantity}
+                                                        placeholder="0"
+                                                        onChange={(e) => {
+                                                            const newVariants = [...formData.variants];
+                                                            newVariants[idx].stockQuantity = e.target.value;
+                                                            setFormData({ ...formData, variants: newVariants });
+                                                        }}
+                                                        className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-gray-200 rounded-lg focus:border-indigo-500 focus:bg-white outline-none"
+                                                    />
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                    <input
+                                                        type="text"
+                                                        value={v.sku || ""}
+                                                        placeholder="SKU"
+                                                        onChange={(e) => {
+                                                            const newVariants = [...formData.variants];
+                                                            newVariants[idx].sku = e.target.value;
+                                                            setFormData({ ...formData, variants: newVariants });
+                                                        }}
+                                                        className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-gray-200 rounded-lg focus:border-indigo-500 focus:bg-white outline-none"
+                                                    />
+                                                </td>
+                                                <td className="py-3 pl-2 text-right">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                variants: prev.variants.filter((_, i) => i !== idx)
+                                                            }));
+                                                        }}
+                                                        className="text-gray-400 hover:text-red-500 p-1.5 transition-colors rounded-lg hover:bg-red-50"
+                                                    >
+                                                        <FiTrash2 size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </motion.div>
 
                     {/* Description */}

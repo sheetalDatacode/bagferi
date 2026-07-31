@@ -101,7 +101,6 @@ const B2BVendorStore = () => {
             setLoading(true);
             try {
 
-                // OPTIMIZED: Fetch vendor, products, and properties in parallel
                 const [vendorRes, productsRes, propertiesRes, reelsRes, ratingSummaryRes] = await Promise.all([
                     api.get(`/vendors/${id}`, { silent: true }),
                     api.get(`/products`, {
@@ -116,12 +115,21 @@ const B2BVendorStore = () => {
                     api.get(`/property/all`, {
                         params: { vendorId: id },
                         silent: true
+                    }).catch(err => {
+                        console.warn("Failed to fetch properties:", err);
+                        return { success: true, data: [] };
                     }),
                     api.get(`/reels/feed`, {
                         params: { vendorId: id, limit: 50 },
                         silent: true
+                    }).catch(err => {
+                        console.warn("Failed to fetch reels:", err);
+                        return { success: true, data: [] };
                     }),
-                    getRatingSummary('shop', id)
+                    getRatingSummary('shop', id).catch(err => {
+                        console.warn("Failed to fetch rating summary:", err);
+                        return { averageRating: 0, ratingCount: 0 };
+                    })
                 ]);
 
                 // Process vendor response
@@ -499,35 +507,9 @@ const B2BVendorStore = () => {
                                     </div>
                                 </div>
 
-                                {/* Community */}
-                                <div className="flex flex-col p-3 md:p-4 bg-gray-50/40 rounded-3xl border border-gray-100/50 hover:bg-white hover:shadow-xl hover:border-primary-100/50 transition-all group">
-                                    <span className="text-[8px] md:text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Community</span>
-                                    <div className="flex items-center gap-2.5 md:gap-3 overflow-hidden">
-                                        <div className="min-w-[2rem] md:min-w-[2.75rem] h-8 md:h-11 px-2 bg-primary-600/10 rounded-2xl flex items-center justify-center text-primary-600 font-black text-xs md:text-sm group-hover:scale-110 transition-transform flex-shrink-0">
-                                            {followerCount}
-                                        </div>
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-[10px] md:text-sm font-black text-gray-900 uppercase tracking-tight leading-none truncate">Followers</span>
-                                            {isFollowing && <span className="text-[8px] md:text-[9px] font-black text-primary-600 uppercase tracking-widest mt-1 animate-pulse truncate">You follow</span>}
-                                        </div>
-                                    </div>
-                                </div>
 
-                                {/* Price Range */}
-                                {shopListing?.minPrice && shopListing?.maxPrice && (
-                                    <div className="flex flex-col p-3 md:p-4 bg-gray-50/40 rounded-3xl border border-gray-100/50 hover:bg-white hover:shadow-xl hover:border-primary-100/50 transition-all group">
-                                        <span className="text-[8px] md:text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2.5">Price Range</span>
-                                        <div className="flex items-center gap-2.5 md:gap-3 overflow-hidden">
-                                            <div className="min-w-[2rem] md:min-w-[2.75rem] h-8 md:h-11 px-2 bg-primary-600/10 rounded-2xl flex items-center justify-center text-primary-600 font-black text-xs md:text-sm group-hover:scale-110 transition-transform flex-shrink-0">
-                                                ₹
-                                            </div>
-                                            <div className="flex flex-col min-w-0">
-                                                <span className="text-[10px] md:text-sm font-black text-gray-900 uppercase tracking-tight leading-none truncate">₹{shopListing.minPrice} - ₹{shopListing.maxPrice}</span>
-                                                <span className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 truncate">Starting from</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+
+
 
                                 {/* Operating Zone */}
                                 {vendor.address?.city && (
@@ -590,163 +572,15 @@ const B2BVendorStore = () => {
                                     </p>
                                 </div>
                             )}
-                            {vendor.phone && (
-                                <p className="text-[12px] md:text-sm font-black text-gray-900 uppercase tracking-widest text-center md:text-right px-4 mb-1">
-                                    PH: +91 {maskPhone(vendor.phone, 2)}
-                                </p>
-                            )}
-                            {vendor.phone && (
-                                <a
-                                    href={(() => {
-                                        const cleanedPhone = (vendor.phone || '').replace(/\D/g, '');
-                                        const formattedPhone = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
-                                        const baseMsg = `👋 *I'm interested in your business services!*\n\n` +
-                                            `🏢 *Business:* ${shopListing?.name || vendor.storeName || 'Verified Vendor'}\n` +
-                                            `📍 *City:* ${vendor?.address?.city || 'N/A'}\n\n` +
-                                            `🔗 *View Store:* ${window.location.href}` +
-                                            getWhatsAppUserDetailsSuffix(user);
-                                        const message = encodeURIComponent(baseMsg);
-                                        return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${message}`;
-                                    })()}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => {
-                                        if (vendor.enquiryStatus && !vendor.enquiryStatus.canAcceptEnquiries) {
-                                            e.preventDefault();
-                                            return;
-                                        }
-                                        trackContactClick(vendor._id || vendor.id, 'whatsapp', getTrackingContext());
-                                    }}
-                                    className={`w-full px-8 py-5 md:py-6 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95 ${
-                                        vendor.enquiryStatus && !vendor.enquiryStatus.canAcceptEnquiries
-                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed grayscale shadow-none'
-                                            : 'bg-[#25D366] text-white hover:bg-[#128C7E] shadow-green-100/50'
-                                    }`}
-                                >
-                                    <FaWhatsapp size={20} />
-                                    WhatsApp Inquiry
-                                </a>
-                            )}
-                            {vendor.phone && (
-                                <button
-                                    onClick={() => {
-                                        if (vendor.enquiryStatus && !vendor.enquiryStatus.canAcceptEnquiries) {
-                                            toast.error("Contact Disabled (Insufficient Quota)");
-                                            return;
-                                        }
-                                        const mapsUrl = getGoogleMapsUrl(shopListing?.mapUrl ? { mapUrl: shopListing.mapUrl } : (vendor.shopUnit || vendor));
-                                        if (mapsUrl) {
-                                            trackContactClick(vendor._id || vendor.id, 'map', getTrackingContext());
-                                            window.open(mapsUrl, '_blank');
-                                        }
-                                        else toast.error('Location details not provided');
-                                    }}
-                                    className={`w-full px-8 py-5 md:py-6 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95 ${
-                                        vendor.enquiryStatus && !vendor.enquiryStatus.canAcceptEnquiries
-                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed grayscale shadow-none'
-                                            : 'bg-orange-600 text-white hover:bg-orange-700 shadow-orange-100/50'
-                                    }`}
-                                    title={vendor.enquiryStatus && !vendor.enquiryStatus.canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "View Shop Location"}
-                                >
-                                    <FiMapPin size={20} />
-                                    View Shop Location
-                                </button>
-                            )}
 
-                            <button
-                                onClick={handleToggleFollow}
-                                disabled={followingLoading}
-                                className={`w-full px-8 py-4 md:py-5 rounded-2xl md:rounded-[2rem] font-black text-[10px] md:text-xs uppercase tracking-[0.2em] transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95 border-2 ${
-                                    isFollowing 
-                                    ? "bg-primary-50/50 text-primary-600 border-primary-500/30 shadow-primary-50/50 hover:bg-primary-100/50" 
-                                    : "bg-primary-600 text-white border-primary-600 shadow-primary-100/50 hover:bg-primary-700 hover:border-primary-700"
-                                }`}
-                            >
-                                {followingLoading ? (
-                                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                ) : isFollowing ? (
-                                    <>
-                                        <FiUserCheck className="text-lg md:text-xl" />
-                                        <span>Following</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <FiUserPlus className="text-lg md:text-xl" />
-                                        <span>Follow Vendor</span>
-                                    </>
-                                )}
-                            </button>
+
+
+
                         </div>
                     </div>
                 </div>
 
-            {/* Team / Contact Persons Section - Moved Above Presentation */}
-            {shopListing?.details?.length > 0 && (
-                <div className="mb-12 md:mb-20">
-                        <div className="flex items-center gap-4 mb-8">
-                            <span className="h-[2px] w-12 bg-primary-600"></span>
-                            <h3 className="text-xl font-black text-gray-800 uppercase tracking-tighter">Key Contacts / Staff</h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {shopListing.details.map((contact, idx) => (
-                                <motion.div
-                                    key={idx}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true }}
-                                    className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-5 group hover:shadow-lg hover:border-primary-100 transition-all font-sans"
-                                >
-                                    <div className="w-14 h-14 bg-gradient-to-br from-primary-50 to-primary-100/50 rounded-2xl flex items-center justify-center text-primary-600 font-black text-xl shadow-inner group-hover:scale-110 transition-transform">
-                                        {contact.name?.charAt(0) || 'C'}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="text-sm font-black text-gray-900 uppercase tracking-tight">{contact.name || 'N/A'}</h4>
-                                        <p className="text-[10px] font-black text-primary-600 uppercase tracking-widest mb-2 opacity-70">{contact.post || 'Staff'}</p>
-                                        {contact.mobile && (
-                                            <div className="flex items-center gap-3">
-                                                <p className="text-[11px] font-bold text-gray-500">+91 {maskPhone(contact.mobile, 2)}</p>
-                                                <a
-                                                    href={vendor.enquiryStatus && !vendor.enquiryStatus.canAcceptEnquiries ? "#" : (() => {
-                                                        const cleanedPhone = String(contact.mobile || '').replace(/\D/g, '');
-                                                        const formattedPhone = cleanedPhone.startsWith('91') ? cleanedPhone : `91${cleanedPhone}`;
-                                                        const baseMsg = `👋 *I'm interested in your business services!*\n\n` +
-                                                            `🏢 *Business:* ${shopListing?.name || vendor?.storeName || 'Verified Vendor'}\n` +
-                                                            `🙍 *Contact:* ${contact.name || contact.post || 'Staff'}\n` +
-                                                            `📍 *City:* ${vendor?.address?.city || 'N/A'}\n\n` +
-                                                            `🔗 *View Store:* ${window.location.href}` +
-                                                            getWhatsAppUserDetailsSuffix(user);
-                                                        const message = encodeURIComponent(baseMsg);
-                                                        return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${message}`;
-                                                    })()}
-                                                    target={vendor.enquiryStatus && !vendor.enquiryStatus.canAcceptEnquiries ? "_self" : "_blank"}
-                                                    rel="noopener noreferrer"
-                                                    className={`p-2 rounded-lg transition-all active:scale-90 ${
-                                                        vendor.enquiryStatus && !vendor.enquiryStatus.canAcceptEnquiries
-                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed grayscale'
-                                                            : 'bg-green-50 text-[#25D366] hover:bg-[#25D366] hover:text-white'
-                                                    }`}
-                                                    onClick={(e) => {
-                                                        if (vendor.enquiryStatus && !vendor.enquiryStatus.canAcceptEnquiries) {
-                                                            e.preventDefault();
-                                                            return;
-                                                        }
-                                                        trackContactClick(vendor._id || vendor.id, 'whatsapp', {
-                                                            ...getTrackingContext(),
-                                                            category: `${vendor?.businessType || 'Vendor'} - ${contact.name || contact.post}`
-                                                        });
-                                                    }}
-                                                    title={vendor.enquiryStatus && !vendor.enquiryStatus.canAcceptEnquiries ? "Contact Disabled (Insufficient Quota)" : "WhatsApp"}
-                                                >
-                                                    <FaWhatsapp size={14} />
-                                                </a>
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </div>
-                )}
+
 
                 {/* Shop Presentation Gallery - For Shop Listings - Moved Below Contacts */}
                 {shopListing && ((shopListing.image && shopListing.images?.length > 0) || shopListing.images?.length > 0) && (

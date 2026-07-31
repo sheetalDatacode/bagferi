@@ -48,13 +48,17 @@ export const initiateCheckout = async (req, res, next) => {
       itemsByGroup[groupKey].push(item);
     });
 
-    const groupKeys = Object.keys(itemsByGroup);
-    const numberOfOrders = groupKeys.length;
-    
-    // Fetch dynamic advance amount
     const settings = await B2BSettings.findOne() || { advancePaymentAmount: 200 };
     const advancePerOrder = settings.advancePaymentAmount;
-    const totalAdvanceRequired = numberOfOrders * advancePerOrder;
+    
+    let totalAdvanceRequired = 0;
+    Object.keys(itemsByGroup).forEach(groupKey => {
+      const items = itemsByGroup[groupKey];
+      const groupSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      totalAdvanceRequired += Math.min(advancePerOrder, groupSubtotal);
+    });
+
+    const numberOfOrders = groupKeys.length;
 
     if (paymentMethod === 'Online') {
       // Create a single Razorpay order for the total advance
@@ -146,6 +150,7 @@ export const verifyCheckoutPayment = async (req, res, next) => {
     for (const [groupKey, group] of Object.entries(itemsByGroup)) {
       const items = group.items;
       const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const advancePaidForGroup = Math.min(advancePerOrder, totalAmount);
       
       const order = new Order({
         orderNumber: generateOrderNumber(),
@@ -163,8 +168,8 @@ export const verifyCheckoutPayment = async (req, res, next) => {
           selectedImageUrl: i.selectedImageUrl || null,
         })),
         totalAmount,
-        advancePayment: advancePerOrder,
-        remainingBalance: totalAmount - advancePerOrder > 0 ? totalAmount - advancePerOrder : 0,
+        advancePayment: advancePaidForGroup,
+        remainingBalance: totalAmount - advancePaidForGroup > 0 ? totalAmount - advancePaidForGroup : 0,
         shippingAddress,
         status: 'Pending',
         paymentMethod: 'Online',
@@ -176,13 +181,13 @@ export const verifyCheckoutPayment = async (req, res, next) => {
       await order.save();
       createdOrders.push(order);
 
-      const vendorShare = advancePerOrder * (1 - (commissionPct / 100));
+      const vendorShare = advancePaidForGroup * (1 - (commissionPct / 100));
 
       // Platform Ledger (Full Advance comes to Platform)
       await PlatformLedger.create({
         entryType: 'credit',
         transactionType: 'PAYMENT_RECEIVED',
-        amount: advancePerOrder,
+        amount: advancePaidForGroup,
         referenceId: order._id.toString(),
         vendorId: group.vendorId,
         description: `Advance payment for order ${order.orderNumber}`,

@@ -31,21 +31,42 @@ export const addToCart = async (req, res, next) => {
     const userId = req.user._id || req.user.id;
     const { productId, quantity, module: productModule, size, color, selectedVariants, selectedImageUrl, buyNow } = req.body;
 
-    const isGrocery = productModule === 'grocery';
-    const productModel = isGrocery ? 'GroceryProduct' : 'Product';
-
     let product;
-    if (isGrocery) {
+    let productModel = 'Product';
+
+    if (productModule === 'grocery') {
       product = await GroceryProduct.findById(productId);
-    } else {
+      productModel = 'GroceryProduct';
+    } else if (productModule === 'product' || productModule === 'fashion') {
       product = await Product.findById(productId);
+      productModel = 'Product';
+    } else {
+      // Fallback: check Product first, then GroceryProduct
+      product = await Product.findById(productId);
+      if (product) {
+        productModel = 'Product';
+      } else {
+        product = await GroceryProduct.findById(productId);
+        if (product) {
+          productModel = 'GroceryProduct';
+        }
+      }
     }
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    const price = product.price;
+    let price = product.price;
+    if (productModel === 'Product' && product.variants && product.variants.length > 0) {
+      const matchingVariant = product.variants.find(v => 
+        String(v.size).toLowerCase() === String(size || '').toLowerCase() && 
+        (!color || String(v.color).toLowerCase() === String(color || '').toLowerCase())
+      );
+      if (matchingVariant) {
+        price = matchingVariant.price;
+      }
+    }
     const vendorId = product.vendorId || product.vendor;
 
     let cart = await Cart.findOne({ user: userId });

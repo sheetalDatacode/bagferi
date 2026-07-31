@@ -247,6 +247,7 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
       videoLink,
       sizes,
       colors,
+      variants,
     } = productData;
 
     // Process images - upload to Cloudinary
@@ -384,6 +385,7 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
       videoLink: videoLink || null,
       sizes: sizes || [],
       colors: colors || [],
+      variants: variants || [],
     });
 
     const created = product.toObject();
@@ -458,6 +460,7 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
       stockQuantity: payloadStockQuantity,
       sizes,
       colors,
+      variants,
     } = productData;
 
     // Update fields
@@ -471,6 +474,7 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
     if (productData.unit !== undefined) updateData.unit = productData.unit;
     if (sizes !== undefined) updateData.sizes = sizes;
     if (colors !== undefined) updateData.colors = colors;
+    if (variants !== undefined) updateData.variants = variants;
 
 
     // Process images if provided
