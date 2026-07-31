@@ -63,6 +63,14 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
     const [originalShopData, setOriginalShopData] = useState(null);
     const [loadingInitial, setLoadingInitial] = useState(true);
     const [zones, setZones] = useState([]);
+    const [selectedDeliveryZoneFilter, setSelectedDeliveryZoneFilter] = useState("");
+
+    useEffect(() => {
+        if (zones.length > 0 && !selectedDeliveryZoneFilter) {
+            const defaultZone = typeof formData.zoneId === 'object' ? (formData.zoneId?._id || zones[0]._id) : (formData.zoneId || zones[0]._id);
+            setSelectedDeliveryZoneFilter(defaultZone);
+        }
+    }, [zones, formData.zoneId, selectedDeliveryZoneFilter]);
 
     useEffect(() => {
         const fetchZones = async () => {
@@ -131,7 +139,30 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
         localStorage.setItem(USER_DRAFT_KEY, JSON.stringify(cleanDraft));
     }, [formData, USER_DRAFT_KEY, vendorId]);
 
-
+    const groupedSelectedAreas = useMemo(() => {
+        if (!formData.deliveryZones || formData.deliveryZones.length === 0 || zones.length === 0) {
+            return [];
+        }
+        const groups = [];
+        zones.forEach(z => {
+            const selectedAreasInZone = [];
+            z.pincodes?.forEach(p => {
+                p.areas?.forEach(a => {
+                    const areaKey = `${p.code}|${a.name}`;
+                    if (formData.deliveryZones.includes(areaKey)) {
+                        selectedAreasInZone.push({ pin: p.code, name: a.name });
+                    }
+                });
+            });
+            if (selectedAreasInZone.length > 0) {
+                groups.push({
+                    zoneName: z.name,
+                    areas: selectedAreasInZone
+                });
+            }
+        });
+        return groups;
+    }, [formData.deliveryZones, zones]);
 
     const { status } = useSubscriptionStore();
     const canUseSlideshow = status?.limits?.shopSlideshow !== false;
@@ -498,18 +529,22 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                         </div>
 
                         {/* Delivery Areas */}
-                        {formData.deliveryZones && formData.deliveryZones.length > 0 && (
-                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Delivery Areas</h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {formData.deliveryZones.map((zone, idx) => {
-                                        const [pin, area] = zone.split('|');
-                                        return (
-                                            <span key={idx} className="bg-white border border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg shadow-sm">
-                                                {area} ({pin})
-                                            </span>
-                                        );
-                                    })}
+                        {groupedSelectedAreas.length > 0 && (
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Areas</h4>
+                                <div className="space-y-4">
+                                    {groupedSelectedAreas.map((group, idx) => (
+                                        <div key={idx} className="border-b border-slate-200/60 pb-3 last:border-0 last:pb-0">
+                                            <div className="text-[10px] font-black text-primary-600 uppercase tracking-wider mb-2">{group.zoneName}</div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {group.areas.map((area, aIdx) => (
+                                                    <span key={aIdx} className="bg-white border border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg shadow-sm">
+                                                        {area.name} ({area.pin})
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
@@ -641,6 +676,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     value={typeof formData.zoneId === 'object' ? (formData.zoneId?._id || "") : (formData.zoneId || "")}
                                     onChange={(e) => {
                                         setFormData({ ...formData, zoneId: e.target.value });
+                                        setSelectedDeliveryZoneFilter(e.target.value);
                                         setIsShopModified(true);
                                     }}
                                     className={inputStyle}
@@ -653,12 +689,28 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     ))}
                                 </select>
                             </div>
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                                 <label className={labelStyle}>Delivery Areas (Select Specific Areas) <span className="text-red-500">*</span></label>
+                                
+                                <div className="mb-3">
+                                    <select
+                                        value={selectedDeliveryZoneFilter}
+                                        onChange={(e) => setSelectedDeliveryZoneFilter(e.target.value)}
+                                        className={inputStyle}
+                                    >
+                                        <option value="" disabled>Select Zone to show delivery areas</option>
+                                        {zones.map((z) => (
+                                            <option key={`filter-${z._id}`} value={z._id}>
+                                                {z.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
                                 <div className={`${inputStyle} h-64 overflow-y-auto p-3 space-y-4 bg-gray-50/50`}>
-                                    {zones.filter((z) => String(z._id) === String(formData.zoneId?._id || formData.zoneId)).length > 0 ? (
+                                    {zones.filter((z) => String(z._id) === String(selectedDeliveryZoneFilter)).length > 0 ? (
                                         zones
-                                            .filter((z) => String(z._id) === String(formData.zoneId?._id || formData.zoneId))
+                                            .filter((z) => String(z._id) === String(selectedDeliveryZoneFilter))
                                             .map((z) => {
                                                 if (!z.pincodes || z.pincodes.length === 0) return null;
                                                 return (
@@ -732,7 +784,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                             })
                                     ) : (
                                         <div className="text-center text-gray-500 py-8 text-sm font-medium">
-                                            Please select a Shop Zone first.
+                                            Please select a Zone to show delivery areas.
                                         </div>
                                     )}
                                 </div>

@@ -28,7 +28,7 @@ const B2BProductDetail = () => {
     const [loading, setLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState(0);
     const [selectedMedia, setSelectedMedia] = useState('image'); // 'image' | 'video'
-    const [selectedSize, setSelectedSize] = useState(null);
+    const [selectedSizes, setSelectedSizes] = useState([]);
     const [selectedColor, setSelectedColor] = useState(null);
     const [selectedVariants, setSelectedVariants] = useState({});
     const videoRef = useRef(null);
@@ -45,12 +45,13 @@ const B2BProductDetail = () => {
     const handleQuantityChange = (type) => {
         const moq = Number(product?.moq || product?.minimumOrderQuantity || 1);
         const hasVariants = product?.variants && product.variants.length > 0;
+        const firstSelectedSize = selectedSizes[0] || null;
         const availableColors = hasVariants
-            ? Array.from(new Set(product.variants.filter(v => v.size === selectedSize).map(v => v.color).filter(Boolean)))
+            ? Array.from(new Set(product.variants.filter(v => v.size === firstSelectedSize).map(v => v.color).filter(Boolean)))
             : (product?.colors || []);
         const activeVariant = hasVariants
             ? product.variants.find(v => 
-                v.size === selectedSize && 
+                v.size === firstSelectedSize && 
                 (availableColors.length === 0 || v.color === selectedColor)
               )
             : null;
@@ -214,23 +215,23 @@ const B2BProductDetail = () => {
                 }
 
                 setProduct(productData);
-                 if (productData.variants && productData.variants.length > 0) {
-                     const uniqueSizes = Array.from(new Set(productData.variants.map(v => v.size).filter(Boolean)));
-                     if (uniqueSizes.length > 0) {
-                         setSelectedSize(uniqueSizes[0]);
-                         const uniqueColorsForSize = Array.from(new Set(productData.variants.filter(v => v.size === uniqueSizes[0]).map(v => v.color).filter(Boolean)));
-                         if (uniqueColorsForSize.length > 0) {
-                             setSelectedColor(uniqueColorsForSize[0]);
-                         }
-                     }
-                 } else {
-                     if (productData.sizes && productData.sizes.length > 0) {
-                        setSelectedSize(productData.sizes[0]);
-                     }
-                     if (productData.colors && productData.colors.length > 0) {
-                        setSelectedColor(productData.colors[0]);
-                     }
-                 }
+                  if (productData.variants && productData.variants.length > 0) {
+                      const uniqueSizes = Array.from(new Set(productData.variants.map(v => v.size).filter(Boolean)));
+                      if (uniqueSizes.length > 0) {
+                          setSelectedSizes([uniqueSizes[0]]);
+                          const uniqueColorsForSize = Array.from(new Set(productData.variants.filter(v => v.size === uniqueSizes[0]).map(v => v.color).filter(Boolean)));
+                          if (uniqueColorsForSize.length > 0) {
+                              setSelectedColor(uniqueColorsForSize[0]);
+                          }
+                      }
+                  } else {
+                      if (productData.sizes && productData.sizes.length > 0) {
+                         setSelectedSizes([productData.sizes[0]]);
+                      }
+                      if (productData.colors && productData.colors.length > 0) {
+                         setSelectedColor(productData.colors[0]);
+                      }
+                  }
                 
                 // Initialize selected variants for dynamic category multi-select fields
                 const initialVariants = {};
@@ -452,12 +453,12 @@ const B2BProductDetail = () => {
         : (product.sizes || []);
         
     const availableColors = hasVariants
-        ? Array.from(new Set(product.variants.filter(v => v.size === selectedSize).map(v => v.color).filter(Boolean)))
+        ? Array.from(new Set(product.variants.filter(v => selectedSizes.includes(v.size)).map(v => v.color).filter(Boolean)))
         : (product.colors || []);
 
     const activeVariant = hasVariants
         ? product.variants.find(v => 
-            v.size === selectedSize && 
+            selectedSizes.includes(v.size) && 
             (availableColors.length === 0 || v.color === selectedColor)
           )
         : null;
@@ -519,7 +520,7 @@ const B2BProductDetail = () => {
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                                         allowFullScreen
                                         className="w-full h-full"
-                                    ></iframe>
+                                    />
                                 ) : (
                                     <video 
                                         key={videoLink}
@@ -657,6 +658,19 @@ const B2BProductDetail = () => {
                             </span>
                         </div>
 
+                        <div className="flex items-center gap-2 mt-3 text-xs font-semibold text-gray-500">
+                            <span>Sold by:</span>
+                            <span className="text-gray-900 font-bold">{product.shopName || product.shopUnitId?.name || product.vendorId?.storeName || 'Verified Store'}</span>
+                            {(product.vendorId?._id || product.vendorId) && (
+                                <button
+                                    onClick={() => navigate(`/b2b/vendor/${product.vendorId?._id || product.vendorId}`)}
+                                    className="ml-2 px-2.5 py-1 bg-teal-50 border border-teal-200 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors font-bold text-[10px] uppercase tracking-wider"
+                                >
+                                    Visit Store
+                                </button>
+                            )}
+                        </div>
+
                         <div className="mt-6 flex items-baseline gap-2">
                             <span className="text-3xl md:text-4xl font-black text-slate-900">
                                 ₹{currentPrice}
@@ -692,7 +706,14 @@ const B2BProductDetail = () => {
                                          <button
                                              key={idx}
                                              onClick={() => {
-                                                 setSelectedSize(s);
+                                                 setSelectedSizes(prev => {
+                                                     if (prev.includes(s)) {
+                                                         if (prev.length === 1) return prev; // Keep at least one selected
+                                                         return prev.filter(item => item !== s);
+                                                     } else {
+                                                         return [...prev, s];
+                                                     }
+                                                 });
                                                  if (hasVariants) {
                                                      // Auto select first color for the newly selected size
                                                      const colorsForSize = Array.from(new Set(product.variants.filter(v => v.size === s).map(v => v.color).filter(Boolean)));
@@ -702,7 +723,7 @@ const B2BProductDetail = () => {
                                                  }
                                              }}
                                              className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
-                                                 selectedSize === s
+                                                 selectedSizes.includes(s)
                                                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
                                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                                              }`}
@@ -850,13 +871,19 @@ const B2BProductDetail = () => {
                         {/* Sticky Action Buttons */}
                         <div className="fixed bottom-[64px] left-0 right-0 px-4 py-3 bg-white border-t border-gray-100 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] md:static md:shadow-none md:border-none md:p-0 md:bg-transparent z-40 mt-8 grid grid-cols-2 gap-4">
                             <button
-                                onClick={() => {
+                                onClick={async () => {
                                     if (!isAuthenticated) {
                                         toast.error('Please login first');
                                         return navigate('/b2b/login');
                                     }
+                                    if (selectedSizes.length === 0) {
+                                        return toast.error('Please select at least one size');
+                                    }
                                     const selectedImgUrl = selectedMedia === 'image' ? (productImages[safeSelectedImage] || null) : null;
-                                    addToCart(product._id, quantity, selectedSize, selectedColor, selectedVariants, selectedImgUrl);
+                                    const promises = selectedSizes.map(size => 
+                                        addToCart(product._id, quantity, size, selectedColor, selectedVariants, selectedImgUrl)
+                                    );
+                                    await Promise.all(promises);
                                 }}
                                 className="bg-[#ff6b00] hover:bg-[#e66000] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
                             >
@@ -868,8 +895,13 @@ const B2BProductDetail = () => {
                                         toast.error('Please login first');
                                         return navigate('/b2b/login');
                                     }
+                                    if (selectedSizes.length === 0) {
+                                        return toast.error('Please select at least one size');
+                                    }
                                     const selectedImgUrl = selectedMedia === 'image' ? (productImages[safeSelectedImage] || null) : null;
-                                    await addToCart(product._id, quantity, selectedSize, selectedColor, selectedVariants, selectedImgUrl, true);
+                                    for (const size of selectedSizes) {
+                                        await addToCart(product._id, quantity, size, selectedColor, selectedVariants, selectedImgUrl, true);
+                                    }
                                     navigate('/b2b/checkout');
                                 }}
                                 className="bg-[#04439c] hover:bg-[#03367c] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"

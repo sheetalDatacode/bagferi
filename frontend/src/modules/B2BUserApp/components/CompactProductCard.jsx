@@ -22,7 +22,7 @@ const CompactProductCard = ({ product }) => {
     e.stopPropagation();
     try {
       setIsAdding(true);
-      await addToCart(product._id, product.stock || 1, product.vendorId || product.vendor?._id);
+      await addToCart(product._id, 1);
       toast.success('Added to cart');
     } catch (error) {
       toast.error('Failed to add to cart');

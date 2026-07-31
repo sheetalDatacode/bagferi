@@ -139,7 +139,7 @@ const Wishlist = () => {
                                         
                                         <button 
                                             onClick={() => {
-                                                addToCart(product, 1);
+                                                addToCart(product._id, 1);
                                                 toast.success('Added to Cart');
                                             }}
                                             className="w-full py-2 bg-teal-50 text-teal-700 hover:bg-teal-600 hover:text-white rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2"

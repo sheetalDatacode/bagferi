@@ -54,14 +54,25 @@ const B2BVendorStore = () => {
     const [viewMode, setViewMode] = useState("grid");
     const [sortBy, setSortBy] = useState("popular");
     const [searchQuery, setSearchQuery] = useState("");
-    // Tabs: "main" (products or properties) and "reels"
-    const [activeTab, setActiveTab] = useState("main");
+    
+    // Tabs: "fashion", "grocery", "reels", "properties"
+    const [activeTab, setActiveTab] = useState("fashion");
     const [reelCategoryFilter, setReelCategoryFilter] = useState("");
     const [categorySearch, setCategorySearch] = useState("");
     const [debouncedCategorySearch, setDebouncedCategorySearch] = useState("");
     const { categories: allCategories, initialize: fetchB2BCategories } = useB2BCategoryStore();
     const [isReelCategoryDropdownOpen, setIsReelCategoryDropdownOpen] = useState(false);
     const reelCategoryDropdownRef = useRef(null);
+
+    // Grocery specific states
+    const [groceryCategories, setGroceryCategories] = useState([]);
+    const [groceryProducts, setGroceryProducts] = useState([]);
+    const [selectedGroceryCategory, setSelectedGroceryCategory] = useState(null);
+    const [selectedGrocerySubcategory, setSelectedGrocerySubcategory] = useState(null);
+
+    // Fashion specific states
+    const [selectedFashionCategory, setSelectedFashionCategory] = useState(null);
+    const [selectedFashionSubcategory, setSelectedFashionSubcategory] = useState(null);
 
     // Click outside handler for category dropdown
     useEffect(() => {
@@ -95,13 +106,35 @@ const B2BVendorStore = () => {
         fetchB2BCategories();
     }, [fetchB2BCategories]);
 
+    // Setup category selections
+    useEffect(() => {
+        if (allCategories.length > 0 && !selectedFashionCategory) {
+            setSelectedFashionCategory(allCategories[0]._id || allCategories[0].id);
+        }
+    }, [allCategories, selectedFashionCategory]);
+
+    useEffect(() => {
+        if (groceryCategories.length > 0 && !selectedGroceryCategory) {
+            setSelectedGroceryCategory(groceryCategories[0]._id || groceryCategories[0].id);
+        }
+    }, [groceryCategories, selectedGroceryCategory]);
+
+    const handleFashionCategoryChange = (catId) => {
+        setSelectedFashionCategory(catId);
+        setSelectedFashionSubcategory(null);
+    };
+
+    const handleGroceryCategoryChange = (catId) => {
+        setSelectedGroceryCategory(catId);
+        setSelectedGrocerySubcategory(null);
+    };
+
     // Fetch vendor details and products
     useEffect(() => {
         const fetchVendorData = async () => {
             setLoading(true);
             try {
-
-                const [vendorRes, productsRes, propertiesRes, reelsRes, ratingSummaryRes] = await Promise.all([
+                const [vendorRes, productsRes, propertiesRes, reelsRes, ratingSummaryRes, groceryCatsRes, groceryProductsRes] = await Promise.all([
                     api.get(`/vendors/${id}`, { silent: true }),
                     api.get(`/products`, {
                         params: {
@@ -129,6 +162,17 @@ const B2BVendorStore = () => {
                     getRatingSummary('shop', id).catch(err => {
                         console.warn("Failed to fetch rating summary:", err);
                         return { averageRating: 0, ratingCount: 0 };
+                    }),
+                    api.get('/grocery/categories', { silent: true }).catch(err => {
+                        console.warn("Failed to fetch grocery categories:", err);
+                        return { success: true, data: [] };
+                    }),
+                    api.get(`/grocery/products`, {
+                        params: { vendorId: id, limit: 100 },
+                        silent: true
+                    }).catch(err => {
+                        console.warn("Failed to fetch grocery products:", err);
+                        return { success: true, data: [] };
                     })
                 ]);
 
@@ -159,6 +203,32 @@ const B2BVendorStore = () => {
                 if (ratingSummaryRes) {
                     setRatingSummary(ratingSummaryRes);
                 }
+
+                // Process grocery categories
+                if (groceryCatsRes?.success) {
+                    setGroceryCategories(groceryCatsRes.data || []);
+                }
+
+                // Process grocery products
+                if (groceryProductsRes?.success) {
+                    const gList = Array.isArray(groceryProductsRes.data)
+                        ? groceryProductsRes.data
+                        : (groceryProductsRes.data.products || []);
+                    setGroceryProducts(gList);
+                }
+
+                // Set default active tab
+                const hasFashion = productsRes?.success && (Array.isArray(productsRes.data) ? productsRes.data.length > 0 : (productsRes.data.products?.length > 0));
+                const hasGrocery = groceryProductsRes?.success && (Array.isArray(groceryProductsRes.data) ? groceryProductsRes.data.length > 0 : (groceryProductsRes.data.products?.length > 0));
+                
+                if (hasGrocery && !hasFashion) {
+                    setActiveTab("grocery");
+                } else if (propertiesRes?.success && propertiesRes.data.length > 0 && !hasFashion && !hasGrocery) {
+                    setActiveTab("properties");
+                } else {
+                    setActiveTab("fashion");
+                }
+
             } catch (error) {
                 console.error("Error fetching vendor store data:", error);
                 toast.error("Failed to load store details");
@@ -258,9 +328,16 @@ const B2BVendorStore = () => {
         return productListing;
     }, [products, vendor]);
 
-    // Filter and sort products
-    const filteredProducts = useMemo(() => {
+    // Filter and sort products (Fashion)
+    const displayedFashionProducts = useMemo(() => {
         let filtered = [...products];
+
+        if (selectedFashionCategory) {
+            filtered = filtered.filter(p => String(p.category?._id || p.category) === String(selectedFashionCategory));
+        }
+        if (selectedFashionSubcategory) {
+            filtered = filtered.filter(p => String(p.subcategory?._id || p.subcategory) === String(selectedFashionSubcategory));
+        }
 
         if (searchQuery) {
             const q = searchQuery.trim().toLowerCase();
@@ -288,7 +365,40 @@ const B2BVendorStore = () => {
         }
 
         return filtered;
-    }, [products, searchQuery, sortBy]);
+    }, [products, selectedFashionCategory, selectedFashionSubcategory, searchQuery, sortBy]);
+
+    // Filter and sort products (Grocery)
+    const displayedGroceryProducts = useMemo(() => {
+        let filtered = [...groceryProducts];
+
+        if (selectedGroceryCategory) {
+            filtered = filtered.filter(p => String(p.category?._id || p.category) === String(selectedGroceryCategory));
+        }
+        if (selectedGrocerySubcategory) {
+            filtered = filtered.filter(p => String(p.subcategory?._id || p.subcategory) === String(selectedGrocerySubcategory));
+        }
+
+        if (searchQuery) {
+            const q = searchQuery.trim().toLowerCase();
+            filtered = filtered.filter(p => (p.name || '').toLowerCase().startsWith(q));
+        }
+
+        switch (sortBy) {
+            case "price-low":
+                filtered.sort((a, b) => a.price - b.price);
+                break;
+            case "price-high":
+                filtered.sort((a, b) => b.price - a.price);
+                break;
+            case "newest":
+                filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                break;
+            default:
+            // popular/default
+        }
+
+        return filtered;
+    }, [groceryProducts, selectedGroceryCategory, selectedGrocerySubcategory, searchQuery, sortBy]);
 
     // Filter properties within this vendor store
     const filteredProperties = useMemo(() => {
@@ -388,7 +498,7 @@ const B2BVendorStore = () => {
         );
     }
 
-    const hasProducts = filteredProducts.length > 0;
+    const hasProducts = products.length > 0 || groceryProducts.length > 0;
     const hasProperties = filteredProperties.length > 0;
     const hasReels = reels.length > 0;
 
@@ -481,11 +591,34 @@ const B2BVendorStore = () => {
                                             ].filter(part => part && String(part).trim()).join(', ')}
                                         </p>
                                     </div>
-                                    <div className="flex items-center gap-3 mt-3">
+                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-3">
                                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100 shadow-sm">
                                             <StarRating rating={ratingSummary.averageRating} size={14} />
                                             <span className="text-[11px] font-black text-gray-900">{ratingSummary.averageRating.toFixed(1)}</span>
                                             <span className="text-[9px] font-bold text-gray-400">({ratingSummary.ratingCount})</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleToggleFollow}
+                                            disabled={followingLoading}
+                                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${
+                                                isFollowing
+                                                    ? 'bg-green-50 border border-green-200 text-green-700 hover:bg-green-100'
+                                                    : 'bg-primary-600 text-white hover:bg-primary-700'
+                                            }`}
+                                        >
+                                            {followingLoading ? (
+                                                <FiLoader className="animate-spin text-sm" />
+                                            ) : isFollowing ? (
+                                                <FiUserCheck className="text-sm" />
+                                            ) : (
+                                                <FiUserPlus className="text-sm" />
+                                            )}
+                                            <span>{isFollowing ? 'Following' : 'Follow'}</span>
+                                        </button>
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100 shadow-sm text-[10px] font-bold text-gray-500">
+                                            <FiUsers size={14} className="text-gray-400" />
+                                            <span>{followerCount} Followers</span>
                                         </div>
                                     </div>
                                 </div>
@@ -607,18 +740,26 @@ const B2BVendorStore = () => {
                 <div className="sticky top-16 md:top-20 z-[100] bg-gray-50/95 backdrop-blur-sm -mx-4 px-4 py-4 border-b border-gray-100 shadow-sm">
                     {/* Tabs Buttons */}
                     <div className="mb-4 flex gap-2 overflow-x-auto no-scrollbar pb-2">
-                        {(hasProducts || hasProperties) && (
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab("main")}
-                                className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[0.2em] border transition-all ${activeTab === "main"
-                                        ? "bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-100"
-                                        : "bg-white text-gray-600 border-gray-200"
-                                    }`}
-                            >
-                                {mainTabLabel}
-                            </button>
-                        )}
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("fashion")}
+                            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[0.2em] border transition-all ${activeTab === "fashion"
+                                    ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-100"
+                                    : "bg-white text-gray-600 border-gray-200"
+                                }`}
+                        >
+                            Fashion
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("grocery")}
+                            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[0.2em] border transition-all ${activeTab === "grocery"
+                                    ? "bg-green-600 text-white border-green-600 shadow-lg shadow-green-100"
+                                    : "bg-white text-gray-600 border-gray-200"
+                                }`}
+                        >
+                            Grocery
+                        </button>
                         {hasReels && (
                             <button
                                 type="button"
@@ -629,6 +770,18 @@ const B2BVendorStore = () => {
                                     }`}
                             >
                                 Reels
+                            </button>
+                        )}
+                        {hasProperties && (
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab("properties")}
+                                className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[0.2em] border transition-all ${activeTab === "properties"
+                                        ? "bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-100"
+                                        : "bg-white text-gray-600 border-gray-200"
+                                    }`}
+                            >
+                                Properties
                             </button>
                         )}
                     </div>
@@ -717,8 +870,8 @@ const B2BVendorStore = () => {
                         </div>
                     )}
 
-                    {/* Main Tab Controls */}
-                    {activeTab === "main" && (
+                    {/* Main Tab Controls for Fashion, Grocery, Properties */}
+                    {(activeTab === "fashion" || activeTab === "grocery" || activeTab === "properties") && (
                         <div className="flex flex-col md:flex-row items-center gap-4 w-full">
                             <div className="relative w-full md:w-64">
                                 <input
@@ -767,39 +920,92 @@ const B2BVendorStore = () => {
                     )}
                 </div>
 
-                {/* Main Content only when main tab is active */}
-                {activeTab === "main" && (
-                    <div className="mt-8">
-                        <div className="flex items-center gap-3 mb-8">
-                            <span className="w-10 h-[2px] bg-primary-600 rounded-full"></span>
-                            <h2 className="text-lg md:text-xl font-black text-gray-800 tracking-tight uppercase">
-                                Current <span className="text-primary-600">Inventory</span>
-                            </h2>
+                {/* Fashion Tab Content */}
+                {activeTab === "fashion" && (
+                    <div className="mt-8 flex gap-6 min-h-[500px]">
+                        {/* Left Categories Sidebar */}
+                        <div className="w-[90px] md:w-36 bg-white flex flex-col overflow-y-auto no-scrollbar border border-gray-100 rounded-3xl p-2 shrink-0">
+                            {allCategories?.map((cat) => {
+                                const catId = cat._id || cat.id;
+                                const isSelected = String(selectedFashionCategory) === String(catId);
+                                return (
+                                    <button
+                                        key={catId}
+                                        onClick={() => handleFashionCategoryChange(catId)}
+                                        className={`flex flex-col items-center justify-center p-3 gap-1.5 transition-all rounded-2xl mb-2 relative
+                                            ${isSelected ? 'bg-purple-50/50 border-l-4 border-purple-600' : 'border-l-4 border-transparent hover:bg-gray-50'}`}
+                                    >
+                                        <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex items-center justify-center
+                                            ${isSelected ? 'ring-2 ring-purple-100 shadow-sm' : 'bg-gray-100'}`}>
+                                            {cat.image ? (
+                                                <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <FiShoppingBag className="text-gray-400 text-xl" />
+                                            )}
+                                        </div>
+                                        <span className={`text-[10px] md:text-[11px] font-bold text-center leading-tight
+                                            ${isSelected ? 'text-purple-700' : 'text-gray-600'}`}>
+                                            {cat.name}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                         </div>
 
-                        {/* Main tab: Products or Properties (depending on vendor) */}
-                        {(!hasProducts && !hasProperties) ? (
-                            <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 shadow-inner">
-                                <FiShoppingBag className="text-6xl text-gray-200 mx-auto mb-6" />
-                                <h3 className="text-xl font-bold text-gray-800">No listings yet</h3>
-                                <p className="text-gray-400 mt-2">This vendor has not added any items yet.</p>
-                            </div>
-                        ) : (
-                            <>
-                                {/* If main tab is Products */}
-                                {!isPropertyVendor && (
-                                    products.length === 0 ? (
-                                        <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 shadow-inner">
-                                            <FiShoppingBag className="text-6xl text-gray-200 mx-auto mb-6" />
-                                            <h3 className="text-xl font-bold text-gray-800">No products match your criteria</h3>
-                                            <p className="text-gray-400 mt-2">Try adjusting your filters or search terms.</p>
+                        {/* Right Content panel */}
+                        <div className="flex-1 bg-white border border-gray-100 rounded-3xl p-6 overflow-y-auto">
+                            {selectedFashionCategory ? (
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight mb-4">
+                                        {allCategories.find(c => String(c._id || c.id) === String(selectedFashionCategory))?.name}
+                                    </h3>
+                                    
+                                    {/* Subcategories horizontal list */}
+                                    {allCategories.find(c => String(c._id || c.id) === String(selectedFashionCategory))?.subcategories?.length > 0 && (
+                                        <div className="flex flex-wrap gap-4 pb-4 mb-6 border-b border-gray-100">
+                                            <button
+                                                onClick={() => setSelectedFashionSubcategory(null)}
+                                                className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                                                    !selectedFashionSubcategory
+                                                        ? 'bg-purple-600 text-white border-purple-600'
+                                                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                Shop All
+                                            </button>
+                                            {allCategories.find(c => String(c._id || c.id) === String(selectedFashionCategory))?.subcategories.map((sub, idx) => {
+                                                const subId = sub._id || sub.id || sub;
+                                                const subName = sub.name || sub;
+                                                const isSelected = String(selectedFashionSubcategory) === String(subId);
+                                                return (
+                                                    <button
+                                                        key={subId || idx}
+                                                        onClick={() => setSelectedFashionSubcategory(subId)}
+                                                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                                                            isSelected
+                                                                ? 'bg-purple-600 text-white border-purple-600'
+                                                                : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                                                        }`}
+                                                    >
+                                                        {subName}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {/* Products Grid */}
+                                    {displayedFashionProducts.length === 0 ? (
+                                        <div className="text-center py-20">
+                                            <FiShoppingBag className="text-5xl text-gray-200 mx-auto mb-4" />
+                                            <p className="text-gray-400 font-bold text-sm uppercase">No fashion products listed in this category</p>
                                         </div>
                                     ) : (
                                         <div className={viewMode === "grid"
-                                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-12"
-                                            : "space-y-6 mb-12"
+                                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                                            : "space-y-4"
                                         }>
-                                            {filteredProducts.map((product) => (
+                                            {displayedFashionProducts.map((product) => (
                                                 <B2BProductCard
                                                     key={product._id}
                                                     product={product}
@@ -808,31 +1014,153 @@ const B2BVendorStore = () => {
                                                 />
                                             ))}
                                         </div>
-                                    )
-                                )}
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-20">
+                                    <FiShoppingBag className="text-5xl text-gray-200 mx-auto mb-4" />
+                                    <p className="text-gray-400 font-bold text-sm uppercase">Select a category to view products</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
-                                {/* If main tab is Properties */}
-                                {isPropertyVendor && (
-                                    properties.length === 0 ? (
-                                        <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 shadow-inner">
-                                            <FiShoppingBag className="text-6xl text-gray-200 mx-auto mb-6" />
-                                            <h3 className="text-xl font-bold text-gray-800">No properties listed yet</h3>
+                {/* Grocery Tab Content */}
+                {activeTab === "grocery" && (
+                    <div className="mt-8 flex gap-6 min-h-[500px]">
+                        {/* Left Categories Sidebar */}
+                        <div className="w-[90px] md:w-36 bg-white flex flex-col overflow-y-auto no-scrollbar border border-gray-100 rounded-3xl p-2 shrink-0">
+                            {groceryCategories?.map((cat) => {
+                                const catId = cat._id || cat.id;
+                                const isSelected = String(selectedGroceryCategory) === String(catId);
+                                return (
+                                    <button
+                                        key={catId}
+                                        onClick={() => handleGroceryCategoryChange(catId)}
+                                        className={`flex flex-col items-center justify-center p-3 gap-1.5 transition-all rounded-2xl mb-2 relative
+                                            ${isSelected ? 'bg-green-50/50 border-l-4 border-green-600' : 'border-l-4 border-transparent hover:bg-gray-50'}`}
+                                    >
+                                        <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex items-center justify-center
+                                            ${isSelected ? 'ring-2 ring-green-100 shadow-sm' : 'bg-gray-100'}`}>
+                                            {cat.image ? (
+                                                <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <FiShoppingBag className="text-gray-400 text-xl" />
+                                            )}
+                                        </div>
+                                        <span className={`text-[10px] md:text-[11px] font-bold text-center leading-tight
+                                            ${isSelected ? 'text-green-700' : 'text-gray-600'}`}>
+                                            {cat.name}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                            {groceryCategories.length === 0 && (
+                                <div className="text-center py-8">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase">No Grocery Categories</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right Content panel */}
+                        <div className="flex-1 bg-white border border-gray-100 rounded-3xl p-6 overflow-y-auto">
+                            {selectedGroceryCategory ? (
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight mb-4">
+                                        {groceryCategories.find(c => String(c._id || c.id) === String(selectedGroceryCategory))?.name}
+                                    </h3>
+                                    
+                                    {/* Subcategories horizontal list */}
+                                    {groceryCategories.find(c => String(c._id || c.id) === String(selectedGroceryCategory))?.subcategories?.length > 0 && (
+                                        <div className="flex flex-wrap gap-4 pb-4 mb-6 border-b border-gray-100">
+                                            <button
+                                                onClick={() => setSelectedGrocerySubcategory(null)}
+                                                className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                                                    !selectedGrocerySubcategory
+                                                        ? 'bg-green-600 text-white border-green-600'
+                                                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                Shop All
+                                            </button>
+                                            {groceryCategories.find(c => String(c._id || c.id) === String(selectedGroceryCategory))?.subcategories.map((sub, idx) => {
+                                                const subId = sub._id || sub.id || sub;
+                                                const subName = sub.name || sub;
+                                                const isSelected = String(selectedGrocerySubcategory) === String(subId);
+                                                return (
+                                                    <button
+                                                        key={subId || idx}
+                                                        onClick={() => setSelectedGrocerySubcategory(subId)}
+                                                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                                                            isSelected
+                                                                ? 'bg-green-600 text-white border-green-600'
+                                                                : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                                                        }`}
+                                                    >
+                                                        {subName}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {/* Products Grid */}
+                                    {displayedGroceryProducts.length === 0 ? (
+                                        <div className="text-center py-20">
+                                            <FiShoppingBag className="text-5xl text-gray-200 mx-auto mb-4" />
+                                            <p className="text-gray-400 font-bold text-sm uppercase">No grocery products listed in this category</p>
                                         </div>
                                     ) : (
-                                        <div
-                                            className={
-                                                viewMode === "grid"
-                                                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
-                                                    : "space-y-6"
-                                            }
-                                        >
-                                            {filteredProperties.map((property) => (
-                                                <RealEstateCard key={property._id} property={property} />
+                                        <div className={viewMode === "grid"
+                                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                                            : "space-y-4"
+                                        }>
+                                            {displayedGroceryProducts.map((product) => (
+                                                <B2BProductCard
+                                                    key={product._id}
+                                                    product={product}
+                                                    viewMode={viewMode}
+                                                    trackContactClick={trackContactClick}
+                                                />
                                             ))}
                                         </div>
-                                    )
-                                )}
-                            </>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-20">
+                                    <FiShoppingBag className="text-5xl text-gray-200 mx-auto mb-4" />
+                                    <p className="text-gray-400 font-bold text-sm uppercase">Select a category to view products</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Properties Tab Content */}
+                {activeTab === "properties" && (
+                    <div className="mt-8">
+                        <div className="flex items-center gap-3 mb-8">
+                            <span className="w-10 h-[2px] bg-primary-600 rounded-full"></span>
+                            <h2 className="text-lg md:text-xl font-black text-gray-800 tracking-tight uppercase">
+                                Listed <span className="text-primary-600">Properties</span>
+                            </h2>
+                        </div>
+
+                        {filteredProperties.length === 0 ? (
+                            <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 shadow-inner">
+                                <FiShoppingBag className="text-6xl text-gray-200 mx-auto mb-6" />
+                                <h3 className="text-xl font-bold text-gray-800">No properties listed yet</h3>
+                            </div>
+                        ) : (
+                            <div className={viewMode === "grid"
+                                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+                                : "space-y-6"
+                            }>
+                                {filteredProperties.map((property) => (
+                                    <RealEstateCard key={property._id} property={property} />
+                                ))}
+                            </div>
                         )}
                     </div>
                 )}

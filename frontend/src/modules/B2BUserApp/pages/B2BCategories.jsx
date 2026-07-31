@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FiSearch, FiHeart, FiShoppingCart, FiArrowLeft } from 'react-icons/fi';
+import { FiSearch, FiHeart, FiShoppingCart, FiArrowLeft, FiShoppingBag } from 'react-icons/fi';
 import { useB2BCategoryStore } from '../../../shared/store/b2bCategoryStore';
 import B2BBottomNav from '../components/Layout/B2BBottomNav';
+import B2BProductCard from '../components/B2BProductCard';
+import api from '../../../shared/utils/api';
 
 const B2BCategories = () => {
     const navigate = useNavigate();
@@ -10,6 +12,36 @@ const B2BCategories = () => {
     const [searchParams] = useSearchParams();
     const [selectedRootId, setSelectedRootId] = useState(null);
     const [selectedSubcategory, setSelectedSubcategory] = useState(null);
+    const [products, setProducts] = useState([]);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            if (!selectedRootId) return;
+            setLoadingProducts(true);
+            try {
+                const params = {
+                    categoryId: selectedRootId,
+                    limit: 40,
+                    vendorType: 'b2b',
+                    itemType: 'product'
+                };
+                if (selectedSubcategory) {
+                    params.subcategoryId = selectedSubcategory._id || selectedSubcategory.id;
+                }
+                const res = await api.get('/products', { params, silent: true });
+                if (res.success) {
+                    const list = Array.isArray(res.data) ? res.data : (res.data.products || []);
+                    setProducts(list);
+                }
+            } catch (err) {
+                console.error("Error fetching products in categories view:", err);
+            } finally {
+                setLoadingProducts(false);
+            }
+        };
+        fetchProducts();
+    }, [selectedRootId, selectedSubcategory]);
 
     useEffect(() => {
         initialize();
@@ -191,6 +223,31 @@ const B2BCategories = () => {
                                     </div>
                                 </div>
                             )}
+                            {/* Products Section */}
+                            <div className="mt-8 pt-6 border-t border-gray-100">
+                                <h3 className="text-sm md:text-base font-extrabold text-gray-800 mb-4 uppercase tracking-wider">
+                                    Products in {selectedSubcategory ? selectedSubcategory.name : selectedRoot.name}
+                                </h3>
+                                {loadingProducts ? (
+                                    <div className="flex justify-center py-10">
+                                        <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+                                    </div>
+                                ) : products.length === 0 ? (
+                                    <div className="text-center py-10 text-gray-400 font-bold uppercase tracking-wider text-xs">
+                                        No products found in this category
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                        {products.map((product) => (
+                                            <B2BProductCard
+                                                key={product._id}
+                                                product={product}
+                                                viewMode="grid"
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-full">
