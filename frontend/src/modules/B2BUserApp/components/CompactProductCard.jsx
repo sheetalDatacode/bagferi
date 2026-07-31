@@ -71,6 +71,13 @@ const CompactProductCard = ({ product }) => {
           </div>
         )}
         
+        {/* Dynamic Discount Badge - Top Left */}
+        {product.mrp && product.mrp > product.price && (
+          <div className="absolute top-0 left-0 bg-[#e67e22] text-white text-[11px] font-black px-2.5 py-1 rounded-br-lg shadow-sm tracking-wide z-10">
+            ₹{product.mrp - product.price} OFF
+          </div>
+        )}
+        
         {/* Wishlist Icon - Top Right */}
         <button 
           onClick={handleWishlist} 
@@ -108,10 +115,24 @@ const CompactProductCard = ({ product }) => {
           {product.name || product.title}
         </h3>
         
-        <p className="text-[10px] text-gray-500 mb-2 truncate">
-          {product.shopName || product.shopUnit?.name || product.vendorId?.storeName || product.vendor?.businessName || 'Vendor'}
-        </p>
-
+        <div className="flex items-center justify-between gap-1 mb-2">
+          <p className="text-[10px] text-gray-500 truncate flex-1">
+            {product.shopName || product.shopUnit?.name || product.vendorId?.storeName || product.vendor?.businessName || 'Vendor'}
+          </p>
+          {(product.vendorId?._id || product.vendorId) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const vid = product.vendorId?._id || product.vendorId;
+                navigate(`/b2b/vendor/${vid}`);
+              }}
+              className="text-[9px] font-bold text-primary-600 bg-primary-50 hover:bg-primary-100 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
+            >
+              Visit Store
+            </button>
+          )}
+        </div>
+ 
         {/* Price & Add to Cart Row */}
         <div className="flex items-center justify-between mt-auto pt-1">
             <div className="flex flex-col">
@@ -121,12 +142,6 @@ const CompactProductCard = ({ product }) => {
                 )}
                 <span className="font-black text-gray-900 text-sm leading-none">₹{product.price}</span>
               </div>
-              {/* Offer Text */}
-              {discountPercent > 0 && (
-                <span className="text-[9px] font-medium text-blue-500 mt-0.5 block">
-                  ₹{Math.floor(product.price * 0.9)} with UPI offer
-                </span>
-              )}
             </div>
 
             {/* ADD Button */}

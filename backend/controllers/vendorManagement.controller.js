@@ -11,6 +11,7 @@ import {
 } from '../services/vendorManagement.service.js';
 import notificationService from '../services/notification.service.js';
 import { sendVendorApprovalEmail, sendVendorRejectionEmail } from '../services/email.service.js';
+import { sendNotificationToVendor } from '../utils/pushNotificationHelper.js';
 
 
 import redisService from '../services/redis.service.js';
@@ -136,7 +137,7 @@ export const updateStatus = async (req, res, next) => {
       const dashboardUrl = isB2B ? '/b2b-vendor/dashboard' : '/vendor/dashboard';
       const profileUrl = isB2B ? '/b2b-vendor/profile' : '/vendor/profile';
 
-      await notificationService.createNotification({
+       await notificationService.createNotification({
         recipientId: id,
         recipientType: 'vendor',
         type: 'system',
@@ -144,6 +145,21 @@ export const updateStatus = async (req, res, next) => {
         message: message,
         actionUrl: status === 'approved' ? dashboardUrl : profileUrl,
       }, req.app.get('io'));
+
+      try {
+        await sendNotificationToVendor(id, {
+          notification: {
+            title: title,
+            body: message,
+          },
+          data: {
+            type: 'system',
+            actionUrl: status === 'approved' ? dashboardUrl : profileUrl,
+          }
+        });
+      } catch (fcmError) {
+        console.error('Failed to send vendor FCM status notification:', fcmError);
+      }
     } catch (notifError) {
       console.error('Failed to send vendor status notification:', notifError);
     }

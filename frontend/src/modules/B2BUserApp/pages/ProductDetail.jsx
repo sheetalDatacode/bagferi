@@ -41,6 +41,16 @@ const B2BProductDetail = () => {
         }
     }, [selectedMedia]);
     const [quantity, setQuantity] = useState(1);
+
+    const handleQuantityChange = (type) => {
+        const moq = Number(product?.moq || product?.minimumOrderQuantity || 1);
+        if (type === 'inc' && quantity < (product?.stockQuantity || 999)) {
+            setQuantity(prev => prev + 1);
+        } else if (type === 'dec' && quantity > moq) {
+            setQuantity(prev => prev - 1);
+        }
+    };
+
     const [showInquiryModal, setShowInquiryModal] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [inquiryAttachment, setInquiryAttachment] = useState(null);
@@ -754,6 +764,33 @@ const B2BProductDetail = () => {
                             <span className="text-slate-500">Deliver in</span>
                             <span className="text-teal-600 font-bold">4 hours</span>
                             <span className="text-slate-400">to default</span>
+                        </div>
+
+                        {/* Quantity Selector */}
+                        <div className="flex items-center gap-4 mt-6">
+                            <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">Quantity:</span>
+                            <div className="flex items-center bg-gray-100 rounded-xl p-1 border border-gray-200">
+                                <button 
+                                    onClick={() => handleQuantityChange('dec')}
+                                    disabled={quantity <= (product.moq || product.minimumOrderQuantity || 1)}
+                                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
+                                >
+                                    <FiMinus />
+                                </button>
+                                <input 
+                                    type="number" 
+                                    value={quantity}
+                                    readOnly
+                                    className="w-12 h-10 bg-transparent text-center font-black text-gray-900 outline-none"
+                                />
+                                <button 
+                                    onClick={() => handleQuantityChange('inc')}
+                                    disabled={quantity >= (product.stockQuantity || 999)}
+                                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
+                                >
+                                    <FiPlus />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Sticky Action Buttons */}

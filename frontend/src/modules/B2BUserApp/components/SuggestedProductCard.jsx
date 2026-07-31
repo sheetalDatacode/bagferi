@@ -148,6 +148,13 @@ const SuggestedProductCard = ({ product, linkPrefix = '/b2b/product/' }) => {
                     />
                 )}
                 
+                {/* Dynamic Discount Badge - Top Left */}
+                {mrp && mrp > price && (
+                    <div className="absolute top-0 left-0 bg-[#e67e22] text-white text-[11px] font-black px-2.5 py-1 rounded-br-lg shadow-sm tracking-wide z-10">
+                        ₹{mrp - price} OFF
+                    </div>
+                )}
+                
                 {/* Rating Badge Overlay */}
                 {ratingSummary.averageRating > 0 && (
                     <div className="absolute bottom-2 left-2 bg-white px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
@@ -167,15 +174,26 @@ const SuggestedProductCard = ({ product, linkPrefix = '/b2b/product/' }) => {
 
             <Link to={`${linkPrefix}${product?._id}`} className="px-1 flex-1 flex flex-col">
                 <h3 className="font-bold text-slate-900 text-sm line-clamp-2 min-h-[40px]">{name}</h3>
-                <p className="text-[10px] text-gray-500 lowercase truncate mb-1">{storeName}</p>
-                
-                <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-gray-400 line-through">{formatPrice(mrp)}</span>
-                    <span className="text-sm font-black text-slate-900">{formatPrice(price)}</span>
+                <div className="flex items-center justify-between gap-1 mb-1.5">
+                    <p className="text-[10px] text-gray-500 truncate flex-1">{storeName}</p>
+                    {(product?.vendorId?._id || product?.vendorId) && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                const vid = product.vendorId?._id || product.vendorId;
+                                navigate(`/b2b/vendor/${vid}`);
+                            }}
+                            className="text-[9px] font-bold text-primary-600 bg-primary-50 hover:bg-primary-100 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
+                        >
+                            Visit Store
+                        </button>
+                    )}
                 </div>
                 
-                <div className="text-[11px] font-bold text-blue-600 truncate mb-2">
-                    {formatPrice(upiPrice)} <span className="font-medium text-blue-500">with UPI offer</span>
+                <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs text-gray-400 line-through">{formatPrice(mrp)}</span>
+                    <span className="text-sm font-black text-slate-900">{formatPrice(price)}</span>
                 </div>
             </Link>
 

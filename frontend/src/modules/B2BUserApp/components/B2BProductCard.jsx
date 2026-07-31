@@ -166,6 +166,12 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
             <div
                 className={`relative ${viewMode === 'grid' ? 'aspect-square w-full' : 'w-48 h-48 flex-shrink-0 rounded-xl'} overflow-hidden bg-gray-50 border-b border-gray-50 group/image`}
             >
+                {/* Dynamic Discount Badge - Top Left */}
+                {product.mrp && product.mrp > product.price && (
+                    <div className="absolute top-0 left-0 bg-[#e67e22] text-white text-[11px] font-black px-2.5 py-1 rounded-br-lg shadow-sm tracking-wide z-20">
+                        ₹{product.mrp - product.price} OFF
+                    </div>
+                )}
                 {/* Images */}
                 {allImages.length > 0 ? (
                     allImages.map((img, idx) => (
@@ -269,9 +275,22 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
                         ? (product.items[0].itemName || product.items[0].name || 'Item')
                         : product.name}
                 </h3>
-                <p className="text-[10px] text-gray-500 lowercase truncate">
-                    {shopDisplayName}
-                </p>
+                <div className="flex items-center justify-between gap-1 mb-0.5">
+                    <p className="text-[10px] text-gray-500 truncate flex-1">
+                        {shopDisplayName}
+                    </p>
+                    {vendorIdStr && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/b2b/vendor/${vendorIdStr}`);
+                            }}
+                            className="text-[9px] font-bold text-primary-600 bg-primary-50 hover:bg-primary-100 px-1.5 py-0.5 rounded transition-colors whitespace-nowrap"
+                        >
+                            Visit Store
+                        </button>
+                    )}
+                </div>
                 
                 <div className="flex items-baseline gap-1 mt-0.5">
                     <span className="text-lg font-bold text-gray-900">

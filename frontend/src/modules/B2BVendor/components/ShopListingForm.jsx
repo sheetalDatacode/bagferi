@@ -29,8 +29,8 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                     accountDetails: parsed.accountDetails || { accountNumber: "", ifscCode: "", bankName: "", accountHolderName: "" },
                     deliveryZones: parsed.deliveryZones || [],
                     mapUrl: parsed.mapUrl || "",
-                    minPrice: parsed.minPrice || "",
-                    maxPrice: parsed.maxPrice || "",
+                    minPrice: parsed.minPrice || "0",
+                    maxPrice: parsed.maxPrice || "0",
                     zoneId: parsed.zoneId || "",
                     images: parsed.images || [],
                     details: parsed.details?.length > 0 ? parsed.details : [{ name: "", post: "", mobile: "" }],
@@ -47,8 +47,8 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             accountDetails: { accountNumber: "", ifscCode: "", bankName: "", accountHolderName: "" },
             deliveryZones: [],
             mapUrl: "",
-            minPrice: "",
-            maxPrice: "",
+            minPrice: "0",
+            maxPrice: "0",
             zoneId: "",
             images: [],
             details: [{ name: "", post: "", mobile: "" }],
@@ -77,6 +77,12 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
         };
         fetchZones();
     }, []);
+
+    useEffect(() => {
+        if (zones.length > 0 && !formData.zoneId) {
+            setFormData(prev => ({ ...prev, zoneId: zones[0]._id }));
+        }
+    }, [zones, formData.zoneId]);
 
     useEffect(() => {
         const fetchUnit = async () => {
@@ -317,20 +323,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             return toast.error("Please select a Zone");
         }
 
-        if (formData.minPrice === "" || formData.maxPrice === "") {
-            return toast.error("Prices are required");
-        }
-
-        const minVal = Number(formData.minPrice);
-        const maxVal = Number(formData.maxPrice);
-
-        if (minVal < 0 || maxVal < 0) {
-            return toast.error("Prices cannot be negative numbers");
-        }
-
-        if (maxVal < minVal) {
-            return toast.error("Max Price cannot be less than Min Price");
-        }
+        // Prices removed from form, defaulted to '0'
 
         if (formData.mapUrl && formData.mapUrl.trim()) {
             const mapRegex = /^(https?:\/\/)?(www\.)?(google\.[a-z]+(\.[a-z]+)?\/maps|maps\.app\.goo\.gl|maps\.google\.[a-z]+)\/.*$/i;
@@ -487,10 +480,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zone</h4>
                                 <p className="text-base font-semibold text-slate-700 mt-1">{zones.find(z => z._id === formData.zoneId)?.name || "Not Selected"}</p>
                             </div>
-                            <div>
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Price Range</h4>
-                                <p className="text-base font-extrabold text-indigo-600 mt-1">₹{formData.minPrice} - ₹{formData.maxPrice}</p>
-                            </div>
+
                             {formData.mapUrl && (
                                 <div>
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Location URL</h4>
@@ -506,6 +496,23 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</h4>
                             <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap leading-relaxed break-words">{formData.description}</p>
                         </div>
+
+                        {/* Delivery Areas */}
+                        {formData.deliveryZones && formData.deliveryZones.length > 0 && (
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Delivery Areas</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {formData.deliveryZones.map((zone, idx) => {
+                                        const [pin, area] = zone.split('|');
+                                        return (
+                                            <span key={idx} className="bg-white border border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg shadow-sm">
+                                                {area} ({pin})
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Staff Contacts */}
                         {formData.details.filter(d => d.name.trim() || d.mobile.trim()).length > 0 && (
@@ -615,7 +622,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className={labelStyle}>Company Name</label>
+                                <label className={labelStyle}>Owner Name</label>
                                 <input
                                     type="text"
                                     value={formData.companyName}
@@ -623,7 +630,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                         setFormData({ ...formData, companyName: e.target.value });
                                         setIsShopModified(true);
                                     }}
-                                    placeholder="Enter Company Name"
+                                    placeholder="Enter Owner Name"
                                     className={inputStyle}
                                 />
                             </div>
@@ -631,7 +638,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                 <label className={labelStyle}>Shop Zone <span className="text-red-500">*</span></label>
                                 <select
                                     required
-                                    value={formData.zoneId}
+                                    value={typeof formData.zoneId === 'object' ? (formData.zoneId?._id || "") : (formData.zoneId || "")}
                                     onChange={(e) => {
                                         setFormData({ ...formData, zoneId: e.target.value });
                                         setIsShopModified(true);
@@ -649,77 +656,85 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                             <div className="space-y-2">
                                 <label className={labelStyle}>Delivery Areas (Select Specific Areas) <span className="text-red-500">*</span></label>
                                 <div className={`${inputStyle} h-64 overflow-y-auto p-3 space-y-4 bg-gray-50/50`}>
-                                    {zones.map((z) => {
-                                        if (!z.pincodes || z.pincodes.length === 0) return null;
-                                        return (
-                                            <div key={`zone-group-${z._id}`} className="mb-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-                                                <div className="text-[11px] font-black text-primary-600 uppercase tracking-widest mb-3 border-b border-gray-100 pb-2">{z.name}</div>
-                                                <div className="space-y-3">
-                                                    {z.pincodes.map(p => {
-                                                        const isAllSelected = p.areas?.length > 0 && p.areas.every(a => formData.deliveryZones.includes(`${p.code}|${a.name}`));
-                                                        const isPartiallySelected = p.areas?.length > 0 && p.areas.some(a => formData.deliveryZones.includes(`${p.code}|${a.name}`)) && !isAllSelected;
+                                    {zones.filter((z) => String(z._id) === String(formData.zoneId?._id || formData.zoneId)).length > 0 ? (
+                                        zones
+                                            .filter((z) => String(z._id) === String(formData.zoneId?._id || formData.zoneId))
+                                            .map((z) => {
+                                                if (!z.pincodes || z.pincodes.length === 0) return null;
+                                                return (
+                                                    <div key={`zone-group-${z._id}`} className="mb-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                                        <div className="text-[11px] font-black text-primary-600 uppercase tracking-widest mb-3 border-b border-gray-100 pb-2">{z.name}</div>
+                                                        <div className="space-y-3">
+                                                            {z.pincodes.map(p => {
+                                                                const isAllSelected = p.areas?.length > 0 && p.areas.every(a => formData.deliveryZones.includes(`${p.code}|${a.name}`));
+                                                                const isPartiallySelected = p.areas?.length > 0 && p.areas.some(a => formData.deliveryZones.includes(`${p.code}|${a.name}`)) && !isAllSelected;
 
-                                                        return (
-                                                            <div key={`delivery-pin-${p.code}`} className="border border-gray-100 rounded-lg p-2.5 bg-gray-50/30">
-                                                                <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100/60">
-                                                                    <label className="flex items-center gap-2.5 cursor-pointer group">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={isAllSelected}
-                                                                            ref={input => {
-                                                                                if (input) input.indeterminate = isPartiallySelected;
-                                                                            }}
-                                                                            onChange={(e) => {
-                                                                                const checked = e.target.checked;
-                                                                                setFormData(prev => {
-                                                                                    let newZones = [...prev.deliveryZones];
-                                                                                    p.areas?.forEach(a => {
-                                                                                        const areaKey = `${p.code}|${a.name}`;
-                                                                                        if (checked && !newZones.includes(areaKey)) newZones.push(areaKey);
-                                                                                        if (!checked) newZones = newZones.filter(k => k !== areaKey);
-                                                                                    });
-                                                                                    return { ...prev, deliveryZones: newZones };
-                                                                                });
-                                                                                setIsShopModified(true);
-                                                                            }}
-                                                                            className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
-                                                                        />
-                                                                        <span className="text-sm font-black text-gray-800 tracking-tight group-hover:text-primary-600 transition-colors">Pincode: {p.code}</span>
-                                                                    </label>
-                                                                </div>
-                                                                
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-1">
-                                                                    {p.areas?.map(a => {
-                                                                        const areaKey = `${p.code}|${a.name}`;
-                                                                        return (
-                                                                            <label key={areaKey} className="flex items-start gap-2.5 cursor-pointer p-1.5 hover:bg-white rounded-md transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
+                                                                return (
+                                                                    <div key={`delivery-pin-${p.code}`} className="border border-gray-100 rounded-lg p-2.5 bg-gray-50/30">
+                                                                        <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100/60">
+                                                                            <label className="flex items-center gap-2.5 cursor-pointer group">
                                                                                 <input
                                                                                     type="checkbox"
-                                                                                    checked={formData.deliveryZones.includes(areaKey)}
+                                                                                    checked={isAllSelected}
+                                                                                    ref={input => {
+                                                                                        if (input) input.indeterminate = isPartiallySelected;
+                                                                                    }}
                                                                                     onChange={(e) => {
                                                                                         const checked = e.target.checked;
-                                                                                        setFormData(prev => ({
-                                                                                            ...prev,
-                                                                                            deliveryZones: checked 
-                                                                                                ? [...prev.deliveryZones, areaKey]
-                                                                                                : prev.deliveryZones.filter(k => k !== areaKey)
-                                                                                        }));
+                                                                                        setFormData(prev => {
+                                                                                            let newZones = [...prev.deliveryZones];
+                                                                                            p.areas?.forEach(a => {
+                                                                                                const areaKey = `${p.code}|${a.name}`;
+                                                                                                if (checked && !newZones.includes(areaKey)) newZones.push(areaKey);
+                                                                                                if (!checked) newZones = newZones.filter(k => k !== areaKey);
+                                                                                            });
+                                                                                            return { ...prev, deliveryZones: newZones };
+                                                                                        });
                                                                                         setIsShopModified(true);
                                                                                     }}
-                                                                                    className="w-3.5 h-3.5 text-blue-600 rounded border-gray-300 mt-0.5"
+                                                                                    className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
                                                                                 />
-                                                                                <span className="text-xs font-bold text-gray-600 leading-tight">{a.name}</span>
+                                                                                <span className="text-sm font-black text-gray-800 tracking-tight group-hover:text-primary-600 transition-colors">Pincode: {p.code}</span>
                                                                             </label>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                                                        </div>
+                                                                        
+                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-1">
+                                                                            {p.areas?.map(a => {
+                                                                                const areaKey = `${p.code}|${a.name}`;
+                                                                                return (
+                                                                                    <label key={areaKey} className="flex items-start gap-2.5 cursor-pointer p-1.5 hover:bg-white rounded-md transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
+                                                                                        <input
+                                                                                            type="checkbox"
+                                                                                            checked={formData.deliveryZones.includes(areaKey)}
+                                                                                            onChange={(e) => {
+                                                                                                const checked = e.target.checked;
+                                                                                                setFormData(prev => ({
+                                                                                                    ...prev,
+                                                                                                    deliveryZones: checked 
+                                                                                                        ? [...prev.deliveryZones, areaKey]
+                                                                                                        : prev.deliveryZones.filter(k => k !== areaKey)
+                                                                                                }));
+                                                                                                setIsShopModified(true);
+                                                                                            }}
+                                                                                            className="w-3.5 h-3.5 text-blue-600 rounded border-gray-300 mt-0.5"
+                                                                                        />
+                                                                                        <span className="text-xs font-bold text-gray-600 leading-tight">{a.name}</span>
+                                                                                    </label>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                    ) : (
+                                        <div className="text-center text-gray-500 py-8 text-sm font-medium">
+                                            Please select a Shop Zone first.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="space-y-2">
@@ -793,39 +808,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className={labelStyle}>Manual Price Range <span className="text-red-500">*</span></label>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="relative">
-                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</span>
-                                        <input
-                                            required
-                                            type="number"
-                                            value={formData.minPrice}
-                                            onChange={(e) => {
-                                                setFormData({ ...formData, minPrice: e.target.value });
-                                                setIsShopModified(true);
-                                            }}
-                                            placeholder="Min"
-                                            className={inputStyle.replace("px-4", "pl-8 pr-4")}
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</span>
-                                        <input
-                                            required
-                                            type="number"
-                                            value={formData.maxPrice}
-                                            onChange={(e) => {
-                                                setFormData({ ...formData, maxPrice: e.target.value });
-                                                setIsShopModified(true);
-                                            }}
-                                            placeholder="Max"
-                                            className={inputStyle.replace("px-4", "pl-8 pr-4")}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+
                         </div>
 
                         {/* 3. Description Field */}

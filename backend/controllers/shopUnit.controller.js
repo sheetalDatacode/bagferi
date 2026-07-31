@@ -59,9 +59,6 @@ export const createOrUpdateUnit = async (req, res, next) => {
 
         // 2. Validate Staff Details & Duplicate Checks
         const validDetails = (details || []).filter(d => d.name?.trim() || d.post?.trim() || d.mobile?.trim());
-        if (validDetails.length === 0) {
-            return res.status(400).json({ success: false, message: 'At least one staff contact detail is required' });
-        }
 
         const seenMobile = new Set();
         const seenName = new Set();

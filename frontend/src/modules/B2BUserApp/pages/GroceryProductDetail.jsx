@@ -118,7 +118,7 @@ const GroceryProductDetail = () => {
     };
 
     const handleQuantityChange = (type) => {
-        if (type === 'inc' && quantity < product?.stock) {
+        if (type === 'inc' && quantity < (product?.stockQuantity || 999)) {
             setQuantity(prev => prev + 1);
         } else if (type === 'dec' && quantity > 1) {
             setQuantity(prev => prev - 1);
