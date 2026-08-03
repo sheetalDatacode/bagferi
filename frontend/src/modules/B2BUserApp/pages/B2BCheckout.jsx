@@ -113,22 +113,27 @@ const B2BCheckout = () => {
     // Group items by vendor to calculate the number of orders
     const groupedItems = cartItems.reduce((acc, item) => {
         const vendorId = item.vendor?._id || item.vendor;
-        if (!acc[vendorId]) acc[vendorId] = [];
-        acc[vendorId].push(item);
+        const vendorName = item.vendor?.storeName || item.vendor?.name || 'Verified Vendor';
+        if (!acc[vendorId]) {
+            acc[vendorId] = {
+                name: vendorName,
+                items: []
+            };
+        }
+        acc[vendorId].items.push(item);
         return acc;
     }, {});
-    
-    const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
-    // Calculate total advance capped by each vendor group subtotal
-    let totalAdvance = 0;
-    Object.keys(groupedItems).forEach(vendorId => {
-        const items = groupedItems[vendorId];
-        const groupSubtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-        totalAdvance += Math.min(advancePerOrder, groupSubtotal);
-    });
+    const vendorIds = Object.keys(groupedItems);
+    const activeVendorId = vendorIds[0] || null;
+    const activeGroup = activeVendorId ? groupedItems[activeVendorId] : null;
 
-    const numberOfOrders = Object.keys(groupedItems).length;
+    const subtotal = activeGroup ? activeGroup.items.reduce((acc, item) => acc + (item.price * item.quantity), 0) : 0;
+
+    // Calculate total advance capped by the active vendor group subtotal
+    const totalAdvance = activeGroup ? Math.min(advancePerOrder, subtotal) : 0;
+
+    const numberOfOrders = activeVendorId ? 1 : 0;
     const remainingBalance = subtotal - totalAdvance > 0 ? subtotal - totalAdvance : 0;
 
     const handleQuantityChange = async (productId, currentQty, change, size = null, color = null, selectedVariants = {}) => {
@@ -166,7 +171,8 @@ const B2BCheckout = () => {
             // 1. Initiate Checkout
             const initRes = await api.post('/order/checkout', {
                 shippingAddress,
-                paymentMethod: 'Online'
+                paymentMethod: 'Online',
+                vendorId: activeVendorId
             });
 
             if (!initRes.success) {
@@ -192,7 +198,8 @@ const B2BCheckout = () => {
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature,
-                            shippingAddress
+                            shippingAddress,
+                            vendorId: activeVendorId
                         });
 
                         if (verifyRes.success) {
@@ -308,79 +315,100 @@ const B2BCheckout = () => {
                     </div>
 
                     {/* Order Items */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 space-y-6">
                         <h2 className="text-lg font-black uppercase text-gray-900 mb-4 flex items-center gap-2">
-                            <FiShoppingBag className="text-primary-600" /> Order Items
+                            <FiShoppingBag className="text-primary-600" /> Order Items (Shop-Wise Checkout)
                         </h2>
                         
-                        <div className="divide-y divide-gray-100">
-                            {allCartItems.map((item) => {
-                                const prod = item.product || {};
-                                const images = prod.images || [];
-                                const hasImage = images.length > 0 || prod.image || prod.media?.length > 0;
-                                const imgUrl = images.length > 0 ? images[0] : (prod.image || prod.media?.[0]?.url);
-                                
+                        <div className="space-y-6">
+                            {Object.entries(groupedItems).map(([vendorId, group], groupIdx) => {
+                                const isActive = vendorId === activeVendorId;
                                 return (
-                                    <div key={`${prod._id || item._id}_${item.size || ''}_${item.color || ''}_${JSON.stringify(item.selectedVariants || {})}`} className="py-4 flex flex-row gap-4 items-center first:pt-0 last:pb-0">
-                                        {/* Selection Checkbox */}
-                                        <input
-                                            type="checkbox"
-                                            checked={item.selected !== false}
-                                            onChange={(e) => toggleSelection(prod._id || item._id, item.size, item.color, item.selectedVariants, e.target.checked)}
-                                            className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 mr-1 flex-shrink-0 cursor-pointer"
-                                        />
-
-                                        <div className="w-20 h-20 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50">
-                                            {hasImage ? (
-                                                <img src={imgUrl} alt={prod.name || prod.title} className="w-full h-full object-cover mix-blend-multiply" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                                    <FiShoppingBag size={20} />
-                                                </div>
-                                            )}
+                                    <div key={vendorId} className={`rounded-xl border p-4 ${isActive ? 'border-primary-200 bg-white' : 'border-gray-100 bg-gray-50/50 opacity-60'}`}>
+                                        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <FiShield className={isActive ? 'text-primary-600' : 'text-gray-400'} />
+                                                <span className="text-xs font-black text-gray-700 uppercase tracking-wider">
+                                                    Sold by: {group.name}
+                                                </span>
+                                            </div>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${isActive ? 'bg-primary-50 text-primary-600' : 'bg-gray-100 text-gray-500'}`}>
+                                                {isActive ? 'Processing Now' : `Next in Queue (${groupIdx + 1}/${vendorIds.length})`}
+                                            </span>
                                         </div>
                                         
-                                        <div className="flex-1 min-w-0 flex flex-col">
-                                            <div className="flex justify-between items-start gap-2">
-                                                <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{prod.name || prod.title}</h3>
-                                                <button
-                                                    onClick={() => removeFromCart(prod._id || item._id, item.size, item.color, item.selectedVariants)}
-                                                    className="text-gray-400 hover:text-red-500 p-1 transition-colors flex-shrink-0"
-                                                    title="Remove item"
-                                                >
-                                                    <FiTrash size={15} />
-                                                </button>
-                                            </div>
-                                            <p className="text-xs text-gray-400 mt-1 uppercase font-bold tracking-wider">Sold by: {item.vendor?.storeName || item.vendor?.name || 'Vendor'}</p>
-                                            
-                                            <div className="flex gap-2 mt-1 flex-wrap">
-                                                {item.size && <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Size: {item.size}</span>}
-                                                {item.color && <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Color: {item.color}</span>}
-                                                {item.selectedVariants && Object.entries(item.selectedVariants).map(([key, val]) => (
-                                                    <span key={key} className="text-[10px] text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{key}: {val}</span>
-                                                ))}
-                                            </div>
+                                        <div className="divide-y divide-gray-100">
+                                            {group.items.map((item) => {
+                                                const prod = item.product || {};
+                                                const images = prod.images || [];
+                                                const hasImage = images.length > 0 || prod.image || prod.media?.length > 0;
+                                                const imgUrl = images.length > 0 ? images[0] : (prod.image || prod.media?.[0]?.url);
+                                                const itemKey = `${prod._id || item._id}_${item.size || ''}_${item.color || ''}_${JSON.stringify(item.selectedVariants || {})}`;
+                                                
+                                                return (
+                                                    <div key={itemKey} className="py-4 flex flex-row gap-4 items-center first:pt-0 last:pb-0">
+                                                        {/* Selection Checkbox */}
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={item.selected !== false}
+                                                            onChange={(e) => toggleSelection(prod._id || item._id, item.size, item.color, item.selectedVariants, e.target.checked)}
+                                                            className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 mr-1 flex-shrink-0 cursor-pointer"
+                                                        />
 
-                                            <div className="mt-auto flex items-center justify-between">
-                                                {/* Quantity Selector */}
-                                                <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-lg p-0.5 scale-90 origin-left">
-                                                    <button 
-                                                        onClick={() => handleQuantityChange(prod._id || item._id, item.quantity, -1, item.size, item.color, item.selectedVariants)}
-                                                        className="w-6 h-6 rounded bg-white hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 border border-gray-100 shadow-sm transition-colors disabled:opacity-50"
-                                                        disabled={item.quantity <= 1}
-                                                    >
-                                                        <FiMinus size={12} />
-                                                    </button>
-                                                    <span className="w-6 text-center text-xs font-black text-slate-800">{item.quantity}</span>
-                                                    <button 
-                                                        onClick={() => handleQuantityChange(prod._id || item._id, item.quantity, 1, item.size, item.color, item.selectedVariants)}
-                                                        className="w-6 h-6 rounded bg-white hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 border border-gray-100 shadow-sm transition-colors"
-                                                    >
-                                                        <FiPlus size={12} />
-                                                    </button>
-                                                </div>
-                                                <span className="font-black text-gray-900 text-sm">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
-                                            </div>
+                                                        <div className="w-16 h-16 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50">
+                                                            {hasImage ? (
+                                                                <img src={imgUrl} alt={prod.name || prod.title} className="w-full h-full object-cover mix-blend-multiply" />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                                    <FiShoppingBag size={16} />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        
+                                                        <div className="flex-1 min-w-0 flex flex-col">
+                                                            <div className="flex justify-between items-start gap-2">
+                                                                <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{prod.name || prod.title}</h3>
+                                                                <button
+                                                                    onClick={() => removeFromCart(prod._id || item._id, item.size, item.color, item.selectedVariants)}
+                                                                    className="text-gray-400 hover:text-red-500 p-1 transition-colors flex-shrink-0"
+                                                                    title="Remove item"
+                                                                >
+                                                                    <FiTrash size={15} />
+                                                                </button>
+                                                            </div>
+                                                            
+                                                            <div className="flex gap-2 mt-1 flex-wrap">
+                                                                {item.size && <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Size: {item.size}</span>}
+                                                                {item.color && <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Color: {item.color}</span>}
+                                                                {item.selectedVariants && Object.entries(item.selectedVariants).map(([key, val]) => (
+                                                                    <span key={key} className="text-[10px] text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{key}: {val}</span>
+                                                                ))}
+                                                            </div>
+
+                                                            <div className="mt-auto flex items-center justify-between">
+                                                                {/* Quantity Selector */}
+                                                                <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-lg p-0.5 scale-90 origin-left">
+                                                                    <button 
+                                                                        onClick={() => handleQuantityChange(prod._id || item._id, item.quantity, -1, item.size, item.color, item.selectedVariants)}
+                                                                        className="w-6 h-6 rounded bg-white hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 border border-gray-100 shadow-sm transition-colors disabled:opacity-50"
+                                                                        disabled={item.quantity <= 1}
+                                                                    >
+                                                                        <FiMinus size={12} />
+                                                                    </button>
+                                                                    <span className="w-6 text-center text-xs font-black text-slate-800">{item.quantity}</span>
+                                                                    <button 
+                                                                        onClick={() => handleQuantityChange(prod._id || item._id, item.quantity, 1, item.size, item.color, item.selectedVariants)}
+                                                                        className="w-6 h-6 rounded bg-white hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 border border-gray-100 shadow-sm transition-colors"
+                                                                    >
+                                                                        <FiPlus size={12} />
+                                                                    </button>
+                                                                </div>
+                                                                <span className="font-slate-800 font-black text-sm">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 );

@@ -509,7 +509,11 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
 
                             <div>
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Zone</h4>
-                                <p className="text-base font-semibold text-slate-700 mt-1">{zones.find(z => z._id === formData.zoneId)?.name || "Not Selected"}</p>
+                                <p className="text-base font-semibold text-slate-700 mt-1">
+                                    {groupedSelectedAreas.length > 0 
+                                        ? `${groupedSelectedAreas.length} Zone${groupedSelectedAreas.length > 1 ? 's' : ''} Selected` 
+                                        : "Not Selected"}
+                                </p>
                             </div>
 
                             {formData.mapUrl && (
@@ -641,7 +645,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                         </div>
 
                         {/* 2. Shop Name & Price Section */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                             <div className="space-y-2">
                                 <label className={labelStyle}>Shop Name <span className="text-red-500">*</span></label>
                                 <input
@@ -689,6 +693,23 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     ))}
                                 </select>
                             </div>
+
+                            <div className="space-y-2">
+                                <label className={labelStyle}>Location URL (Google Maps)</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={formData.mapUrl}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, mapUrl: e.target.value });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="https://maps.google.com/..."
+                                        className={inputStyle}
+                                    />
+                                </div>
+                            </div>
+
                              <div className="space-y-2">
                                 <label className={labelStyle}>Delivery Areas (Select Specific Areas) <span className="text-red-500">*</span></label>
                                 
@@ -715,7 +736,6 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                                 if (!z.pincodes || z.pincodes.length === 0) return null;
                                                 return (
                                                     <div key={`zone-group-${z._id}`} className="mb-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-                                                        <div className="text-[11px] font-black text-primary-600 uppercase tracking-widest mb-3 border-b border-gray-100 pb-2">{z.name}</div>
                                                         <div className="space-y-3">
                                                             {z.pincodes.map(p => {
                                                                 const isAllSelected = p.areas?.length > 0 && p.areas.every(a => formData.deliveryZones.includes(`${p.code}|${a.name}`));
@@ -789,23 +809,60 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     )}
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className={labelStyle}>Location URL (Google Maps)</label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        value={formData.mapUrl}
-                                        onChange={(e) => {
-                                            setFormData({ ...formData, mapUrl: e.target.value });
-                                            setIsShopModified(true);
-                                        }}
-                                        placeholder="https://maps.google.com/..."
-                                        className={inputStyle}
-                                    />
-                                </div>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
+                            {groupedSelectedAreas.length > 0 && (
+                                <div className="space-y-2">
+                                    <label className={labelStyle}>Selected Areas ({formData.deliveryZones.length})</label>
+                                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3 h-64 overflow-y-auto custom-scrollbar">
+                                        <div className="flex justify-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (window.confirm("Are you sure you want to clear all selected areas?")) {
+                                                        setFormData(prev => ({ ...prev, deliveryZones: [] }));
+                                                        setIsShopModified(true);
+                                                    }
+                                                }}
+                                                className="text-[9px] font-bold text-red-500 hover:underline capitalize"
+                                            >
+                                                Clear All
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {groupedSelectedAreas.map((group, idx) => (
+                                                <div key={idx} className="space-y-1.5">
+                                                    <div className="text-[9px] font-black text-primary-600 uppercase tracking-wider">{group.zoneName}</div>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {group.areas.map((area, aIdx) => {
+                                                             const areaKey = `${area.pin}|${area.name}`;
+                                                             return (
+                                                                 <span key={aIdx} className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-wider pl-2.5 pr-1.5 py-1 rounded-lg shadow-sm">
+                                                                     {area.name} ({area.pin})
+                                                                     <button
+                                                                         type="button"
+                                                                         onClick={() => {
+                                                                             setFormData(prev => ({
+                                                                                 ...prev,
+                                                                                 deliveryZones: prev.deliveryZones.filter(k => k !== areaKey)
+                                                                             }));
+                                                                             setIsShopModified(true);
+                                                                         }}
+                                                                         className="p-0.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded transition-colors"
+                                                                     >
+                                                                         <FiX size={12} />
+                                                                     </button>
+                                                                 </span>
+                                                             );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 pt-4 border-t border-gray-100">
                                 <div className="space-y-2">
                                     <label className={labelStyle}>Bank Name</label>
                                     <input

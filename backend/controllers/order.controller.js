@@ -23,14 +23,17 @@ const generateOrderNumber = () => {
 export const initiateCheckout = async (req, res, next) => {
   try {
     const userId = req.user._id || req.user.id;
-    const { shippingAddress, paymentMethod } = req.body;
+    const { shippingAddress, paymentMethod, vendorId } = req.body;
 
     const cart = await Cart.findOne({ user: userId });
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({ success: false, message: 'Cart is empty' });
     }
 
-    const selectedItems = cart.items.filter(item => item.selected !== false);
+    let selectedItems = cart.items.filter(item => item.selected !== false);
+    if (vendorId) {
+      selectedItems = selectedItems.filter(item => item.vendor.toString() === vendorId.toString());
+    }
     if (selectedItems.length === 0) {
       return res.status(400).json({ success: false, message: 'No items selected for checkout' });
     }
@@ -48,7 +51,7 @@ export const initiateCheckout = async (req, res, next) => {
       itemsByGroup[groupKey].push(item);
     });
 
-    const settings = await B2BSettings.findOne() || { advancePaymentAmount: 200 };
+    const settings = await B2BSettings.findOne().sort({ createdAt: -1 }) || { advancePaymentAmount: 200 };
     const advancePerOrder = settings.advancePaymentAmount;
     
     let totalAdvanceRequired = 0;
@@ -58,7 +61,7 @@ export const initiateCheckout = async (req, res, next) => {
       totalAdvanceRequired += Math.min(advancePerOrder, groupSubtotal);
     });
 
-    const numberOfOrders = groupKeys.length;
+    const numberOfOrders = Object.keys(itemsByGroup).length;
 
     if (paymentMethod === 'Online') {
       // Create a single Razorpay order for the total advance
@@ -99,7 +102,7 @@ export const initiateCheckout = async (req, res, next) => {
 export const verifyCheckoutPayment = async (req, res, next) => {
   try {
     const userId = req.user._id || req.user.id;
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, shippingAddress } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, shippingAddress, vendorId } = req.body;
 
     // Verify signature
     const secret = process.env.RAZORPAY_KEY_SECRET || 'dummy_secret';
@@ -120,7 +123,10 @@ export const verifyCheckoutPayment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cart is empty' });
     }
 
-    const selectedItems = cart.items.filter(item => item.selected !== false);
+    let selectedItems = cart.items.filter(item => item.selected !== false);
+    if (vendorId) {
+      selectedItems = selectedItems.filter(item => item.vendor.toString() === vendorId.toString());
+    }
     if (selectedItems.length === 0) {
       return res.status(400).json({ success: false, message: 'No items selected for checkout' });
     }
@@ -142,7 +148,7 @@ export const verifyCheckoutPayment = async (req, res, next) => {
       itemsByGroup[groupKey].items.push(item);
     });
 
-    const settings = await B2BSettings.findOne() || { advancePaymentAmount: 200, advancePaymentCommissionPercentage: 0 };
+    const settings = await B2BSettings.findOne().sort({ createdAt: -1 }) || { advancePaymentAmount: 200, advancePaymentCommissionPercentage: 0 };
     const advancePerOrder = settings.advancePaymentAmount;
     const commissionPct = settings.advancePaymentCommissionPercentage;
     const createdOrders = [];

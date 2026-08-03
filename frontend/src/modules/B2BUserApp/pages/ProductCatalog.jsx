@@ -1993,7 +1993,9 @@ const ProductCatalog = () => {
                 }
               });
               
-              return allSubNames.map(subName => (
+              const uniqueSubNames = [...new Set(allSubNames)];
+              
+              return uniqueSubNames.map(subName => (
                 <button
                   key={subName}
                   onClick={() => setSelectedSubcategory(subName)}

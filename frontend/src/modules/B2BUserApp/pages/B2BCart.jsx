@@ -43,7 +43,6 @@ const B2BCart = () => {
     const tax = 0; 
     const deliveryFee = 0; 
     const total = subtotal + tax + (subtotal > 0 ? deliveryFee : 0);
-
     // Group items by vendor
     const groupedItems = cartItems.reduce((acc, item) => {
         const vendorId = item.vendor?._id || item.vendor || 'unknown';
