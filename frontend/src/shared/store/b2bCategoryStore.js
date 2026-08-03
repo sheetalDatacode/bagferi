@@ -84,7 +84,7 @@ export const useB2BCategoryStore = create(
             },
         }),
         {
-            name: 'b2b-category-storage',
+            name: 'bagferi-b2b-category-storage',
             storage: createJSONStorage(() => localStorage),
         }
     )

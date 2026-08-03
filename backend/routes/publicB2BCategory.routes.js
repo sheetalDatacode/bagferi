@@ -8,7 +8,7 @@ import redisService from '../services/redis.service.js';
 const router = express.Router();
 
 // Public B2B category routes (no authentication required for reading)
-router.get('/', redisService.cacheMiddleware('public:b2b-categories', 600), asyncHandler(async (req, res) => {
+router.get('/', redisService.cacheMiddleware('bagferi:public:b2b-categories', 600), asyncHandler(async (req, res) => {
   try {
     const categories = await getAllB2BCategories();
 

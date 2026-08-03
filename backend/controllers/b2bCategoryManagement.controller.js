@@ -13,7 +13,7 @@ import { uploadToCloudinary } from '../utils/cloudinary.util.js';
  */
 const clearB2BCategoryCache = async () => {
   try {
-    await redisService.clearPattern('public:b2b-categories:*');
+    await redisService.clearPattern('bagferi:public:b2b-categories:*');
   } catch (error) {
     console.error('Error clearing B2B category cache:', error);
   }
