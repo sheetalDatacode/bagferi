@@ -85,59 +85,115 @@ export default function StaffDashboard() {
                     <p style={{ color: '#718096', margin: 0 }}>No pending deliveries assigned to you.</p>
                 </div>
             ) : (
-                pendingDeliveries.map(order => (
-                    <div
-                        key={order._id}
-                        style={{ ...card, cursor: 'pointer', transition: 'box-shadow 0.2s' }}
-                        onClick={() => { setSelectedOrder(order); setOtp(''); }}
-                        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)'}
-                        onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'}
-                    >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                            <div>
-                                <p style={{ margin: 0, fontWeight: '700', color: '#1a202c' }}>Order #{order.orderNumber}</p>
-                                <p style={{ margin: 0, fontSize: '0.8rem', color: '#718096', marginTop: '0.2rem' }}>{order.items?.length || 0} item(s)</p>
-                            </div>
-                            <span style={{ background: '#ebf8ff', color: '#2b6cb0', fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '999px', fontWeight: '700' }}>
-                                To Deliver
-                            </span>
-                        </div>
-
-                        <div style={{ fontSize: '0.875rem', color: '#4a5568', marginBottom: '0.75rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                                <span>📍</span>
-                                <span>
-                                    {order.shippingAddress?.fullName} — {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
-                            <span style={{ fontSize: '0.875rem', color: '#718096', fontWeight: '600' }}>Collect:</span>
-                            <span style={{ fontWeight: '800', fontSize: '1.1rem', color: '#667eea' }}>
-                                ₹{order.paymentMethod === 'COD' ? order.totalAmount?.toLocaleString('en-IN') : 0}
-                            </span>
-                        </div>
-                    </div>
-                ))
+                <div style={{ overflowX: 'auto', borderRadius: '1rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', background: 'white', marginBottom: '2rem' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                        <thead>
+                            <tr style={{ background: '#f7fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                                <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase' }}>Order Info</th>
+                                <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase' }}>Customer & Address</th>
+                                <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase' }}>Collect</th>
+                                <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase', textAlign: 'center' }}>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {pendingDeliveries.map(order => (
+                                <tr 
+                                    key={order._id} 
+                                    style={{ borderBottom: '1px solid #e2e8f0', cursor: 'pointer', transition: 'background 0.2s' }}
+                                    onClick={() => { setSelectedOrder(order); setOtp(''); }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f7fafc'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                    <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
+                                        <p style={{ margin: 0, fontWeight: '750', color: '#1a202c', fontSize: '0.875rem' }}>#{order.orderNumber}</p>
+                                        <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096' }}>{order.items?.length || 0} item(s)</p>
+                                    </td>
+                                    <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
+                                        <p style={{ margin: 0, fontWeight: '700', color: '#2d3748', fontSize: '0.875rem' }}>{order.shippingAddress?.fullName}</p>
+                                        <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096', lineHeight: '1.4' }}>
+                                            📍 {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city}
+                                        </p>
+                                    </td>
+                                    <td style={{ padding: '1rem', verticalAlign: 'middle', fontWeight: '800', color: '#667eea', fontSize: '1rem' }}>
+                                        ₹{order.remainingBalance !== undefined ? order.remainingBalance.toLocaleString('en-IN') : (order.totalAmount - (order.advancePayment || 0)).toLocaleString('en-IN')}
+                                    </td>
+                                    <td style={{ padding: '1rem', verticalAlign: 'middle', textAlign: 'center' }}>
+                                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
+                                            {(order.shippingAddress?.phone || order.user?.phone) && (
+                                                <a 
+                                                    href={`tel:${order.shippingAddress?.phone || order.user?.phone}`}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.35rem',
+                                                        background: '#ebf8ff',
+                                                        color: '#2b6cb0',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: '700',
+                                                        padding: '0.4rem 0.8rem',
+                                                        borderRadius: '0.5rem',
+                                                        textDecoration: 'none',
+                                                        border: '1px solid #bee3f8'
+                                                    }}
+                                                >
+                                                    📞 Call
+                                                </a>
+                                            )}
+                                            <button
+                                                style={{
+                                                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                                    color: 'white',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: '700',
+                                                    padding: '0.4rem 0.8rem',
+                                                    borderRadius: '0.5rem',
+                                                    border: 'none',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Deliver
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             )}
 
             {completedDeliveries.length > 0 && (
-                <div style={{ marginTop: '1.5rem' }}>
+                <div style={{ marginTop: '2rem' }}>
                     <h2 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#1a202c', marginBottom: '1rem' }}>
                         ✅ Completed Today
                     </h2>
-                    {completedDeliveries.map(order => (
-                        <div key={order._id} style={{ ...card, opacity: 0.65 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <p style={{ margin: 0, fontWeight: '700', color: '#4a5568' }}>Order #{order.orderNumber}</p>
-                                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#718096' }}>{new Date(order.updatedAt).toLocaleDateString('en-IN')}</p>
-                                </div>
-                                <span style={{ color: '#38a169', fontWeight: '700', fontSize: '0.875rem' }}>✓ Delivered</span>
-                            </div>
-                        </div>
-                    ))}
+                    <div style={{ overflowX: 'auto', borderRadius: '1rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', background: 'white' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '400px' }}>
+                            <thead>
+                                <tr style={{ background: '#f7fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase' }}>Order Number</th>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase' }}>Completed Time</th>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase', textAlign: 'center' }}>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {completedDeliveries.map(order => (
+                                    <tr key={order._id} style={{ borderBottom: '1px solid #e2e8f0', opacity: 0.8 }}>
+                                        <td style={{ padding: '0.75rem 1rem', verticalAlign: 'middle', fontWeight: '700', color: '#4a5568' }}>
+                                            #{order.orderNumber}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 1rem', verticalAlign: 'middle', fontSize: '0.8rem', color: '#718096' }}>
+                                            {new Date(order.updatedAt).toLocaleDateString('en-IN')} {new Date(order.updatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                        </td>
+                                        <td style={{ padding: '0.75rem 1rem', verticalAlign: 'middle', textAlign: 'center', color: '#38a169', fontWeight: '750', fontSize: '0.8rem' }}>
+                                            ✓ Delivered
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
@@ -151,9 +207,12 @@ export default function StaffDashboard() {
                         </div>
 
                         <div style={{ background: '#ebf8ff', border: '1px solid #bee3f8', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1rem' }}>
-                            <p style={{ margin: 0, fontWeight: '700', color: '#2b6cb0', fontSize: '0.9rem' }}>
-                                📞 {selectedOrder?.shippingAddress?.phone || selectedOrder.user?.phone}
-                            </p>
+                            <a 
+                                href={`tel:${selectedOrder?.shippingAddress?.phone || selectedOrder.user?.phone}`}
+                                style={{ margin: 0, fontWeight: '850', color: '#2b6cb0', fontSize: '1rem', textDecoration: 'underline', display: 'block' }}
+                            >
+                                📞 Call: {selectedOrder?.shippingAddress?.phone || selectedOrder.user?.phone}
+                            </a>
                             <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#2c5282' }}>
                                 Ask the customer for their 4-digit Delivery OTP
                             </p>
@@ -162,7 +221,7 @@ export default function StaffDashboard() {
                         <div style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                             <span style={{ fontWeight: '600', color: '#4a5568' }}>Collect from customer:</span>
                             <span style={{ fontWeight: '800', fontSize: '1.25rem', color: '#667eea' }}>
-                                ₹{selectedOrder.paymentMethod === 'COD' ? selectedOrder.totalAmount?.toLocaleString('en-IN') : 0}
+                                ₹{selectedOrder.remainingBalance !== undefined ? selectedOrder.remainingBalance.toLocaleString('en-IN') : (selectedOrder.totalAmount - (selectedOrder.advancePayment || 0)).toLocaleString('en-IN')}
                             </span>
                         </div>
 

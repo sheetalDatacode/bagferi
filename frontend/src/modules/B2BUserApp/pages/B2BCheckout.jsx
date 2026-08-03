@@ -204,8 +204,14 @@ const B2BCheckout = () => {
 
                         if (verifyRes.success) {
                             toast.success('Orders placed successfully!');
-                             await fetchCart();
-                             navigate('/b2b/landing');
+                            await fetchCart();
+                            const updatedCart = useCartStore.getState().cart;
+                            const remainingSelectedItems = updatedCart?.items?.filter(item => item.selected !== false) || [];
+                            if (remainingSelectedItems.length > 0) {
+                                setIsPlacingOrder(false);
+                            } else {
+                                navigate('/b2b/orders');
+                            }
                         } else {
                             toast.error('Payment verification failed');
                         }

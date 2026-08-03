@@ -266,6 +266,19 @@ const Orders = () => {
                                                 )}
                                             </div>
 
+                                            {order.status === 'Dispatched' && order.assignedStaff?.name && (
+                                                <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 mt-3">
+                                                    <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-1">Delivery Partner Details</p>
+                                                    <p className="font-bold text-gray-900">{order.assignedStaff.name}</p>
+                                                    {order.assignedStaff.mobile && (
+                                                        <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                                                             <FiPhoneCall className="text-gray-400" /> 
+                                                             <a href={`tel:${order.assignedStaff.mobile}`} className="font-bold text-emerald-600 hover:underline">{order.assignedStaff.mobile}</a>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2 text-xs">
                                                 <div className="flex justify-between items-center text-gray-500 font-semibold">
                                                     <span>Subtotal</span>

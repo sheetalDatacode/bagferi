@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPackage, FiSearch, FiFilter, FiCheckCircle, FiTruck, FiClock, FiUserCheck, FiX, FiPlus, FiUser, FiFileText, FiPrinter } from 'react-icons/fi';
+import { FiPackage, FiSearch, FiFilter, FiCheckCircle, FiTruck, FiClock, FiUserCheck, FiX, FiPlus, FiUser, FiFileText, FiPrinter, FiPhoneCall } from 'react-icons/fi';
 import api from '../../../shared/utils/api';
 import toast from 'react-hot-toast';
 import { appLogo } from '../../../data/logos';
@@ -27,6 +27,40 @@ const VendorOrders = () => {
     // Invoice Modal state
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState(null);
+
+    // Staff Delivery History states
+    const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'staffHistory'
+    const [selectedStaffFilter, setSelectedStaffFilter] = useState('All');
+
+    const getStaffStatistics = () => {
+        const stats = {};
+        orders.forEach(order => {
+            if (order.status === 'Completed' && order.assignedStaff?.name) {
+                const staffKey = `${order.assignedStaff.name}_${order.assignedStaff.mobile || ''}`;
+                if (!stats[staffKey]) {
+                    stats[staffKey] = {
+                        name: order.assignedStaff.name,
+                        mobile: order.assignedStaff.mobile || 'N/A',
+                        totalDeliveries: 0,
+                        totalCollected: 0,
+                        deliveries: []
+                    };
+                }
+                const collected = order.remainingBalance !== undefined ? order.remainingBalance : (order.totalAmount - (order.advancePayment || 0));
+                stats[staffKey].totalDeliveries += 1;
+                stats[staffKey].totalCollected += collected;
+                stats[staffKey].deliveries.push({
+                    _id: order._id,
+                    orderNumber: order.orderNumber,
+                    customerName: order.shippingAddress?.fullName || 'Customer',
+                    city: order.shippingAddress?.city || 'N/A',
+                    date: new Date(order.updatedAt).toLocaleDateString('en-IN'),
+                    amount: collected
+                });
+            }
+        });
+        return Object.values(stats);
+    };
 
     useEffect(() => {
         fetchOrders();
@@ -151,200 +185,348 @@ const VendorOrders = () => {
         }
     };
 
+    const staffStats = getStaffStatistics();
+    const totalStaffCount = staffStats.length;
+    const totalDeliveriesCount = staffStats.reduce((sum, s) => sum + s.totalDeliveries, 0);
+    const totalCashCollected = staffStats.reduce((sum, s) => sum + s.totalCollected, 0);
+
+    // Get all completed deliveries across all staff for the detailed history table
+    const allCompletedDeliveries = [];
+    orders.forEach(order => {
+        if (order.status === 'Completed' && order.assignedStaff?.name) {
+            const collected = order.remainingBalance !== undefined ? order.remainingBalance : (order.totalAmount - (order.advancePayment || 0));
+            allCompletedDeliveries.push({
+                _id: order._id,
+                createdAt: order.createdAt,
+                updatedAt: order.updatedAt,
+                customerName: order.shippingAddress?.fullName || 'Customer',
+                address: `${order.shippingAddress?.addressLine1 || order.shippingAddress?.streetAddress || ''}, ${order.shippingAddress?.city || ''} ${order.shippingAddress?.pincode ? `(${order.shippingAddress.pincode})` : ''}`,
+                date: new Date(order.updatedAt || order.createdAt).toLocaleDateString('en-IN'),
+                itemsCount: order.items?.length || 0,
+                totalAmount: order.totalAmount,
+                collectedAmount: collected,
+                staffName: order.assignedStaff.name,
+                staffMobile: order.assignedStaff.mobile || 'N/A'
+            });
+        }
+    });
+
+    const filteredCompletedDeliveries = selectedStaffFilter === 'All' 
+        ? allCompletedDeliveries 
+        : allCompletedDeliveries.filter(d => `${d.staffName}_${d.staffMobile}` === selectedStaffFilter);
+
     return (
         <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                {/* Search Box */}
-                <div className="relative w-full lg:max-w-xs shrink-0">
-                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input 
-                        type="text" 
-                        placeholder="Search Order ID..." 
-                        className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-primary-500 w-full text-sm font-medium transition-colors"
-                    />
+            {/* Top Sub-Header with Navigation Tabs */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <div>
+                    <h1 className="text-xl font-black text-gray-950 uppercase tracking-tight">Orders & Deliveries</h1>
+                    <p className="text-gray-500 text-xs mt-1">Manage orders and view staff delivery performance</p>
                 </div>
-                
-                {/* Filters */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
-                    <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap w-full sm:w-auto overflow-x-auto hide-scrollbar">
-                        {['All', 'Fashion', 'Grocery'].map(m => (
-                            <button
-                                key={m}
-                                onClick={() => setModuleFilter(m)}
-                                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all shrink-0 ${moduleFilter === m ? 'bg-white shadow-sm text-primary-600 border border-gray-100/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'}`}
-                            >
-                                {m}
-                            </button>
-                        ))}
-                    </div>
-                    <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap w-full sm:w-auto overflow-x-auto hide-scrollbar">
-                        {['All', 'Pending', 'Accepted', 'Dispatched', 'Completed', 'Cancelled'].map(f => (
-                            <button
-                                key={f}
-                                onClick={() => setFilter(f)}
-                                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all shrink-0 ${filter === f ? 'bg-white shadow-sm text-primary-600 border border-gray-100/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'}`}
-                            >
-                                {f}
-                            </button>
-                        ))}
-                    </div>
+                <div className="flex bg-gray-100/80 rounded-xl p-1 shrink-0 border border-gray-200/50">
+                    <button
+                        onClick={() => setActiveTab('orders')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'orders' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                        Order Listings
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('staffHistory')}
+                        className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${activeTab === 'staffHistory' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                        Staff Delivery History
+                    </button>
                 </div>
             </div>
 
-            {loading ? (
-                <div className="flex justify-center py-20">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                </div>
-            ) : filteredOrders.length === 0 ? (
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 flex flex-col items-center justify-center text-center">
-                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                        <FiPackage className="text-3xl text-gray-400" />
+            {activeTab === 'orders' ? (
+                <>
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                        {/* Search Box */}
+                        <div className="relative w-full lg:max-w-xs shrink-0">
+                            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input 
+                                type="text" 
+                                placeholder="Search Order ID..." 
+                                className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-primary-500 w-full text-sm font-medium transition-colors"
+                            />
+                        </div>
+                        
+                        {/* Filters */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
+                            <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap w-full sm:w-auto overflow-x-auto hide-scrollbar">
+                                {['All', 'Fashion', 'Grocery'].map(m => (
+                                    <button
+                                        key={m}
+                                        onClick={() => setModuleFilter(m)}
+                                        className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all shrink-0 ${moduleFilter === m ? 'bg-white shadow-sm text-primary-600 border border-gray-100/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'}`}
+                                    >
+                                        {m}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap w-full sm:w-auto overflow-x-auto hide-scrollbar">
+                                {['All', 'Pending', 'Accepted', 'Dispatched', 'Completed', 'Cancelled'].map(f => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setFilter(f)}
+                                        className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all shrink-0 ${filter === f ? 'bg-white shadow-sm text-primary-600 border border-gray-100/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'}`}
+                                    >
+                                        {f}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900">No Orders Found</h3>
-                    <p className="text-gray-500 mt-2">You don't have any orders matching the current filter.</p>
-                </div>
-            ) : (
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-gray-50 border-b border-gray-100">
-                                    <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap">Order ID & Date</th>
-                                    <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap">Customer</th>
-                                    <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest min-w-[200px]">Items</th>
-                                    <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-right">Amount</th>
-                                    <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-center">Status</th>
-                                    <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-center">Delivery By</th>
-                                    <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {filteredOrders.map(order => (
-                                    <tr key={order._id} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="p-4">
-                                            <p className="text-sm font-bold text-gray-900">{order.orderNumber}</p>
-                                            <p className="text-xs text-gray-500 font-medium mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
-                                        </td>
-                                        <td className="p-4">
-                                            <div 
-                                                onClick={() => {
-                                                    setSelectedOrderForDetail(order);
-                                                    setIsDetailModalOpen(true);
-                                                }}
-                                                className="cursor-pointer group text-left"
-                                            >
-                                                <p className="text-sm font-bold text-gray-900 group-hover:text-primary-600 group-hover:underline">
-                                                    {order.shippingAddress?.fullName || 'Customer'}
-                                                </p>
-                                                <p className="text-xs text-gray-500 font-medium mt-1">{order.shippingAddress?.city}, {order.shippingAddress?.state}</p>
-                                                <span className="text-[10px] text-primary-600 font-bold block mt-1 hover:underline">View Details →</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <div className="flex flex-col gap-2">
-                                                {order.items.map((item, idx) => (
-                                                    <div key={idx} className="flex items-center gap-3">
-                                                        <div className="relative w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
-                                                            {(item.selectedImageUrl || item.product?.images?.length > 0) ? (
-                                                                <img src={item.selectedImageUrl || item.product.images[0]} className="w-full h-full object-cover" alt="" />
-                                                            ) : (
-                                                                <FiPackage className="w-full h-full p-2 text-gray-400" />
-                                                            )}
-                                                            {item.selectedImageUrl && (
-                                                                <div className="absolute bottom-0 left-0 right-0 bg-teal-500 text-white text-[6px] font-black text-center py-0.5 uppercase tracking-wide">
-                                                                    Chosen
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs font-bold text-gray-900 line-clamp-1">{item.product?.name || 'Product'}</p>
-                                                            <p className="text-[10px] text-gray-500 font-bold uppercase">Qty: {item.quantity}</p>
-                                                            {item.selectedImageUrl && (
-                                                                <p className="text-[9px] text-teal-600 font-bold mt-0.5">&#10003; Customer selected image</p>
-                                                            )}
-                                                        </div>
+
+                    {loading ? (
+                        <div className="flex justify-center py-20">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                        </div>
+                    ) : filteredOrders.length === 0 ? (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 flex flex-col items-center justify-center text-center">
+                            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                                <FiPackage className="text-3xl text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900">No Orders Found</h3>
+                            <p className="text-gray-500 mt-2">You don't have any orders matching the current filter.</p>
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-50 border-b border-gray-100">
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap">Order ID & Date</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap">Customer</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest min-w-[200px]">Items</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-right">Amount</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-center">Status</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-center">Delivery By</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredOrders.map(order => (
+                                            <tr key={order._id} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="p-4">
+                                                    <p className="text-sm font-bold text-gray-900">{order.orderNumber}</p>
+                                                    <p className="text-xs text-gray-500 font-medium mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div 
+                                                        onClick={() => {
+                                                            setSelectedOrderForDetail(order);
+                                                            setIsDetailModalOpen(true);
+                                                        }}
+                                                        className="cursor-pointer group text-left"
+                                                    >
+                                                        <p className="text-sm font-bold text-gray-900 group-hover:text-primary-600 group-hover:underline">
+                                                            {order.shippingAddress?.fullName || 'Customer'}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 font-medium mt-1">{order.shippingAddress?.city}, {order.shippingAddress?.state}</p>
+                                                        <span className="text-[10px] text-primary-600 font-bold block mt-1 hover:underline">View Details →</span>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <p className="text-sm font-black text-primary-600">₹{order.totalAmount?.toLocaleString('en-IN')}</p>
-                                            <p className="text-[10px] font-bold text-gray-500 uppercase mt-1 border border-gray-200 inline-block px-1.5 py-0.5 rounded bg-gray-50">
-                                                Advance Paid: ₹{order.advancePayment}
-                                            </p>
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order.status)}`}>
-                                                {order.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-center text-xs font-medium text-gray-700">
-                                            {order.assignedStaff?.name ? (
-                                                <div>
-                                                    <p className="font-bold text-gray-950">{order.assignedStaff.name}</p>
-                                                    <p className="text-gray-500 mt-0.5">{order.assignedStaff.mobile}</p>
-                                                </div>
-                                            ) : (
-                                                <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Not Assigned</span>
-                                            )}
-                                        </td>
-                                        <td className="p-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                {order.status === 'Pending' && (
-                                                    <>
-                                                        <button 
-                                                            onClick={() => updateOrderStatus(order._id, 'Accepted')}
-                                                            className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors border border-indigo-200 flex items-center gap-1"
-                                                        >
-                                                            <FiCheckCircle /> Accept
-                                                        </button>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="flex flex-col gap-2">
+                                                        {order.items.map((item, idx) => (
+                                                            <div key={idx} className="flex items-center gap-3">
+                                                                <div className="relative w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
+                                                                    {(item.selectedImageUrl || item.product?.images?.length > 0) ? (
+                                                                        <img src={item.selectedImageUrl || item.product.images[0]} className="w-full h-full object-cover" alt="" />
+                                                                    ) : (
+                                                                        <FiPackage className="w-full h-full p-2 text-gray-400" />
+                                                                    )}
+                                                                    {item.selectedImageUrl && (
+                                                                        <div className="absolute bottom-0 left-0 right-0 bg-teal-500 text-white text-[6px] font-black text-center py-0.5 uppercase tracking-wide">
+                                                                            Chosen
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs font-bold text-gray-900 line-clamp-1">{item.product?.name || 'Product'}</p>
+                                                                    <p className="text-[10px] text-gray-500 font-bold uppercase">Qty: {item.quantity}</p>
+                                                                    {item.selectedImageUrl && (
+                                                                        <p className="text-[9px] text-teal-600 font-bold mt-0.5">&#10003; Customer selected image</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    <p className="text-sm font-black text-primary-600">₹{order.totalAmount?.toLocaleString('en-IN')}</p>
+                                                    <p className="text-[10px] font-bold text-gray-500 uppercase mt-1 border border-gray-200 inline-block px-1.5 py-0.5 rounded bg-gray-50">
+                                                        Advance Paid: ₹{order.advancePayment}
+                                                    </p>
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order.status)}`}>
+                                                        {order.status}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-center text-xs font-medium text-gray-700">
+                                                    {order.assignedStaff?.name ? (
+                                                        <div>
+                                                            <p className="font-bold text-gray-950">{order.assignedStaff.name}</p>
+                                                            <p className="text-gray-500 mt-0.5">{order.assignedStaff.mobile}</p>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Not Assigned</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        {order.status === 'Pending' && (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => updateOrderStatus(order._id, 'Accepted')}
+                                                                    className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors border border-indigo-200 flex items-center gap-1"
+                                                                >
+                                                                    <FiCheckCircle /> Accept
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        if(window.confirm('Are you sure you want to cancel this order?')) {
+                                                                            updateOrderStatus(order._id, 'Cancelled');
+                                                                        }
+                                                                    }}
+                                                                    className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors border border-red-200 flex items-center gap-1"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {order.status === 'Accepted' && (
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setOrderToDispatch(order);
+                                                                    setIsDispatchModalOpen(true);
+                                                                }}
+                                                                className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-200 flex items-center gap-1"
+                                                            >
+                                                                <FiTruck /> Dispatch
+                                                            </button>
+                                                        )}
+                                                        {order.status === 'Dispatched' && (
+                                                            <button 
+                                                                onClick={() => updateOrderStatus(order._id, 'Completed')}
+                                                                className="text-xs font-bold text-green-600 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors border border-green-200 flex items-center gap-1"
+                                                            >
+                                                                <FiCheckCircle /> Complete
+                                                            </button>
+                                                        )}
+                                                        {['Accepted', 'Dispatched'].includes(order.status) && (order.shippingAddress?.phone || order.user?.phone) && (
+                                                            <a 
+                                                                href={`tel:${order.shippingAddress?.phone || order.user?.phone}`}
+                                                                className="text-xs font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors border border-teal-200 flex items-center gap-1"
+                                                            >
+                                                                <FiPhoneCall /> Call User
+                                                            </a>
+                                                        )}
                                                         <button 
                                                             onClick={() => {
-                                                                if(window.confirm('Are you sure you want to cancel this order?')) {
-                                                                    updateOrderStatus(order._id, 'Cancelled');
-                                                                }
+                                                                setSelectedOrderForInvoice(order);
+                                                                setIsInvoiceModalOpen(true);
                                                             }}
-                                                            className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors border border-red-200 flex items-center gap-1"
+                                                            className="text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors border border-gray-300 flex items-center gap-1"
+                                                            title="View & Print Order Invoice / Bill"
                                                         >
-                                                            Cancel
+                                                            <FiFileText /> Invoice
                                                         </button>
-                                                    </>
-                                                )}
-                                                {order.status === 'Accepted' && (
-                                                    <button 
-                                                        onClick={() => {
-                                                            setOrderToDispatch(order);
-                                                            setIsDispatchModalOpen(true);
-                                                        }}
-                                                        className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-200 flex items-center gap-1"
-                                                    >
-                                                        <FiTruck /> Dispatch
-                                                    </button>
-                                                )}
-                                                {order.status === 'Dispatched' && (
-                                                    <button 
-                                                        onClick={() => updateOrderStatus(order._id, 'Completed')}
-                                                        className="text-xs font-bold text-green-600 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors border border-green-200 flex items-center gap-1"
-                                                    >
-                                                        <FiCheckCircle /> Complete
-                                                    </button>
-                                                )}
-                                                <button 
-                                                    onClick={() => {
-                                                        setSelectedOrderForInvoice(order);
-                                                        setIsInvoiceModalOpen(true);
-                                                    }}
-                                                    className="text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors border border-gray-300 flex items-center gap-1"
-                                                    title="View & Print Order Invoice / Bill"
-                                                >
-                                                    <FiFileText /> Invoice
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </>
+            ) : (
+                /* Staff Delivery History Tab Content */
+                <div className="space-y-6">
+                    {/* Performance Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Active Delivery Staff</span>
+                            <span className="text-3xl font-black text-slate-900 mt-2">{totalStaffCount}</span>
+                        </div>
+                        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Deliveries Completed</span>
+                            <span className="text-3xl font-black text-emerald-600 mt-2">{totalDeliveriesCount}</span>
+                        </div>
+                        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Cash/COD Collected</span>
+                            <span className="text-3xl font-black text-primary-600 mt-2">₹{totalCashCollected.toLocaleString('en-IN')}</span>
+                        </div>
+                    </div>
+
+                    {/* Filter and Detailed Table */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
+                            <div>
+                                <h3 className="font-black text-gray-900 text-sm uppercase tracking-wider">Detailed Delivery History Log</h3>
+                                <p className="text-xs text-gray-500 mt-0.5">Filter by delivery staff to audit specific records</p>
+                            </div>
+                            <div className="shrink-0">
+                                <select
+                                    value={selectedStaffFilter}
+                                    onChange={(e) => setSelectedStaffFilter(e.target.value)}
+                                    className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-primary-500 shadow-sm"
+                                >
+                                    <option value="All">All Delivery Staff</option>
+                                    {staffStats.map(s => (
+                                        <option key={`${s.name}_${s.mobile}`} value={`${s.name}_${s.mobile}`}>{s.name} ({s.mobile})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {filteredCompletedDeliveries.length === 0 ? (
+                            <div className="p-12 text-center text-gray-400 font-bold uppercase tracking-wider text-xs">
+                                No completed delivery records found
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-50 border-b border-gray-100">
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap">Date & Address</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap">Delivery Partner (Staff)</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap">Customer Name</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-right">Order Amount</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest whitespace-nowrap text-right">COD Collected</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredCompletedDeliveries.map(del => (
+                                            <tr key={del._id} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="p-4">
+                                                    <p className="text-xs text-gray-500 font-bold">{del.date}</p>
+                                                    <p className="text-sm font-medium text-gray-800 mt-1 max-w-[250px] whitespace-normal leading-normal" title={del.address}>📍 {del.address}</p>
+                                                </td>
+                                                <td className="p-4">
+                                                    <p className="text-sm font-bold text-gray-900">{del.staffName}</p>
+                                                    <p className="text-xs text-gray-500 font-medium mt-0.5">{del.staffMobile}</p>
+                                                </td>
+                                                <td className="p-4">
+                                                    <p className="text-sm font-bold text-gray-900">{del.customerName}</p>
+                                                </td>
+                                                <td className="p-4 text-right font-bold text-slate-500 text-sm">
+                                                    ₹{del.totalAmount?.toLocaleString('en-IN')}
+                                                </td>
+                                                <td className="p-4 text-right font-black text-primary-600 text-sm">
+                                                    ₹{del.collectedAmount?.toLocaleString('en-IN')}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

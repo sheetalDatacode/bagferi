@@ -210,8 +210,11 @@ export const verifyCheckoutPayment = async (req, res, next) => {
       );
     }
 
-    // Clear selected items from cart after successful order creation
-    cart.items = cart.items.filter(item => item.selected === false);
+    // Clear only the processed vendor's selected items from cart after successful order creation
+    cart.items = cart.items.filter(item => 
+      item.selected === false || 
+      (vendorId && item.vendor.toString() !== vendorId.toString())
+    );
     await cart.save();
 
     res.status(200).json({
