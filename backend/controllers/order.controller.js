@@ -30,10 +30,22 @@ export const initiateCheckout = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cart is empty' });
     }
 
+    console.log('initiateCheckout req.body vendorId:', vendorId);
+    console.log('initiateCheckout cart.items vendors:', cart?.items?.map(item => ({
+      vendor: item.vendor,
+      vendorStr: item.vendor?.toString(),
+      selected: item.selected
+    })));
+
     let selectedItems = cart.items.filter(item => item.selected !== false);
     if (vendorId) {
-      selectedItems = selectedItems.filter(item => item.vendor.toString() === vendorId.toString());
+      selectedItems = selectedItems.filter(item => {
+        const itemVendorStr = item.vendor?._id ? item.vendor._id.toString() : item.vendor?.toString();
+        const targetVendorStr = String(vendorId);
+        return itemVendorStr && targetVendorStr && itemVendorStr.toLowerCase().trim() === targetVendorStr.toLowerCase().trim();
+      });
     }
+    console.log('initiateCheckout selectedItems after filter:', selectedItems.map(item => item.vendor?.toString()));
     if (selectedItems.length === 0) {
       return res.status(400).json({ success: false, message: 'No items selected for checkout' });
     }
@@ -51,7 +63,7 @@ export const initiateCheckout = async (req, res, next) => {
       itemsByGroup[groupKey].push(item);
     });
 
-    const settings = await B2BSettings.findOne().sort({ createdAt: -1 }) || { advancePaymentAmount: 200 };
+    const settings = await B2BSettings.findOne() || { advancePaymentAmount: 200 };
     const advancePerOrder = settings.advancePaymentAmount;
     
     let totalAdvanceRequired = 0;
@@ -125,7 +137,11 @@ export const verifyCheckoutPayment = async (req, res, next) => {
 
     let selectedItems = cart.items.filter(item => item.selected !== false);
     if (vendorId) {
-      selectedItems = selectedItems.filter(item => item.vendor.toString() === vendorId.toString());
+      selectedItems = selectedItems.filter(item => {
+        const itemVendorStr = item.vendor?._id ? item.vendor._id.toString() : item.vendor?.toString();
+        const targetVendorStr = String(vendorId);
+        return itemVendorStr && targetVendorStr && itemVendorStr.toLowerCase().trim() === targetVendorStr.toLowerCase().trim();
+      });
     }
     if (selectedItems.length === 0) {
       return res.status(400).json({ success: false, message: 'No items selected for checkout' });

@@ -239,7 +239,7 @@ const Orders = () => {
                                                         {(order.vendor?.phone || order.vendor?.mobile) && (
                                                             <div className="flex items-center gap-2">
                                                                  <FiPhoneCall className="text-gray-400" /> 
-                                                                 <a href={`tel:${order.vendor.phone || order.vendor.mobile}`} className="font-bold text-blue-600 hover:underline">{order.vendor.phone || order.vendor.mobile}</a>
+                                                                 <a href={`tel:${order.vendor.phone || order.vendor.mobile}`} className="font-bold text-blue-600 hover:underline">Call Vendor</a>
                                                             </div>
                                                         )}
                                                         {order.vendor?.email && (
@@ -273,7 +273,7 @@ const Orders = () => {
                                                     {order.assignedStaff.mobile && (
                                                         <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
                                                              <FiPhoneCall className="text-gray-400" /> 
-                                                             <a href={`tel:${order.assignedStaff.mobile}`} className="font-bold text-emerald-600 hover:underline">{order.assignedStaff.mobile}</a>
+                                                             <a href={`tel:${order.assignedStaff.mobile}`} className="font-bold text-emerald-600 hover:underline">Call Delivery Boy</a>
                                                         </div>
                                                     )}
                                                 </div>

@@ -36,6 +36,10 @@ const GroceryCatalog = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [selectedRootId, setSelectedRootId] = useState(null);
+
+  useEffect(() => {
+    setSearchQuery(searchParams.get("search") || "");
+  }, [searchParams]);
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
@@ -84,6 +88,11 @@ const GroceryCatalog = () => {
 
   const handleSearchSubmit = (query) => {
     setSearchQuery(query);
+    if (query) {
+      setSearchParams({ search: query });
+    } else {
+      setSearchParams({});
+    }
   };
 
   useEffect(() => {
@@ -92,6 +101,7 @@ const GroceryCatalog = () => {
       try {
         setLoadingProducts(true);
         let url = `/grocery/products?category=${selectedRootId}&limit=20&sort=${sortBy}&_t=${Date.now()}`;
+        if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
         if (debouncedMinPrice) url += `&minPrice=${debouncedMinPrice}`;
         if (debouncedMaxPrice) url += `&maxPrice=${debouncedMaxPrice}`;
         if (maxMoq) url += `&maxMoq=${maxMoq}`;
@@ -133,7 +143,7 @@ const GroceryCatalog = () => {
 
     fetchProducts();
     fetchFilters();
-  }, [selectedRootId, sortBy, debouncedMinPrice, debouncedMaxPrice, selectedBrands, selectedWeights, maxMoq, selectedAddress?._id]);
+  }, [selectedRootId, sortBy, debouncedMinPrice, debouncedMaxPrice, selectedBrands, selectedWeights, maxMoq, selectedAddress?._id, searchQuery]);
 
   const selectedRoot = categories.find(c => c._id === selectedRootId) || null;
 

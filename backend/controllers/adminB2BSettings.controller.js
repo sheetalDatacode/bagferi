@@ -8,7 +8,7 @@ class AdminB2BSettingsController {
     async getSettings(req, res) {
         try {
             // Sort by createdAt descending to get the latest if multiples exist
-            let settings = await B2BSettings.findOne().sort({ createdAt: -1 });
+            let settings = await B2BSettings.findOne();
             
             if (!settings) {
                 // Initialize with defaults if not exists

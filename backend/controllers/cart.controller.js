@@ -245,3 +245,59 @@ export const clearCart = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateCartBulk = async (req, res, next) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const { updates } = req.body;
+
+    if (!Array.isArray(updates)) {
+      return res.status(400).json({ success: false, message: 'Invalid updates payload' });
+    }
+
+    const cart = await Cart.findOne({ user: userId });
+    if (!cart) {
+      return res.status(404).json({ success: false, message: 'Cart not found' });
+    }
+
+    updates.forEach(update => {
+      const { productId, size, color, selectedVariants, selected } = update;
+      const itemIndex = cart.items.findIndex(p => {
+        const isProductMatch = p.product.toString() === productId;
+        const isSizeMatch = size ? p.size === size : !p.size;
+        const isColorMatch = color ? p.color === color : !p.color;
+        
+        const pVariants = p.selectedVariants ? (p.selectedVariants instanceof Map ? Object.fromEntries(p.selectedVariants) : p.selectedVariants) : {};
+        const reqVariants = selectedVariants || {};
+        const isVariantsMatch = Object.keys(pVariants).length === Object.keys(reqVariants).length &&
+          Object.keys(pVariants).every(k => String(pVariants[k]) === String(reqVariants[k]));
+        
+        return isProductMatch && isSizeMatch && isColorMatch && isVariantsMatch;
+      });
+
+      if (itemIndex > -1) {
+        if (selected !== undefined) {
+          cart.items[itemIndex].selected = selected;
+        }
+      }
+    });
+
+    await cart.save();
+    
+    const populatedCart = await Cart.findById(cart._id).populate({
+      path: 'items.product',
+      select: 'name price image images brandName stockQuantity minOrderQuantity sku formType items unit weight vendor vendorId',
+    }).populate({
+      path: 'items.vendor',
+      select: 'storeName businessType address',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Cart updated',
+      data: populatedCart,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

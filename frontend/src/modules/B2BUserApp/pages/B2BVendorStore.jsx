@@ -342,11 +342,11 @@ const B2BVendorStore = () => {
         if (searchQuery) {
             const q = searchQuery.trim().toLowerCase();
             filtered = filtered.filter(p => {
-                const nameStarts = (p.name || '').toLowerCase().startsWith(q);
-                const itemStarts = Array.isArray(p.items)
-                    ? p.items.some(it => (it.itemName || '').toLowerCase().startsWith(q))
+                const nameMatches = (p.name || '').toLowerCase().includes(q);
+                const itemMatches = Array.isArray(p.items)
+                    ? p.items.some(it => (it.itemName || '').toLowerCase().includes(q))
                     : false;
-                return nameStarts || itemStarts;
+                return nameMatches || itemMatches;
             });
         }
 
@@ -380,7 +380,7 @@ const B2BVendorStore = () => {
 
         if (searchQuery) {
             const q = searchQuery.trim().toLowerCase();
-            filtered = filtered.filter(p => (p.name || '').toLowerCase().startsWith(q));
+            filtered = filtered.filter(p => (p.name || '').toLowerCase().includes(q));
         }
 
         switch (sortBy) {
@@ -879,7 +879,7 @@ const B2BVendorStore = () => {
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Search inventory..."
-                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-xl font-bold text-xs uppercase tracking-widest text-gray-500 outline-none focus:border-primary-200 transition-all shadow-sm"
+                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-xl font-medium text-xs text-gray-700 outline-none focus:border-primary-200 transition-all shadow-sm"
                                 />
                                 <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                                     <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85Zm-5.242.656a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z" />
@@ -922,9 +922,9 @@ const B2BVendorStore = () => {
 
                 {/* Fashion Tab Content */}
                 {activeTab === "fashion" && (
-                    <div className="mt-8 flex gap-6 min-h-[500px]">
+                    <div className="mt-8 flex gap-2 md:gap-4 min-h-[500px]">
                         {/* Left Categories Sidebar */}
-                        <div className="w-[90px] md:w-36 bg-white flex flex-col overflow-y-auto no-scrollbar border border-gray-100 rounded-3xl p-2 shrink-0">
+                        <div className="w-[90px] md:w-36 bg-white flex flex-col overflow-y-auto no-scrollbar border border-gray-100 rounded-3xl p-2 shrink-0 sticky top-[240px] max-h-[calc(100vh-280px)]">
                             {allCategories?.map((cat) => {
                                 const catId = cat._id || cat.id;
                                 const isSelected = String(selectedFashionCategory) === String(catId);
@@ -960,19 +960,27 @@ const B2BVendorStore = () => {
                                         {allCategories.find(c => String(c._id || c.id) === String(selectedFashionCategory))?.name}
                                     </h3>
                                     
-                                    {/* Subcategories horizontal list */}
+                                    {/* Subcategories horizontal list with images */}
                                     {allCategories.find(c => String(c._id || c.id) === String(selectedFashionCategory))?.subcategories?.length > 0 && (
-                                        <div className="flex flex-wrap gap-4 pb-4 mb-6 border-b border-gray-100">
+                                        <div className="flex gap-6 overflow-x-auto no-scrollbar pb-4 mb-6 border-b border-gray-100">
+                                            {/* Shop All Button */}
                                             <button
                                                 onClick={() => setSelectedFashionSubcategory(null)}
-                                                className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
-                                                    !selectedFashionSubcategory
-                                                        ? 'bg-purple-600 text-white border-purple-600'
-                                                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                                                }`}
+                                                className="flex flex-col items-center gap-2 group flex-shrink-0"
                                             >
-                                                Shop All
+                                                <div className={`w-14 h-14 rounded-full overflow-hidden flex items-center justify-center border transition-all ${
+                                                    !selectedFashionSubcategory
+                                                        ? 'ring-2 ring-purple-500 shadow-md border-purple-500 bg-purple-50'
+                                                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                                                }`}>
+                                                    <span className={`text-[10px] font-black uppercase ${!selectedFashionSubcategory ? 'text-purple-600' : 'text-gray-500'}`}>ALL</span>
+                                                </div>
+                                                <span className={`text-[10px] font-black uppercase tracking-wider text-center ${!selectedFashionSubcategory ? 'text-purple-700' : 'text-gray-500'}`}>
+                                                    Shop All
+                                                </span>
                                             </button>
+
+                                            {/* Subcategory items */}
                                             {allCategories.find(c => String(c._id || c.id) === String(selectedFashionCategory))?.subcategories.map((sub, idx) => {
                                                 const subId = sub._id || sub.id || sub;
                                                 const subName = sub.name || sub;
@@ -981,13 +989,24 @@ const B2BVendorStore = () => {
                                                     <button
                                                         key={subId || idx}
                                                         onClick={() => setSelectedFashionSubcategory(subId)}
-                                                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
-                                                            isSelected
-                                                                ? 'bg-purple-600 text-white border-purple-600'
-                                                                : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                                                        }`}
+                                                        className="flex flex-col items-center gap-2 group flex-shrink-0"
                                                     >
-                                                        {subName}
+                                                        <div className={`w-14 h-14 rounded-full overflow-hidden flex items-center justify-center border transition-all ${
+                                                            isSelected
+                                                                ? 'ring-2 ring-purple-500 shadow-md border-purple-500 bg-purple-50'
+                                                                : 'bg-gray-50 border-gray-100 hover:bg-gray-200'
+                                                        }`}>
+                                                            {sub.image ? (
+                                                                <img src={sub.image} alt={subName} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-full bg-purple-50 flex items-center justify-center text-purple-400 font-bold text-[10px]">
+                                                                    {subName.slice(0, 2).toUpperCase()}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <span className={`text-[10px] font-black uppercase tracking-wider text-center ${isSelected ? 'text-purple-700' : 'text-gray-500'}`}>
+                                                            {subName}
+                                                        </span>
                                                     </button>
                                                 );
                                             })}
@@ -1028,9 +1047,9 @@ const B2BVendorStore = () => {
 
                 {/* Grocery Tab Content */}
                 {activeTab === "grocery" && (
-                    <div className="mt-8 flex gap-6 min-h-[500px]">
+                    <div className="mt-8 flex gap-2 md:gap-4 min-h-[500px]">
                         {/* Left Categories Sidebar */}
-                        <div className="w-[90px] md:w-36 bg-white flex flex-col overflow-y-auto no-scrollbar border border-gray-100 rounded-3xl p-2 shrink-0">
+                        <div className="w-[90px] md:w-36 bg-white flex flex-col overflow-y-auto no-scrollbar border border-gray-100 rounded-3xl p-2 shrink-0 sticky top-[240px] max-h-[calc(100vh-280px)]">
                             {groceryCategories?.map((cat) => {
                                 const catId = cat._id || cat.id;
                                 const isSelected = String(selectedGroceryCategory) === String(catId);
@@ -1071,19 +1090,27 @@ const B2BVendorStore = () => {
                                         {groceryCategories.find(c => String(c._id || c.id) === String(selectedGroceryCategory))?.name}
                                     </h3>
                                     
-                                    {/* Subcategories horizontal list */}
+                                    {/* Subcategories horizontal list with images */}
                                     {groceryCategories.find(c => String(c._id || c.id) === String(selectedGroceryCategory))?.subcategories?.length > 0 && (
-                                        <div className="flex flex-wrap gap-4 pb-4 mb-6 border-b border-gray-100">
+                                        <div className="flex gap-6 overflow-x-auto no-scrollbar pb-4 mb-6 border-b border-gray-100">
+                                            {/* Shop All Button */}
                                             <button
                                                 onClick={() => setSelectedGrocerySubcategory(null)}
-                                                className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
-                                                    !selectedGrocerySubcategory
-                                                        ? 'bg-green-600 text-white border-green-600'
-                                                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                                                }`}
+                                                className="flex flex-col items-center gap-2 group flex-shrink-0"
                                             >
-                                                Shop All
+                                                <div className={`w-14 h-14 rounded-full overflow-hidden flex items-center justify-center border transition-all ${
+                                                    !selectedGrocerySubcategory
+                                                        ? 'ring-2 ring-green-500 shadow-md border-green-500 bg-green-50'
+                                                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                                                }`}>
+                                                    <span className={`text-[10px] font-black uppercase ${!selectedGrocerySubcategory ? 'text-green-600' : 'text-gray-500'}`}>ALL</span>
+                                                </div>
+                                                <span className={`text-[10px] font-black uppercase tracking-wider text-center ${!selectedGrocerySubcategory ? 'text-green-700' : 'text-gray-500'}`}>
+                                                    Shop All
+                                                </span>
                                             </button>
+
+                                            {/* Subcategory items */}
                                             {groceryCategories.find(c => String(c._id || c.id) === String(selectedGroceryCategory))?.subcategories.map((sub, idx) => {
                                                 const subId = sub._id || sub.id || sub;
                                                 const subName = sub.name || sub;
@@ -1092,13 +1119,24 @@ const B2BVendorStore = () => {
                                                     <button
                                                         key={subId || idx}
                                                         onClick={() => setSelectedGrocerySubcategory(subId)}
-                                                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
-                                                            isSelected
-                                                                ? 'bg-green-600 text-white border-green-600'
-                                                                : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                                                        }`}
+                                                        className="flex flex-col items-center gap-2 group flex-shrink-0"
                                                     >
-                                                        {subName}
+                                                        <div className={`w-14 h-14 rounded-full overflow-hidden flex items-center justify-center border transition-all ${
+                                                            isSelected
+                                                                ? 'ring-2 ring-green-500 shadow-md border-green-500 bg-green-50'
+                                                                : 'bg-gray-50 border-gray-100 hover:bg-gray-200'
+                                                        }`}>
+                                                            {sub.image ? (
+                                                                <img src={sub.image} alt={subName} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-full bg-green-50 flex items-center justify-center text-green-400 font-bold text-[10px]">
+                                                                    {subName.slice(0, 2).toUpperCase()}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <span className={`text-[10px] font-black uppercase tracking-wider text-center ${isSelected ? 'text-green-700' : 'text-gray-500'}`}>
+                                                            {subName}
+                                                        </span>
                                                     </button>
                                                 );
                                             })}

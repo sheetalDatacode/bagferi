@@ -17,6 +17,7 @@ const B2BGroceryCategoryView = () => {
   const [rootCategory, setRootCategory] = useState(null);
   const [subcategories, setSubcategories] = useState([]);
   const [selectedSub, setSelectedSub] = useState(null);
+  const [localSearch, setLocalSearch] = useState('');
   
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +112,7 @@ const B2BGroceryCategoryView = () => {
       if (priceRange.max) params.append('maxPrice', priceRange.max);
       if (selectedBrands.length > 0) params.append('brands', selectedBrands.join(','));
       if (selectedWeights.length > 0) params.append('weights', selectedWeights.join(','));
+      if (localSearch) params.append('search', localSearch);
 
       const storedAddress = localStorage.getItem('selected-b2b-address');
       if (storedAddress) {
@@ -163,6 +165,13 @@ const B2BGroceryCategoryView = () => {
   };
 
   useEffect(() => {
+    if (!localSearch && selectedSub) {
+      setPage(1);
+      fetchProducts(1, true);
+    }
+  }, [localSearch]);
+
+  useEffect(() => {
     if (selectedSub) {
       setPage(1);
       fetchProducts(1, true);
@@ -194,14 +203,28 @@ const B2BGroceryCategoryView = () => {
           <FiArrowLeft size={20} />
         </button>
         <h1 className="font-black text-gray-900 text-lg flex-1 truncate">{rootCategory?.name}</h1>
-        <div className="flex items-center bg-gray-50 rounded-lg px-3 py-1.5 border border-gray-100 flex-1 max-w-[200px]">
-          <FiSearch className="text-gray-400 mr-2" />
-          <input 
-            type="text" 
-            placeholder="Search..."
-            className="bg-transparent border-none outline-none w-full text-sm font-medium" 
-            onClick={() => navigate('/b2b/grocery')}
-          />
+        <div className="flex items-center gap-2 flex-1 max-w-[280px]">
+          <div className="flex items-center bg-gray-50 rounded-lg px-3 py-1.5 border border-gray-100 flex-1">
+            <FiSearch className="text-gray-400 mr-2" />
+            <input 
+              type="text" 
+              placeholder="Search..."
+              className="bg-transparent border-none outline-none w-full text-sm font-medium" 
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  fetchProducts(1, true);
+                }
+              }}
+            />
+          </div>
+          <button 
+            onClick={() => fetchProducts(1, true)}
+            className="px-3 py-1.5 bg-primary-600 text-white font-bold text-xs rounded-lg hover:bg-primary-700 transition-all uppercase tracking-wider shadow-sm"
+          >
+            Search
+          </button>
         </div>
       </div>
 

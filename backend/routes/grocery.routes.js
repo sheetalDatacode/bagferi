@@ -14,7 +14,8 @@ import {
     deleteGroceryProduct,
     getVendorGroceryProducts,
     getGroceryProductFilters,
-    updateGroceryProductStatus
+    updateGroceryProductStatus,
+    getGroceryProductSuggestions
 } from '../controllers/groceryProduct.controller.js';
 import { upload } from '../utils/upload.util.js';
 import { authenticate } from '../middleware/auth.middleware.js';
@@ -25,6 +26,7 @@ const router = express.Router();
 // Public Routes
 router.get('/categories', getGroceryCategories);
 router.get('/categories/:id', getGroceryCategory);
+router.get('/products/suggestions', getGroceryProductSuggestions);
 router.get('/products', getGroceryProducts);
 router.get('/products/filters', getGroceryProductFilters);
 router.get('/products/:id', getGroceryProductById);

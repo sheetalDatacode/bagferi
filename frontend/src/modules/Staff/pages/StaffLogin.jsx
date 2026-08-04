@@ -83,6 +83,29 @@ export default function StaffLogin() {
                         {loading ? 'Logging in...' : 'Login'}
                     </button>
                 </form>
+
+                <div style={{ marginTop: '1.5rem', borderTop: '1px solid #edf2f7', paddingTop: '1.25rem', textAlign: 'center' }}>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/b2b-vendor/login')}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            background: '#f7fafc',
+                            color: '#4a5568',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '0.5rem',
+                            padding: '0.5rem 1rem',
+                            fontSize: '0.8rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        💼 Login as Vendor
+                    </button>
+                </div>
             </div>
         </div>
     );

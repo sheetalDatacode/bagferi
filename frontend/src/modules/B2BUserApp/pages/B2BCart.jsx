@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 const B2BCart = () => {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuthStore();
-    const { cart, loading, fetchCart, updateQuantity, removeFromCart, toggleSelection } = useCartStore();
+    const { cart, loading, fetchCart, updateQuantity, removeFromCart, toggleSelection, toggleBulkSelection } = useCartStore();
     const [updatingItemId, setUpdatingItemId] = useState(null);
 
     useEffect(() => {
@@ -91,14 +91,41 @@ const B2BCart = () => {
                         
                         {/* Left Column: Cart Items */}
                         <div className="flex-1 flex flex-col gap-6">
-                            {Object.entries(groupedItems).map(([vendorId, group]) => (
-                                <div key={vendorId} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                                    <div className="bg-gray-50/80 px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex items-center gap-2">
-                                        <FiShield className="text-primary-600" />
-                                        <span className="text-[11px] md:text-xs font-black text-gray-700 uppercase tracking-[0.15em]">Sold by: {group.name}</span>
-                                    </div>
-                                    
-                                    <div className="divide-y divide-gray-100">
+                            {Object.entries(groupedItems).map(([vendorId, group]) => {
+                                const isGroupSelected = group.items.every(item => item.selected !== false);
+                                return (
+                                    <div key={vendorId} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
+                                        {updatingItemId === `group_${vendorId}` && (
+                                            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary-600"></div>
+                                            </div>
+                                        )}
+                                        <div className="bg-gray-50/80 px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isGroupSelected}
+                                                    onChange={async (e) => {
+                                                        const targetChecked = e.target.checked;
+                                                        setUpdatingItemId(`group_${vendorId}`);
+                                                        const updates = group.items.map(item => ({
+                                                            productId: item.product._id || item.product,
+                                                            size: item.size,
+                                                            color: item.color,
+                                                            selectedVariants: item.selectedVariants,
+                                                            selected: targetChecked
+                                                        }));
+                                                        await toggleBulkSelection(updates);
+                                                        setUpdatingItemId(null);
+                                                    }}
+                                                    className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                                                />
+                                                <FiShield className="text-primary-600" />
+                                                <span className="text-[11px] md:text-xs font-black text-gray-700 uppercase tracking-[0.15em]">Sold by: {group.name}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="divide-y divide-gray-100">
                                         {group.items.map((item) => {
                                             const itemKey = `${item.product._id || item.product}_${item.size || ''}_${item.color || ''}_${JSON.stringify(item.selectedVariants || {})}`;
                                             return (
@@ -203,7 +230,7 @@ const B2BCart = () => {
                                         })}
                                     </div>
                                 </div>
-                            ))}
+                            )})}
                         </div>
 
                         {/* Right Column: Order Summary (Sticky Bottom on Mobile) */}

@@ -246,6 +246,127 @@ const B2BVendorDashboard = () => {
                 </div>
             )}
 
+            {/* ------------------------------------------
+                NEW ORDERS & TOP SELLING PRODUCTS GRID
+            ------------------------------------------ */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* NEW ORDERS TABLE */}
+                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full">
+                    <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Activity</h2>
+                            <p className="text-xl font-black text-slate-800 mt-1">New Orders</p>
+                        </div>
+                        <button 
+                            onClick={() => navigate('/b2b-vendor/orders')}
+                            className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors"
+                        >
+                            View All
+                        </button>
+                    </div>
+                    
+                    {dashboardData?.recentOrders?.length > 0 ? (
+                        <div className="overflow-x-auto flex-1">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50/50 border-b border-slate-100">
+                                        <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Order</th>
+                                        <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Customer</th>
+                                        <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Amount</th>
+                                        <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {dashboardData.recentOrders.map((order) => (
+                                        <tr key={order._id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="py-4 px-6 text-xs font-black text-slate-900 uppercase">#{order._id?.slice(-6)}</td>
+                                            <td className="py-4 px-6">
+                                                <p className="text-xs font-bold text-slate-800 truncate max-w-[150px]">{order.user?.name || 'Guest'}</p>
+                                            </td>
+                                            <td className="py-4 px-6 text-xs font-black text-slate-800">₹{(order.totalAmount || 0).toLocaleString('en-IN')}</td>
+                                            <td className="py-4 px-6 text-right">
+                                                <span className={`inline-block px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${
+                                                    order.status === 'Completed' || order.status === 'delivered'
+                                                        ? 'bg-emerald-50 text-emerald-600'
+                                                        : order.status === 'Pending' || order.status === 'pending'
+                                                        ? 'bg-amber-50 text-amber-600 font-extrabold'
+                                                        : 'bg-blue-50 text-blue-600'
+                                                }`}>
+                                                    {order.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="py-12 text-center text-slate-400 uppercase text-xs font-bold flex-1 flex items-center justify-center">
+                            No new orders received yet
+                        </div>
+                    )}
+                </div>
+
+                {/* TOP SELLING PRODUCTS */}
+                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full">
+                    <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Analytics Overview</h2>
+                            <p className="text-xl font-black text-slate-800 mt-1 text-left">Top Products</p>
+                        </div>
+                        <div className="p-2 bg-primary-50 rounded-xl text-primary-600">
+                            <FiTrendingUp size={16} />
+                        </div>
+                    </div>
+                    
+                    {dashboardData?.topSellingProducts?.length > 0 ? (
+                        <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+                            {dashboardData.topSellingProducts.map((item, idx) => {
+                                const prod = item.product;
+                                if (!prod) return null;
+                                const images = prod.images || [];
+                                const imgUrl = images.length > 0 ? images[0] : (prod.image || '');
+                                
+                                return (
+                                    <div key={idx} className="flex items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors border border-transparent rounded-xl p-2">
+                                        <div className="flex items-center gap-3 text-left min-w-0">
+                                            <span className="text-xs font-black text-slate-400 w-4">#{idx + 1}</span>
+                                            <div className="w-10 h-10 rounded-lg border border-slate-100 overflow-hidden bg-slate-50 flex-shrink-0">
+                                                {imgUrl ? (
+                                                    <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                                        <FiPackage size={14} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h4 className="text-xs font-bold text-slate-800 truncate max-w-[200px]" title={prod.name}>{prod.name}</h4>
+                                                <p className="text-[10px] text-slate-400 font-bold mt-0.5">₹{(prod.price || 0).toLocaleString('en-IN')}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-6 text-right flex-shrink-0">
+                                            <div>
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Sold</span>
+                                                <span className="text-xs font-black text-slate-800">{item.salesCount}</span>
+                                            </div>
+                                            <div className="min-w-[80px]">
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Revenue</span>
+                                                <span className="text-xs font-black text-primary-600">₹{item.revenue.toLocaleString('en-IN')}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="py-12 text-center text-slate-400 uppercase text-xs font-bold flex-1 flex items-center justify-center">
+                            No sales data available yet
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
                 {/* LEFT COLUMN: LISTINGS & SUBSCRIPTIONS */}
                 <div className="xl:col-span-8 space-y-10">
@@ -368,69 +489,6 @@ const B2BVendorDashboard = () => {
                         )}
                     </div>
 
-                    {/* ------------------------------------------
-                        NEW ORDERS TABLE
-                    ------------------------------------------ */}
-                    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-                        <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-                            <div>
-                                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Activity</h2>
-                                <p className="text-xl font-black text-slate-800 mt-1">New Orders</p>
-                            </div>
-                            <button 
-                                onClick={() => navigate('/b2b-vendor/orders')}
-                                className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors"
-                            >
-                                View All Orders
-                            </button>
-                        </div>
-                        
-                        {dashboardData?.recentOrders?.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                                            <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Order ID</th>
-                                            <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Customer</th>
-                                            <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Date</th>
-                                            <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Amount</th>
-                                            <th className="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-wider">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {dashboardData.recentOrders.map((order) => (
-                                            <tr key={order._id} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="py-4 px-6 text-xs font-black text-slate-900 uppercase">#{order._id?.slice(-6)}</td>
-                                                <td className="py-4 px-6">
-                                                    <p className="text-xs font-bold text-slate-800">{order.user?.name || 'Guest User'}</p>
-                                                    <p className="text-[9px] font-bold text-slate-400 mt-0.5">{order.user?.phone}</p>
-                                                </td>
-                                                <td className="py-4 px-6 text-xs font-medium text-slate-500">
-                                                    {new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                                </td>
-                                                <td className="py-4 px-6 text-xs font-black text-slate-800">₹{(order.totalAmount || 0).toLocaleString('en-IN')}</td>
-                                                <td className="py-4 px-6">
-                                                    <span className={`inline-block px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
-                                                        order.status === 'Completed' || order.status === 'delivered'
-                                                            ? 'bg-emerald-50 text-emerald-600'
-                                                            : order.status === 'Pending' || order.status === 'pending'
-                                                            ? 'bg-amber-50 text-amber-600 font-extrabold'
-                                                            : 'bg-blue-50 text-blue-600'
-                                                    }`}>
-                                                        {order.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            <div className="py-12 text-center text-slate-400 uppercase text-xs font-bold">
-                                No new orders received yet
-                            </div>
-                        )}
-                    </div>
 
                     {/* ------------------------------------------
                         SECTION 4: CONFIG-BASED SUBSCRIPTION OVERVIEW

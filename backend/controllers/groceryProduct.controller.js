@@ -448,3 +448,36 @@ export const updateGroceryProductStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getGroceryProductSuggestions = async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const products = await GroceryProduct.find({
+      name: { $regex: q, $options: 'i' },
+      isActive: true,
+      isVisible: true
+    })
+    .select('name image price')
+    .limit(10)
+    .lean();
+
+    const suggestions = products.map(p => ({
+      text: p.name,
+      type: 'product',
+      id: p._id,
+      image: p.image,
+      price: p.price
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: suggestions
+    });
+  } catch (error) {
+    next(error);
+  }
+};

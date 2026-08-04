@@ -137,7 +137,7 @@ export default function StaffDashboard() {
                                                         border: '1px solid #bee3f8'
                                                     }}
                                                 >
-                                                    📞 Call
+                                                    📞 Call Customer
                                                 </a>
                                             )}
                                             <button
@@ -211,7 +211,7 @@ export default function StaffDashboard() {
                                 href={`tel:${selectedOrder?.shippingAddress?.phone || selectedOrder.user?.phone}`}
                                 style={{ margin: 0, fontWeight: '850', color: '#2b6cb0', fontSize: '1rem', textDecoration: 'underline', display: 'block' }}
                             >
-                                📞 Call: {selectedOrder?.shippingAddress?.phone || selectedOrder.user?.phone}
+                                📞 Call Customer
                             </a>
                             <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#2c5282' }}>
                                 Ask the customer for their 4-digit Delivery OTP

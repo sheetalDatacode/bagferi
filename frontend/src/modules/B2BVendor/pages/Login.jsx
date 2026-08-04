@@ -183,12 +183,18 @@ const B2BVendorLogin = () => {
                                 Register Now
                             </Link>
                         </p>
-                        <div className="pt-2">
+                        <div className="pt-2 flex items-center justify-center gap-3">
                             <Link
                                 to="/b2b/login"
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg font-bold hover:bg-gray-100 transition-all text-xs border border-gray-200"
                             >
                                 <FiShoppingBag /> Login as Buyer
+                            </Link>
+                            <Link
+                                to="/staff/login"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg font-bold hover:bg-gray-100 transition-all text-xs border border-gray-200"
+                            >
+                                <FiUser /> Login as Staff
                             </Link>
                         </div>
                     </div>

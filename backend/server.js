@@ -401,6 +401,15 @@ const startServer = async () => {
         mongoose.model('Vendor').createIndexes()
       ]);
       console.log('✅ Database sparse indexes successfully self-healed');
+
+      // Ensure only one B2B settings document exists to prevent query/update mismatches
+      const b2bSettingsColl = db.collection('b2bsettings');
+      const allSettings = await b2bSettingsColl.find({}).sort({ createdAt: -1 }).toArray();
+      if (allSettings.length > 1) {
+        const keepId = allSettings[0]._id;
+        const deleteResult = await b2bSettingsColl.deleteMany({ _id: { $ne: keepId } });
+        console.log(`⚡ Removed ${deleteResult.deletedCount} duplicate B2B settings documents`);
+      }
     } catch (indexErr) {
       console.warn('⚠️ Note on startup db healing:', indexErr.message);
     }

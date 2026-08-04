@@ -104,6 +104,31 @@ export const getDashboardData = async (req, res, next) => {
             revenue: d.revenue
         }));
 
+        // Calculate Top Selling Products
+        const productSales = {};
+        vendorOrders.forEach(order => {
+            if (['Accepted', 'Dispatched', 'Completed'].includes(order.status)) {
+                order.items?.forEach(item => {
+                    if (item.product) {
+                        const prodId = item.product._id ? item.product._id.toString() : item.product.toString();
+                        if (!productSales[prodId]) {
+                            productSales[prodId] = {
+                                product: item.product,
+                                salesCount: 0,
+                                revenue: 0
+                            };
+                        }
+                        productSales[prodId].salesCount += item.quantity || 1;
+                        productSales[prodId].revenue += (item.price || 0) * (item.quantity || 1);
+                    }
+                });
+            }
+        });
+
+        const topSellingProducts = Object.values(productSales)
+            .sort((a, b) => b.salesCount - a.salesCount)
+            .slice(0, 5);
+
         // Format Data for Frontend
         const dashboardData = {
             hasShop: !!shop,
@@ -141,6 +166,7 @@ export const getDashboardData = async (req, res, next) => {
             totalOrders: vendorOrders.length,
             totalRevenue: vendorOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
             recentOrders: vendorOrders.slice(0, 5),
+            topSellingProducts,
             growthData,
             subscriptions: subscriptions.map(sub => ({
                 type: sub.planId?.businessType || 'unknown',

@@ -67,6 +67,20 @@ export const useCartStore = create((set, get) => ({
     }
   },
 
+  toggleBulkSelection: async (updates) => {
+    set({ loading: true });
+    try {
+      const response = await api.put('/cart/update-bulk', { updates });
+      if (response.success) {
+        set({ cart: response.data });
+      }
+    } catch (error) {
+      console.error('Failed to toggle bulk selection:', error);
+    } finally {
+      set({ loading: false });
+    }
+  },
+
   removeFromCart: async (productId, size = null, color = null, selectedVariants = {}) => {
     set({ loading: true });
     try {
