@@ -141,6 +141,22 @@ const orderSchema = new mongoose.Schema(
       enum: ['na', 'pending', 'processing', 'completed'],
       default: 'na',
     },
+    exchangeRequest: {
+      status: {
+        type: String,
+        enum: ['None', 'Requested', 'Accepted', 'Completed'],
+        default: 'None',
+      },
+      reason: { type: String, default: '' },
+      currentSize: { type: String, default: '' },
+      currentColor: { type: String, default: '' },
+      expectedSize: { type: String, default: '' },
+      expectedColor: { type: String, default: '' },
+      otp: { type: String, default: null },
+      requestedAt: { type: Date, default: null },
+      acceptedAt: { type: Date, default: null },
+      completedAt: { type: Date, default: null },
+    },
   },
   { timestamps: true }
 );

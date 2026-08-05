@@ -417,3 +417,138 @@ export const getUserWalletBalance = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/orders/:orderId/request-exchange
+ * Request an exchange for a completed order within 3 days.
+ */
+export const requestExchange = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { reason, currentSize, currentColor, expectedSize, expectedColor } = req.body;
+    const userId = req.user._id || req.user.id;
+
+    if (!reason || !currentSize || !currentColor || !expectedSize || !expectedColor) {
+      return res.status(400).json({ success: false, message: 'All exchange details are required' });
+    }
+
+    const order = await Order.findOne({ _id: orderId, user: userId });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.status !== 'Completed') {
+      return res.status(400).json({ success: false, message: 'Only completed orders can be exchanged' });
+    }
+
+    // 3 days window check (3 * 24 * 60 * 60 * 1000 = 259200000 ms)
+    const timeDiff = Date.now() - new Date(order.updatedAt).getTime();
+    if (timeDiff > 259200000) {
+      return res.status(400).json({ success: false, message: 'Exchange period of 3 days has expired' });
+    }
+
+    if (order.exchangeRequest && order.exchangeRequest.status !== 'None') {
+      return res.status(400).json({ success: false, message: 'An exchange has already been requested or processed for this order' });
+    }
+
+    order.exchangeRequest = {
+      status: 'Requested',
+      reason,
+      currentSize,
+      currentColor,
+      expectedSize,
+      expectedColor,
+      requestedAt: new Date(),
+    };
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Exchange request submitted successfully',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/orders/vendor/orders/:orderId/accept-exchange
+ * Vendor accepts the exchange request and generates a 4-digit OTP.
+ */
+export const acceptExchange = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const vendorId = req.user.vendorId;
+
+    const order = await Order.findOne({ _id: orderId, vendor: vendorId });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (!order.exchangeRequest || order.exchangeRequest.status !== 'Requested') {
+      return res.status(400).json({ success: false, message: 'No pending exchange request for this order' });
+    }
+
+    // Generate random 4-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    order.exchangeRequest.status = 'Accepted';
+    order.exchangeRequest.otp = otp;
+    order.exchangeRequest.acceptedAt = new Date();
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Exchange request accepted. OTP generated successfully.',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/orders/vendor/orders/:orderId/verify-exchange
+ * Vendor verifies exchange OTP directly (e.g. user visits shop).
+ */
+export const verifyExchangeOtpByVendor = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { otp } = req.body;
+    const vendorId = req.user.vendorId;
+
+    if (!otp) {
+      return res.status(400).json({ success: false, message: 'OTP is required' });
+    }
+
+    const order = await Order.findOne({ _id: orderId, vendor: vendorId });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (!order.exchangeRequest || order.exchangeRequest.status !== 'Accepted') {
+      return res.status(400).json({ success: false, message: 'Exchange request is not accepted or already verified' });
+    }
+
+    if (order.exchangeRequest.otp !== otp.toString()) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+
+    order.exchangeRequest.status = 'Completed';
+    order.exchangeRequest.otp = null; // Clear OTP
+    order.exchangeRequest.completedAt = new Date();
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Exchange verified and completed successfully',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -79,3 +79,46 @@ export const verifyDeliveryOtp = asyncHandler(async (req, res) => {
         data: order
     });
 });
+
+/**
+ * @desc    Verify Exchange OTP and complete the exchange
+ * @route   POST /api/staff/orders/:orderId/verify-exchange
+ * @access  Private (Staff)
+ */
+export const verifyExchangeOtpByStaff = asyncHandler(async (req, res) => {
+    const { orderId } = req.params;
+    const { otp } = req.body;
+    const staffMobile = req.user.mobile;
+
+    if (!otp) {
+        return res.status(400).json({ success: false, message: 'OTP is required' });
+    }
+
+    const order = await Order.findOne({ 
+        _id: orderId,
+        'assignedStaff.mobile': staffMobile
+    });
+
+    if (!order) {
+        return res.status(404).json({ success: false, message: 'Order not found or not assigned to you' });
+    }
+
+    if (!order.exchangeRequest || order.exchangeRequest.status !== 'Accepted') {
+        return res.status(400).json({ success: false, message: 'Exchange request is not accepted or already verified' });
+    }
+
+    if (order.exchangeRequest.otp !== otp.toString()) {
+        return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+
+    order.exchangeRequest.status = 'Completed';
+    order.exchangeRequest.otp = null; // Clear OTP
+    order.exchangeRequest.completedAt = new Date();
+    await order.save();
+
+    res.status(200).json({
+        success: true,
+        message: 'Exchange completed successfully',
+        data: order
+    });
+});

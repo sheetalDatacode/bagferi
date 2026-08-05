@@ -20,6 +20,55 @@ const Orders = () => {
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [selectedOrderForCancel, setSelectedOrderForCancel] = useState(null);
 
+    // Exchange states
+    const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
+    const [selectedOrderForExchange, setSelectedOrderForExchange] = useState(null);
+    const [exchangeForm, setExchangeForm] = useState({
+        reason: '',
+        currentSize: '',
+        currentColor: '',
+        expectedSize: '',
+        expectedColor: ''
+    });
+    const [isExchanging, setIsExchanging] = useState(false);
+
+    const openExchangeModal = (order) => {
+        const firstItem = order.items?.[0] || {};
+        setExchangeForm({
+            reason: '',
+            currentSize: firstItem.size || '',
+            currentColor: firstItem.color || '',
+            expectedSize: '',
+            expectedColor: ''
+        });
+        setSelectedOrderForExchange(order);
+        setIsExchangeModalOpen(true);
+    };
+
+    const handleExchangeSubmit = async (e) => {
+        e.preventDefault();
+        if (!exchangeForm.reason || !exchangeForm.currentSize || !exchangeForm.currentColor || !exchangeForm.expectedSize || !exchangeForm.expectedColor) {
+            return toast.error("All exchange details are required");
+        }
+        try {
+            setIsExchanging(true);
+            const res = await api.post(`/order/${selectedOrderForExchange._id}/request-exchange`, exchangeForm);
+            if (res.success) {
+                toast.success(res.message);
+                setIsExchangeModalOpen(false);
+                setSelectedOrderForExchange(null);
+                fetchOrders();
+            } else {
+                toast.error(res.message || 'Failed to submit exchange request');
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || 'Failed to request exchange');
+        } finally {
+            setIsExchanging(false);
+        }
+    };
+
     async function fetchOrders() {
         try {
             setLoading(true);
@@ -159,6 +208,63 @@ const Orders = () => {
                                             </span>
                                         </div>
                                     </div>
+
+                                    {order.status === 'Completed' && (
+                                        <>
+                                            {/* Policy Banner */}
+                                            <div className="bg-amber-50 border-b border-amber-100 px-4 py-3 text-xs text-amber-900 flex flex-col gap-1 sm:flex-row sm:items-center justify-between font-bold">
+                                                <div className="flex items-center gap-1.5 text-left">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0" />
+                                                    <span>Return Policy: 🚫 No returns allowed.</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-left">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-600 shrink-0" />
+                                                    <span>Exchange Policy: Size & color exchange only within 3 days.</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Exchange Request Banner */}
+                                            {order.exchangeRequest && order.exchangeRequest.status !== 'None' ? (
+                                                <div className="bg-indigo-50 border-b border-indigo-100 px-4 py-3 text-xs text-indigo-900 space-y-2 font-bold">
+                                                    <div className="flex items-center justify-between flex-wrap gap-2">
+                                                        <span className="flex items-center gap-1.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0 animate-pulse" />
+                                                            Exchange Status: <span className="uppercase font-black text-indigo-700">{order.exchangeRequest.status}</span>
+                                                        </span>
+                                                        {order.exchangeRequest.status === 'Accepted' && order.exchangeRequest.otp && (
+                                                            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded shadow-sm border border-indigo-200">
+                                                                <span className="text-[10px] uppercase font-black text-indigo-500">Exchange OTP:</span>
+                                                                <span className="text-sm font-black text-indigo-700 tracking-[0.2em]">{order.exchangeRequest.otp}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[10px] text-indigo-600 font-semibold">
+                                                        {order.exchangeRequest.status === 'Requested' && "Waiting for vendor approval."}
+                                                        {order.exchangeRequest.status === 'Accepted' && "Exchange accepted. Share the OTP above with the delivery boy or vendor to complete the exchange."}
+                                                        {order.exchangeRequest.status === 'Completed' && "Exchange completed successfully."}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                (() => {
+                                                    const completedDate = new Date(order.updatedAt).getTime();
+                                                    const daysDiff = (Date.now() - completedDate) / (1000 * 60 * 60 * 24);
+                                                    if (daysDiff <= 3) {
+                                                        return (
+                                                            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex justify-end">
+                                                                <button
+                                                                    onClick={() => openExchangeModal(order)}
+                                                                    className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-black uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+                                                                >
+                                                                    Request Exchange
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()
+                                            )}
+                                        </>
+                                    )}
 
                                     {order.status === 'Cancelled' && (
                                         <div className="bg-rose-50 border-b border-rose-100 px-4 py-3.5 text-xs text-rose-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-bold">
@@ -477,6 +583,107 @@ const Orders = () => {
                 onSubmit={handleCancelOrderSubmit}
                 order={selectedOrderForCancel}
             />
+
+            {/* Exchange Order Modal */}
+            {isExchangeModalOpen && selectedOrderForExchange && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+                    <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl my-8">
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h3 className="font-black text-slate-900 uppercase tracking-tight">Request Product Exchange</h3>
+                            <button 
+                                onClick={() => {
+                                    setIsExchangeModalOpen(false);
+                                    setSelectedOrderForExchange(null);
+                                }} 
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <FiX size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleExchangeSubmit} className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Current Size</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={exchangeForm.currentSize}
+                                        onChange={(e) => setExchangeForm({ ...exchangeForm, currentSize: e.target.value })}
+                                        placeholder="e.g. M, 32"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Current Color</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={exchangeForm.currentColor}
+                                        onChange={(e) => setExchangeForm({ ...exchangeForm, currentColor: e.target.value })}
+                                        placeholder="e.g. Red, Blue"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">New Size Wanted</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={exchangeForm.expectedSize}
+                                        onChange={(e) => setExchangeForm({ ...exchangeForm, expectedSize: e.target.value })}
+                                        placeholder="e.g. L, 34"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">New Color Wanted</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={exchangeForm.expectedColor}
+                                        onChange={(e) => setExchangeForm({ ...exchangeForm, expectedColor: e.target.value })}
+                                        placeholder="e.g. Green, Black"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Reason for Exchange</label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    value={exchangeForm.reason}
+                                    onChange={(e) => setExchangeForm({ ...exchangeForm, reason: e.target.value })}
+                                    placeholder="Describe reason (e.g., too small, color mismatch)"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white resize-none"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsExchangeModalOpen(false);
+                                        setSelectedOrderForExchange(null);
+                                    }}
+                                    className="px-5 py-2.5 bg-gray-100 text-gray-700 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-gray-200"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    disabled={isExchanging}
+                                    type="submit"
+                                    className="px-6 py-2.5 bg-green-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-green-700 flex items-center justify-center gap-2"
+                                >
+                                    {isExchanging ? 'Submitting...' : 'Request Exchange'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <div className="md:hidden">
                 <B2BBottomNav />

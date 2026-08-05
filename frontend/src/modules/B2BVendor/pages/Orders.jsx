@@ -32,6 +32,47 @@ const VendorOrders = () => {
     const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'staffHistory'
     const [selectedStaffFilter, setSelectedStaffFilter] = useState('All');
 
+    // Exchange states
+    const [exchangeOtpInputs, setExchangeOtpInputs] = useState({});
+    const [verifyingExchangeOrder, setVerifyingExchangeOrder] = useState({});
+
+    const handleAcceptExchange = async (orderId) => {
+        try {
+            const res = await api.post(`/order/vendor/orders/${orderId}/accept-exchange`);
+            if (res.success) {
+                toast.success("Exchange request accepted and OTP generated");
+                fetchOrders();
+            } else {
+                toast.error(res.message || "Failed to accept exchange");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to accept exchange");
+        }
+    };
+
+    const handleVerifyExchange = async (orderId) => {
+        const otp = exchangeOtpInputs[orderId];
+        if (!otp) {
+            return toast.error("Please enter the 4-digit Exchange OTP");
+        }
+        try {
+            setVerifyingExchangeOrder(prev => ({ ...prev, [orderId]: true }));
+            const res = await api.post(`/order/vendor/orders/${orderId}/verify-exchange`, { otp });
+            if (res.success) {
+                toast.success(res.message);
+                fetchOrders();
+            } else {
+                toast.error(res.message || "Invalid OTP");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to verify exchange OTP");
+        } finally {
+            setVerifyingExchangeOrder(prev => ({ ...prev, [orderId]: false }));
+        }
+    };
+
     const getStaffStatistics = () => {
         const stats = {};
         orders.forEach(order => {
@@ -353,6 +394,19 @@ const VendorOrders = () => {
                                                                 </div>
                                                             </div>
                                                         ))}
+                                                        {order.exchangeRequest && order.exchangeRequest.status !== 'None' && (
+                                                            <div className="mt-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl space-y-2 text-left max-w-xs">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0 animate-pulse" />
+                                                                    <span className="text-[10px] font-black uppercase text-indigo-700 tracking-wider">Exchange: {order.exchangeRequest.status}</span>
+                                                                </div>
+                                                                <div className="text-[10px] text-gray-600 font-semibold space-y-0.5">
+                                                                    <p><span className="text-gray-400">Current:</span> {order.exchangeRequest.currentSize} / {order.exchangeRequest.currentColor}</p>
+                                                                    <p><span className="text-indigo-600">Expected:</span> {order.exchangeRequest.expectedSize} / {order.exchangeRequest.expectedColor}</p>
+                                                                    <p className="italic text-gray-500 font-medium">"{order.exchangeRequest.reason}"</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="p-4 text-right">
@@ -378,44 +432,89 @@ const VendorOrders = () => {
                                                 </td>
                                                 <td className="p-4 text-center">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        {order.status === 'Pending' && (
+                                                        {order.exchangeRequest && order.exchangeRequest.status !== 'None' ? (
                                                             <>
-                                                                <button 
-                                                                    onClick={() => updateOrderStatus(order._id, 'Accepted')}
-                                                                    className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors border border-indigo-200 flex items-center gap-1"
-                                                                >
-                                                                    <FiCheckCircle /> Accept
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => {
-                                                                        if(window.confirm('Are you sure you want to cancel this order?')) {
-                                                                            updateOrderStatus(order._id, 'Cancelled');
-                                                                        }
-                                                                    }}
-                                                                    className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors border border-red-200 flex items-center gap-1"
-                                                                >
-                                                                    Cancel
-                                                                </button>
+                                                                {order.exchangeRequest.status === 'Requested' && (
+                                                                    <button 
+                                                                        onClick={() => handleAcceptExchange(order._id)}
+                                                                        className="text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl transition-all shadow-md shadow-indigo-200 flex items-center gap-1.5 uppercase tracking-wider"
+                                                                    >
+                                                                        Accept Exchange
+                                                                    </button>
+                                                                )}
+                                                                {order.exchangeRequest.status === 'Accepted' && (
+                                                                    <div className="flex flex-col gap-1 items-center bg-indigo-50 border border-indigo-200 rounded-xl p-2 shadow-sm shrink-0">
+                                                                        <span className="text-[9px] font-black uppercase text-indigo-700 tracking-wider">Awaiting OTP</span>
+                                                                        <div className="flex gap-1 items-center">
+                                                                            <input
+                                                                                type="text"
+                                                                                maxLength={4}
+                                                                                placeholder="OTP"
+                                                                                value={exchangeOtpInputs[order._id] || ''}
+                                                                                onChange={(e) => setExchangeOtpInputs({
+                                                                                    ...exchangeOtpInputs,
+                                                                                    [order._id]: e.target.value.replace(/\D/g, '')
+                                                                                })}
+                                                                                className="w-14 px-1 py-1 bg-white border border-gray-300 rounded text-center text-xs font-bold focus:border-indigo-500 outline-none"
+                                                                            />
+                                                                            <button
+                                                                                disabled={verifyingExchangeOrder[order._id]}
+                                                                                onClick={() => handleVerifyExchange(order._id)}
+                                                                                className="text-[10px] font-black text-white bg-green-600 hover:bg-green-700 px-2 py-1 rounded-lg uppercase tracking-wider shadow-sm"
+                                                                            >
+                                                                                {verifyingExchangeOrder[order._id] ? '...' : 'Verify'}
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                {order.exchangeRequest.status === 'Completed' && (
+                                                                    <span className="text-[10px] font-black uppercase tracking-wider text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                                                                        Exchange Done
+                                                                    </span>
+                                                                )}
                                                             </>
-                                                        )}
-                                                        {order.status === 'Accepted' && (
-                                                            <button 
-                                                                onClick={() => {
-                                                                    setOrderToDispatch(order);
-                                                                    setIsDispatchModalOpen(true);
-                                                                }}
-                                                                className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-200 flex items-center gap-1"
-                                                            >
-                                                                <FiTruck /> Dispatch
-                                                            </button>
-                                                        )}
-                                                        {order.status === 'Dispatched' && (
-                                                            <button 
-                                                                onClick={() => updateOrderStatus(order._id, 'Completed')}
-                                                                className="text-xs font-bold text-green-600 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors border border-green-200 flex items-center gap-1"
-                                                            >
-                                                                <FiCheckCircle /> Complete
-                                                            </button>
+                                                        ) : (
+                                                            <>
+                                                                {order.status === 'Pending' && (
+                                                                    <>
+                                                                        <button 
+                                                                            onClick={() => updateOrderStatus(order._id, 'Accepted')}
+                                                                            className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors border border-indigo-200 flex items-center gap-1"
+                                                                        >
+                                                                            <FiCheckCircle /> Accept
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={() => {
+                                                                                if(window.confirm('Are you sure you want to cancel this order?')) {
+                                                                                    updateOrderStatus(order._id, 'Cancelled');
+                                                                                }
+                                                                            }}
+                                                                            className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors border border-red-200 flex items-center gap-1"
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                                {order.status === 'Accepted' && (
+                                                                    <button 
+                                                                        onClick={() => {
+                                                                            setOrderToDispatch(order);
+                                                                            setIsDispatchModalOpen(true);
+                                                                        }}
+                                                                        className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-200 flex items-center gap-1"
+                                                                    >
+                                                                        <FiTruck /> Dispatch
+                                                                    </button>
+                                                                )}
+                                                                {order.status === 'Dispatched' && (
+                                                                    <button 
+                                                                        onClick={() => updateOrderStatus(order._id, 'Completed')}
+                                                                        className="text-xs font-bold text-green-600 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors border border-green-200 flex items-center gap-1"
+                                                                    >
+                                                                        <FiCheckCircle /> Complete
+                                                                    </button>
+                                                                )}
+                                                            </>
                                                         )}
                                                         {['Accepted', 'Dispatched'].includes(order.status) && (order.shippingAddress?.phone || order.user?.phone) && (
                                                             <a 
