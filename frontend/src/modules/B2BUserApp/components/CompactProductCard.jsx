@@ -115,7 +115,7 @@ const CompactProductCard = ({ product }) => {
           {product.name || product.title}
         </h3>
         
-        <div className="flex items-center justify-between gap-1 mb-2">
+        <div className="flex items-center justify-between gap-1 mb-1">
           <p className="text-[10px] text-gray-500 truncate flex-1">
             {product.shopName || product.shopUnit?.name || product.vendorId?.storeName || product.vendor?.businessName || 'Vendor'}
           </p>
@@ -132,6 +132,20 @@ const CompactProductCard = ({ product }) => {
             </button>
           )}
         </div>
+
+        {/* Delivery Time Badge */}
+        {(() => {
+          const deliveryTime = product.shopUnit?.groceryDeliveryTime || product.vendorId?.groceryDeliveryTime || product.vendorId?.shopUnit?.groceryDeliveryTime;
+          if (deliveryTime?.minTime && deliveryTime?.maxTime) {
+            return (
+              <div className="flex items-center gap-1 text-[10px] font-black text-green-700 uppercase tracking-tight mb-2">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
+                <span className="truncate">Delivery in {deliveryTime.minTime}–{deliveryTime.maxTime} min</span>
+              </div>
+            );
+          }
+          return null;
+        })()}
  
         {/* Price & Add to Cart Row */}
         <div className="flex items-center justify-between mt-auto pt-1">

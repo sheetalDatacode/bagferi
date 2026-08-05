@@ -515,18 +515,18 @@ const B2BVendorStore = () => {
                 hideSearch={true}
             />
 
-            <main className="max-w-7xl mx-auto px-4 py-6 md:py-12">
+            <main className="max-w-7xl mx-auto px-0 py-6 md:py-12">
                 {/* Back Link */}
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-gray-400 hover:text-primary-600 transition-colors mb-6 md:mb-10 font-bold text-[10px] md:text-xs uppercase tracking-[0.2em]"
+                    className="flex items-center gap-2 text-gray-400 hover:text-primary-600 transition-colors mb-6 md:mb-10 font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] px-4"
                 >
                     <FiArrowLeft className="text-sm md:text-base" />
                     {fromReel ? "Back to Reel" : "Back to Catalog"}
                 </button>
 
                 {/* Vendor Premium Profile Card */}
-                <div className="relative mb-8 md:mb-16">
+                <div className="relative mb-8 md:mb-16 px-4">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary-600/10 via-transparent to-primary-600/5 rounded-[2rem] md:rounded-[4rem] blur-3xl opacity-50"></div>
                     <div className="relative bg-white rounded-[2rem] md:rounded-[3.5rem] p-6 md:p-12 border border-white/50 shadow-2xl flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-12">
                         <div className="relative group">
@@ -737,7 +737,7 @@ const B2BVendorStore = () => {
                 )}
 
                 {/* Navigation and Filters sticky block */}
-                <div className="sticky top-16 md:top-20 z-[100] bg-gray-50/95 backdrop-blur-sm -mx-4 px-4 py-4 border-b border-gray-100 shadow-sm">
+                <div className="sticky top-16 md:top-20 z-[100] bg-gray-50/95 backdrop-blur-sm px-4 py-4 border-b border-gray-100 shadow-sm">
                     {/* Tabs Buttons */}
                     <div className="mb-4 flex gap-2 overflow-x-auto no-scrollbar pb-2">
                         <button
@@ -922,9 +922,9 @@ const B2BVendorStore = () => {
 
                 {/* Fashion Tab Content */}
                 {activeTab === "fashion" && (
-                    <div className="mt-8 flex gap-2 md:gap-4 min-h-[500px]">
+                    <div className="mt-4 flex gap-0 min-h-[500px]">
                         {/* Left Categories Sidebar */}
-                        <div className="w-[90px] md:w-36 bg-white flex flex-col overflow-y-auto no-scrollbar border border-gray-100 rounded-3xl p-2 shrink-0 sticky top-[240px] max-h-[calc(100vh-280px)]">
+                        <div className="w-[80px] md:w-28 bg-white flex flex-col overflow-y-auto no-scrollbar border-r border-gray-100 p-1 shrink-0 sticky top-[200px] max-h-[calc(100vh-240px)]">
                             {allCategories?.map((cat) => {
                                 const catId = cat._id || cat.id;
                                 const isSelected = String(selectedFashionCategory) === String(catId);
@@ -953,7 +953,7 @@ const B2BVendorStore = () => {
                         </div>
 
                         {/* Right Content panel */}
-                        <div className="flex-1 bg-white border border-gray-100 rounded-3xl p-6 overflow-y-auto">
+                        <div className="flex-1 bg-white overflow-y-auto p-2 sm:p-3">
                             {selectedFashionCategory ? (
                                 <div className="mb-6">
                                     <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight mb-4">
@@ -1021,7 +1021,7 @@ const B2BVendorStore = () => {
                                         </div>
                                     ) : (
                                         <div className={viewMode === "grid"
-                                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 md:gap-6"
                                             : "space-y-4"
                                         }>
                                             {displayedFashionProducts.map((product) => (
@@ -1047,9 +1047,9 @@ const B2BVendorStore = () => {
 
                 {/* Grocery Tab Content */}
                 {activeTab === "grocery" && (
-                    <div className="mt-8 flex gap-2 md:gap-4 min-h-[500px]">
+                    <div className="mt-4 flex gap-0 min-h-[500px]">
                         {/* Left Categories Sidebar */}
-                        <div className="w-[90px] md:w-36 bg-white flex flex-col overflow-y-auto no-scrollbar border border-gray-100 rounded-3xl p-2 shrink-0 sticky top-[240px] max-h-[calc(100vh-280px)]">
+                        <div className="w-[80px] md:w-28 bg-white flex flex-col overflow-y-auto no-scrollbar border-r border-gray-100 p-1 shrink-0 sticky top-[200px] max-h-[calc(100vh-240px)]">
                             {groceryCategories?.map((cat) => {
                                 const catId = cat._id || cat.id;
                                 const isSelected = String(selectedGroceryCategory) === String(catId);
@@ -1083,7 +1083,7 @@ const B2BVendorStore = () => {
                         </div>
 
                         {/* Right Content panel */}
-                        <div className="flex-1 bg-white border border-gray-100 rounded-3xl p-6 overflow-y-auto">
+                        <div className="flex-1 bg-white overflow-y-auto p-2 sm:p-3">
                             {selectedGroceryCategory ? (
                                 <div className="mb-6">
                                     <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight mb-4">
@@ -1151,7 +1151,7 @@ const B2BVendorStore = () => {
                                         </div>
                                     ) : (
                                         <div className={viewMode === "grid"
-                                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 md:gap-6"
                                             : "space-y-4"
                                         }>
                                             {displayedGroceryProducts.map((product) => (

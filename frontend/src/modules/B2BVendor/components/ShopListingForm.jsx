@@ -35,6 +35,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                     images: parsed.images || [],
                     details: parsed.details?.length > 0 ? parsed.details : [{ name: "", post: "", mobile: "" }],
                     shopUnitId: null,
+                    groceryDeliveryTime: parsed.groceryDeliveryTime || { minTime: '', maxTime: '' },
                 };
             } catch (e) {
                 console.error("Failed to parse draft:", e);
@@ -53,6 +54,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             images: [],
             details: [{ name: "", post: "", mobile: "" }],
             shopUnitId: null,
+            groceryDeliveryTime: { minTime: '', maxTime: '' },
         };
     });
 
@@ -110,7 +112,8 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                         maxPrice: unit.maxPrice || "",
                         zoneId: unit.zoneId || "",
                         details: unit.details?.length > 0 ? unit.details : [{ name: "", post: "", mobile: "" }],
-                        shopUnitId: unit._id
+                        shopUnitId: unit._id,
+                        groceryDeliveryTime: unit.groceryDeliveryTime || { minTime: '', maxTime: '' }
                     };
                     setFormData(prev => ({ ...prev, ...shopData }));
                     setOriginalShopData(shopData);
@@ -402,6 +405,15 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             seenName.add(nameKey);
         }
 
+        const minTimeVal = formData.groceryDeliveryTime.minTime;
+        const maxTimeVal = formData.groceryDeliveryTime.maxTime;
+        if ((minTimeVal && !maxTimeVal) || (!minTimeVal && maxTimeVal)) {
+            return toast.error("Please enter both min and max delivery time");
+        }
+        if (minTimeVal && maxTimeVal && Number(minTimeVal) > Number(maxTimeVal)) {
+            return toast.error("Min delivery time cannot exceed max delivery time");
+        }
+
         const payload = {
             name: trimmedShopName,
             description: trimmedDescription,
@@ -414,6 +426,10 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             companyName: formData.companyName,
             accountDetails: formData.accountDetails,
             deliveryZones: formData.deliveryZones,
+            groceryDeliveryTime: {
+                minTime: minTimeVal ? Number(minTimeVal) : null,
+                maxTime: maxTimeVal ? Number(maxTimeVal) : null,
+            }
         };
 
         // Clear draft on successful submit
@@ -525,6 +541,15 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                 </div>
                             )}
                         </div>
+
+                        {formData.groceryDeliveryTime?.minTime && formData.groceryDeliveryTime?.maxTime && (
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grocery Delivery Timing</h4>
+                                <p className="text-sm font-bold text-green-700 mt-2">
+                                    🕐 Delivery in {formData.groceryDeliveryTime.minTime}–{formData.groceryDeliveryTime.maxTime} min
+                                </p>
+                            </div>
+                        )}
 
                         {/* Description */}
                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
@@ -644,8 +669,8 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                             </div>
                         </div>
 
-                        {/* 2. Shop Name & Price Section */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                        {/* 2. Shop Name & Basic Info Section */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                             <div className="space-y-2">
                                 <label className={labelStyle}>Shop Name <span className="text-red-500">*</span></label>
                                 <input
@@ -709,7 +734,10 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     />
                                 </div>
                             </div>
+                        </div>
 
+                        {/* 3. Delivery Areas Section */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start pt-6 border-t border-gray-100">
                              <div className="space-y-2">
                                 <label className={labelStyle}>Delivery Areas (Select Specific Areas) <span className="text-red-500">*</span></label>
                                 
@@ -810,7 +838,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                 </div>
                             </div>
 
-                            {groupedSelectedAreas.length > 0 && (
+                            {groupedSelectedAreas.length > 0 ? (
                                 <div className="space-y-2">
                                     <label className={labelStyle}>Selected Areas ({formData.deliveryZones.length})</label>
                                     <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3 h-64 overflow-y-auto custom-scrollbar">
@@ -860,11 +888,77 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                         </div>
                                     </div>
                                 </div>
-                            )}
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 pt-4 border-t border-gray-100">
+                            ) : (
                                 <div className="space-y-2">
-                                    <label className={labelStyle}>Bank Name</label>
+                                    <label className={labelStyle}>Selected Areas (0)</label>
+                                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center h-64 text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                                        No Areas Selected
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 4. Grocery Delivery Timing Section */}
+                        <div className="space-y-4 pt-6 border-t border-gray-100">
+                            <label className={labelStyle}>Grocery Delivery Timing</label>
+                            <p className="text-[10px] text-gray-500 -mt-2">Approximate time to deliver grocery orders (optional)</p>
+                            <div className="grid grid-cols-2 gap-4 max-w-md">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-wider">Min Time (minutes)</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="999"
+                                        value={formData.groceryDeliveryTime.minTime}
+                                        onChange={(e) => {
+                                            setFormData({
+                                                ...formData,
+                                                groceryDeliveryTime: {
+                                                    ...formData.groceryDeliveryTime,
+                                                    minTime: e.target.value
+                                                }
+                                            });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="e.g. 20"
+                                        className={inputStyle}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-wider">Max Time (minutes)</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="999"
+                                        value={formData.groceryDeliveryTime.maxTime}
+                                        onChange={(e) => {
+                                            setFormData({
+                                                ...formData,
+                                                groceryDeliveryTime: {
+                                                    ...formData.groceryDeliveryTime,
+                                                    maxTime: e.target.value
+                                                }
+                                            });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="e.g. 30"
+                                        className={inputStyle}
+                                    />
+                                </div>
+                            </div>
+                            {formData.groceryDeliveryTime.minTime && formData.groceryDeliveryTime.maxTime && (
+                                <p className="text-xs font-bold text-green-700 mt-2 bg-green-50 border border-green-100 rounded-lg p-2.5 inline-block">
+                                    Preview: ✅ Delivery in {formData.groceryDeliveryTime.minTime}–{formData.groceryDeliveryTime.maxTime} min
+                                </p>
+                            )}
+                        </div>
+
+                        {/* 5. Bank Details Section */}
+                        <div className="space-y-4 pt-6 border-t border-gray-100">
+                            <label className={labelStyle}>Bank Details (For Payments & Settlements)</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Bank Name</label>
                                     <input
                                         type="text"
                                         value={formData.accountDetails.bankName}
@@ -877,7 +971,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className={labelStyle}>Account Holder Name</label>
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Account Holder Name</label>
                                     <input
                                         type="text"
                                         value={formData.accountDetails.accountHolderName}
@@ -890,7 +984,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className={labelStyle}>Account Number</label>
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Account Number</label>
                                     <input
                                         type="text"
                                         value={formData.accountDetails.accountNumber}
@@ -903,7 +997,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className={labelStyle}>IFSC Code</label>
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">IFSC Code</label>
                                     <input
                                         type="text"
                                         value={formData.accountDetails.ifscCode}
@@ -916,8 +1010,6 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     />
                                 </div>
                             </div>
-
-
                         </div>
 
                         {/* 3. Description Field */}

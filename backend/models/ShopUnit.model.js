@@ -60,6 +60,10 @@ const shopUnitSchema = new mongoose.Schema(
                 identityDocumentPublicId: String,
             }
         ],
+        groceryDeliveryTime: {
+            minTime: { type: Number, default: null },
+            maxTime: { type: Number, default: null }
+        },
         isActive: {
             type: Boolean,
             default: true,

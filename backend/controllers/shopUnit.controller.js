@@ -13,7 +13,7 @@ export const getMyUnit = async (req, res, next) => {
 
 export const createOrUpdateUnit = async (req, res, next) => {
     try {
-        const { name, description, images, minPrice, maxPrice, details, mapUrl, zoneId, companyName, accountDetails, deliveryZones } = req.body;
+        const { name, description, images, minPrice, maxPrice, details, mapUrl, zoneId, companyName, accountDetails, deliveryZones, groceryDeliveryTime } = req.body;
         const vendorId = req.user.vendorId;
 
         // 1. Basic input validation
@@ -48,6 +48,11 @@ export const createOrUpdateUnit = async (req, res, next) => {
         }
         if (parsedMax < parsedMin) {
             return res.status(400).json({ success: false, message: 'Max Price cannot be less than Min Price' });
+        }
+
+        const { minTime, maxTime } = groceryDeliveryTime || {};
+        if (minTime && maxTime && (Number(minTime) > Number(maxTime))) {
+            return res.status(400).json({ success: false, message: 'Min time cannot exceed max time' });
         }
 
         if (mapUrl && mapUrl.trim()) {
@@ -136,6 +141,10 @@ export const createOrUpdateUnit = async (req, res, next) => {
             accountDetails: accountDetails || {},
             deliveryZones: Array.isArray(deliveryZones) ? deliveryZones : [],
             mapUrl: mapUrl && mapUrl.trim() ? mapUrl.trim() : null,
+            groceryDeliveryTime: groceryDeliveryTime ? {
+                minTime: groceryDeliveryTime.minTime ? Number(groceryDeliveryTime.minTime) : null,
+                maxTime: groceryDeliveryTime.maxTime ? Number(groceryDeliveryTime.maxTime) : null,
+            } : undefined,
         };
 
         if (shop) {

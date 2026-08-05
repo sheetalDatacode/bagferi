@@ -198,6 +198,28 @@ export const getGroceryProducts = async (req, res, next) => {
       .sort(sortOptions)
       .lean();
 
+    if (products.length > 0) {
+      try {
+        const vendorIds = products.map(p => p.vendorId?._id || p.vendorId).filter(Boolean);
+        const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
+        const shopUnits = await ShopUnit.find({ vendorId: { $in: vendorIds } }).select('vendorId groceryDeliveryTime').lean();
+        const shopUnitMap = {};
+        shopUnits.forEach(su => {
+          if (su.vendorId) {
+            shopUnitMap[su.vendorId.toString()] = su;
+          }
+        });
+        products.forEach(p => {
+          const vid = p.vendorId?._id || p.vendorId;
+          if (vid && shopUnitMap[vid.toString()]) {
+            p.shopUnit = shopUnitMap[vid.toString()];
+          }
+        });
+      } catch (e) {
+        console.error("Failed to attach shopUnit to grocery products:", e);
+      }
+    }
+
     const total = await GroceryProduct.countDocuments(query);
 
     try {
@@ -230,6 +252,17 @@ export const getGroceryProductById = async (req, res, next) => {
       .populate('category subcategory vendorId')
       .lean();
     if (!product) return res.status(404).json({ success: false, message: 'Not found' });
+    
+    try {
+      const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
+      const shopUnit = await ShopUnit.findOne({ vendorId: product.vendorId?._id || product.vendorId }).select('vendorId groceryDeliveryTime').lean();
+      if (shopUnit) {
+        product.shopUnit = shopUnit;
+      }
+    } catch (e) {
+      console.error("Failed to attach shopUnit to grocery product:", e);
+    }
+    
     res.status(200).json({ success: true, data: product });
   } catch (error) {
     next(error);
