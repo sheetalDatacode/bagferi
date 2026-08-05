@@ -834,12 +834,26 @@ const B2BProductDetail = () => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 mt-6 text-sm">
-                            <FiTruck className="text-teal-600 text-lg" />
-                            <span className="text-slate-500">Deliver in</span>
-                            <span className="text-teal-600 font-bold">4 hours</span>
-                            <span className="text-slate-400">to default</span>
-                        </div>
+                        {(() => {
+                            const fd = product.shopUnit?.fashionDeliveryTime || product.vendorId?.fashionDeliveryTime || product.vendorId?.shopUnit?.fashionDeliveryTime;
+                            if (fd?.minDays && fd?.maxDays) {
+                                return (
+                                    <div className="flex items-center gap-2 mt-6 text-sm">
+                                        <FiTruck className="text-teal-600 text-lg" />
+                                        <span className="text-slate-500">Deliver within</span>
+                                        <span className="text-teal-600 font-bold">{fd.minDays}-{fd.maxDays} days</span>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div className="flex items-center gap-2 mt-6 text-sm">
+                                    <FiTruck className="text-teal-600 text-lg" />
+                                    <span className="text-slate-500">Deliver in</span>
+                                    <span className="text-teal-600 font-bold">4 hours</span>
+                                    <span className="text-slate-400">to default</span>
+                                </div>
+                            );
+                        })()}
 
                         {/* Quantity Selector */}
                         <div className="flex items-center gap-4 mt-6">

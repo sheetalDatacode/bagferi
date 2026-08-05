@@ -64,6 +64,10 @@ const shopUnitSchema = new mongoose.Schema(
             minTime: { type: Number, default: null },
             maxTime: { type: Number, default: null }
         },
+        fashionDeliveryTime: {
+            minDays: { type: Number, default: null },
+            maxDays: { type: Number, default: null }
+        },
         isActive: {
             type: Boolean,
             default: true,

@@ -13,7 +13,7 @@ export const getMyUnit = async (req, res, next) => {
 
 export const createOrUpdateUnit = async (req, res, next) => {
     try {
-        const { name, description, images, minPrice, maxPrice, details, mapUrl, zoneId, companyName, accountDetails, deliveryZones, groceryDeliveryTime } = req.body;
+        const { name, description, images, minPrice, maxPrice, details, mapUrl, zoneId, companyName, accountDetails, deliveryZones, groceryDeliveryTime, fashionDeliveryTime } = req.body;
         const vendorId = req.user.vendorId;
 
         // 1. Basic input validation
@@ -53,6 +53,11 @@ export const createOrUpdateUnit = async (req, res, next) => {
         const { minTime, maxTime } = groceryDeliveryTime || {};
         if (minTime && maxTime && (Number(minTime) > Number(maxTime))) {
             return res.status(400).json({ success: false, message: 'Min time cannot exceed max time' });
+        }
+
+        const { minDays, maxDays } = fashionDeliveryTime || {};
+        if (minDays && maxDays && (Number(minDays) > Number(maxDays))) {
+            return res.status(400).json({ success: false, message: 'Min delivery days cannot exceed max delivery days' });
         }
 
         if (mapUrl && mapUrl.trim()) {
@@ -144,6 +149,10 @@ export const createOrUpdateUnit = async (req, res, next) => {
             groceryDeliveryTime: groceryDeliveryTime ? {
                 minTime: groceryDeliveryTime.minTime ? Number(groceryDeliveryTime.minTime) : null,
                 maxTime: groceryDeliveryTime.maxTime ? Number(groceryDeliveryTime.maxTime) : null,
+            } : undefined,
+            fashionDeliveryTime: fashionDeliveryTime ? {
+                minDays: fashionDeliveryTime.minDays ? Number(fashionDeliveryTime.minDays) : null,
+                maxDays: fashionDeliveryTime.maxDays ? Number(fashionDeliveryTime.maxDays) : null,
             } : undefined,
         };
 

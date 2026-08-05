@@ -322,8 +322,22 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
                     </span>
                 </div>
 
-                <div className="mt-1 flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-2 py-0.5 w-fit mb-2">
-                    <span className="text-[9px] font-medium text-gray-600">Free Delivery</span>
+                <div className="mt-1 flex flex-wrap gap-2 items-center mb-2">
+                    <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-2 py-0.5 w-fit">
+                        <span className="text-[9px] font-medium text-gray-600">Free Delivery</span>
+                    </div>
+                    {(() => {
+                        const deliveryTime = product.shopUnit?.fashionDeliveryTime || product.vendorId?.fashionDeliveryTime || product.vendorId?.shopUnit?.fashionDeliveryTime;
+                        if (deliveryTime?.minDays && deliveryTime?.maxDays) {
+                            return (
+                                <div className="flex items-center gap-1 bg-green-50 border border-green-100 text-green-700 rounded-full px-2 py-0.5 w-fit text-[9px] font-bold">
+                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
+                                    <span>Delivery within {deliveryTime.minDays}–{deliveryTime.maxDays} days</span>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
                 </div>
 
                 {/* Add to Cart / Buy Now Buttons */}

@@ -36,6 +36,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                     details: parsed.details?.length > 0 ? parsed.details : [{ name: "", post: "", mobile: "" }],
                     shopUnitId: null,
                     groceryDeliveryTime: parsed.groceryDeliveryTime || { minTime: '', maxTime: '' },
+                    fashionDeliveryTime: parsed.fashionDeliveryTime || { minDays: '', maxDays: '' },
                 };
             } catch (e) {
                 console.error("Failed to parse draft:", e);
@@ -55,6 +56,7 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             details: [{ name: "", post: "", mobile: "" }],
             shopUnitId: null,
             groceryDeliveryTime: { minTime: '', maxTime: '' },
+            fashionDeliveryTime: { minDays: '', maxDays: '' },
         };
     });
 
@@ -113,7 +115,8 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                         zoneId: unit.zoneId || "",
                         details: unit.details?.length > 0 ? unit.details : [{ name: "", post: "", mobile: "" }],
                         shopUnitId: unit._id,
-                        groceryDeliveryTime: unit.groceryDeliveryTime || { minTime: '', maxTime: '' }
+                        groceryDeliveryTime: unit.groceryDeliveryTime || { minTime: '', maxTime: '' },
+                        fashionDeliveryTime: unit.fashionDeliveryTime || { minDays: '', maxDays: '' }
                     };
                     setFormData(prev => ({ ...prev, ...shopData }));
                     setOriginalShopData(shopData);
@@ -414,6 +417,15 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             return toast.error("Min delivery time cannot exceed max delivery time");
         }
 
+        const minDaysVal = formData.fashionDeliveryTime.minDays;
+        const maxDaysVal = formData.fashionDeliveryTime.maxDays;
+        if ((minDaysVal && !maxDaysVal) || (!minDaysVal && maxDaysVal)) {
+            return toast.error("Please enter both min and max delivery days");
+        }
+        if (minDaysVal && maxDaysVal && Number(minDaysVal) > Number(maxDaysVal)) {
+            return toast.error("Min delivery days cannot exceed max delivery days");
+        }
+
         const payload = {
             name: trimmedShopName,
             description: trimmedDescription,
@@ -429,6 +441,10 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             groceryDeliveryTime: {
                 minTime: minTimeVal ? Number(minTimeVal) : null,
                 maxTime: maxTimeVal ? Number(maxTimeVal) : null,
+            },
+            fashionDeliveryTime: {
+                minDays: minDaysVal ? Number(minDaysVal) : null,
+                maxDays: maxDaysVal ? Number(maxDaysVal) : null,
             }
         };
 
@@ -547,6 +563,15 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grocery Delivery Timing</h4>
                                 <p className="text-sm font-bold text-green-700 mt-2">
                                     🕐 Delivery in {formData.groceryDeliveryTime.minTime}–{formData.groceryDeliveryTime.maxTime} min
+                                </p>
+                            </div>
+                        )}
+
+                        {formData.fashionDeliveryTime?.minDays && formData.fashionDeliveryTime?.maxDays && (
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fashion Delivery Timing</h4>
+                                <p className="text-sm font-bold text-green-700 mt-2">
+                                    🕐 Delivery within {formData.fashionDeliveryTime.minDays}–{formData.fashionDeliveryTime.maxDays} days
                                 </p>
                             </div>
                         )}
@@ -949,6 +974,61 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                             {formData.groceryDeliveryTime.minTime && formData.groceryDeliveryTime.maxTime && (
                                 <p className="text-xs font-bold text-green-700 mt-2 bg-green-50 border border-green-100 rounded-lg p-2.5 inline-block">
                                     Preview: ✅ Delivery in {formData.groceryDeliveryTime.minTime}–{formData.groceryDeliveryTime.maxTime} min
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Fashion Delivery Timing Section */}
+                        <div className="space-y-4 pt-6 border-t border-gray-100">
+                            <label className={labelStyle}>Fashion Product Delivery Timing</label>
+                            <p className="text-[10px] text-gray-500 -mt-2">Approximate days to deliver fashion products (optional)</p>
+                            <div className="grid grid-cols-2 gap-4 max-w-md">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-wider">Min Days</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="99"
+                                        value={formData.fashionDeliveryTime.minDays}
+                                        onChange={(e) => {
+                                            setFormData({
+                                                ...formData,
+                                                fashionDeliveryTime: {
+                                                    ...formData.fashionDeliveryTime,
+                                                    minDays: e.target.value
+                                                }
+                                            });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="e.g. 2"
+                                        className={inputStyle}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-wider">Max Days</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="99"
+                                        value={formData.fashionDeliveryTime.maxDays}
+                                        onChange={(e) => {
+                                            setFormData({
+                                                ...formData,
+                                                fashionDeliveryTime: {
+                                                    ...formData.fashionDeliveryTime,
+                                                    maxDays: e.target.value
+                                                }
+                                            });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="e.g. 5"
+                                        className={inputStyle}
+                                    />
+                                </div>
+                            </div>
+                            {formData.fashionDeliveryTime.minDays && formData.fashionDeliveryTime.maxDays && (
+                                <p className="text-xs font-bold text-green-700 mt-2 bg-green-50 border border-green-100 rounded-lg p-2.5 inline-block">
+                                    Preview: ✅ Delivery within {formData.fashionDeliveryTime.minDays}–{formData.fashionDeliveryTime.maxDays} days
                                 </p>
                             )}
                         </div>
