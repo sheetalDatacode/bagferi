@@ -69,7 +69,8 @@ export const createB2BCategory = async ({ name, image, imagePublicId, parent, le
     label: f.label?.trim(),
     type: f.type,
     options: Array.isArray(f.options) ? f.options.filter(o => o?.trim()) : [],
-    required: !!f.required
+    required: !!f.required,
+    isVariant: !!f.isVariant
   }));
 
   const newCategory = new B2BCategory({
@@ -108,7 +109,8 @@ export const updateB2BCategory = async (categoryId, updateData) => {
         label: f.label?.trim(),
         type: f.type,
         options: Array.isArray(f.options) ? f.options.filter(o => o?.trim()) : [],
-        required: !!f.required
+        required: !!f.required,
+        isVariant: !!f.isVariant
       }));
     }
 

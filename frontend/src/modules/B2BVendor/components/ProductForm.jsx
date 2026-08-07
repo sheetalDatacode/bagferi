@@ -67,8 +67,13 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
 
     const [formData, setFormData] = useState(() => {
         if (initialData) {
+            const specs = initialData.specifications || (initialData.attributes || []).map(spec => ({
+                name: spec.name || spec.attributeName,
+                value: spec.value
+            }));
             return {
                 ...initialData,
+                specifications: specs.length > 0 ? specs : [{ name: "", value: "" }],
                 variants: initialData.variants || [],
             };
         }
@@ -298,13 +303,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
 
             setSubSubcategories(sub?.subcategories || []);
 
-            let fields = [];
-            if (formData.subSubcategory && sub?.subcategories?.length > 0) {
-                const subSub = sub.subcategories.find(s => s.name.toLowerCase() === formData.subSubcategory.toLowerCase());
-                fields = subSub?.fields || sub?.fields || [];
-            } else {
-                fields = sub?.fields || [];
-            }
+            let fields = sub?.fields || [];
 
             setDynamicFields(fields);
 

@@ -25,7 +25,7 @@ const EditProduct = () => {
                         const categoryAttr = productData.attributes?.find(attr => attr.name === 'category');
                         const subcategoryAttr = productData.attributes?.find(attr => attr.name === 'subcategory');
                         const specifications = productData.attributes?.filter(attr =>
-                            !['category', 'subcategory', 'Color', 'color'].includes(attr.name)
+                            !['category', 'subcategory', 'Color', 'color'].includes(attr.name || attr.attributeName)
                         ) || [];
 
                         let availability = "In Stock";
@@ -49,7 +49,7 @@ const EditProduct = () => {
                             images: images,
                             // Pass all specifications; ProductForm will split them into dynamic vs generic
                             specifications: specifications.length > 0
-                                ? specifications.map(spec => ({ name: spec.name, value: spec.value }))
+                                ? specifications.map(spec => ({ name: spec.name || spec.attributeName, value: spec.value }))
                                 : [{ name: "", value: "" }],
                             unit: productData.unit || "Pcs",
                         });

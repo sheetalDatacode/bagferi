@@ -286,38 +286,8 @@ const B2BCategories = () => {
             }
         }));
     };
-
     const closeSubSubEdit = (subId) => {
         setColEditForms(p => ({ ...p, [subId]: { ...p[subId], open: false } }));
-    };
-
-    const updateEditForm = (subId, patch) => {
-        setColEditForms(p => ({ ...p, [subId]: { ...p[subId], ...patch } }));
-    };
-
-    const addFieldToEditForm = (subId) => {
-        setColEditForms(p => {
-            const form = { ...p[subId] };
-            form.fields = [...(form.fields || []), { uiId: uid(), label: '', type: 'text', options: [] }];
-            return { ...p, [subId]: form };
-        });
-    };
-    const updateEditFormField = (subId, uiId, key, value) => {
-        setColEditForms(p => {
-            const form = { ...p[subId] };
-            form.fields = form.fields.map(f => f.uiId !== uiId ? f : {
-                ...f,
-                [key]: value
-            });
-            return { ...p, [subId]: form };
-        });
-    };
-    const removeEditFormField = (subId, uiId) => {
-        setColEditForms(p => {
-            const form = { ...p[subId] };
-            form.fields = form.fields.filter(f => f.uiId !== uiId);
-            return { ...p, [subId]: form };
-        });
     };
 
     const saveSubSubEdit = async (subId) => {
@@ -330,9 +300,6 @@ const B2BCategories = () => {
             fd.append('level', 3);
             fd.append('parent', subId);
             if (form.file) fd.append('image', form.file);
-            if (form.fields && form.fields.length > 0) {
-                fd.append('fields', JSON.stringify(form.fields.map(({ label, type, options }) => ({ label, type, options }))));
-            }
             await api.put(`/admin/b2b-categories/${form.subSubId}`, fd);
             toast.success('Updated!');
             closeSubSubEdit(subId);
@@ -346,7 +313,7 @@ const B2BCategories = () => {
 
     /* ══════════════════════════════════════════
        EDIT SUBCATEGORY (level 2) — open a sub edit form in the column header
-    ══════════════════════════════════════════ */
+     ══════════════════════════════════════════ */
     const [subEditForms, setSubEditForms] = useState({}); // keyed by subId
 
     const openSubEdit = (sub, e) => {
@@ -360,6 +327,7 @@ const B2BCategories = () => {
                 file: null,
                 preview: sub.image || null,
                 existingImage: sub.image || null,
+                fields: (sub.fields || []).map(f => ({ ...f, uiId: uid(), options: f.options || [] })),
                 saving: false
             }
         }));
@@ -367,6 +335,32 @@ const B2BCategories = () => {
 
     const closeSubEdit = (subId) => {
         setSubEditForms(p => ({ ...p, [subId]: { ...p[subId], open: false } }));
+    };
+
+    const addFieldToSubEdit = (subId) => {
+        setSubEditForms(p => {
+            const form = p[subId] || {};
+            return {
+                ...p,
+                [subId]: { ...form, fields: [...(form.fields || []), { uiId: uid(), label: '', type: 'text', options: [] }] }
+            };
+        });
+    };
+
+    const updateSubEditField = (subId, uiId, key, value) => {
+        setSubEditForms(p => {
+            const form = { ...p[subId] };
+            form.fields = form.fields.map(f => f.uiId !== uiId ? f : { ...f, [key]: value });
+            return { ...p, [subId]: form };
+        });
+    };
+
+    const removeSubEditField = (subId, uiId) => {
+        setSubEditForms(p => {
+            const form = { ...p[subId] };
+            form.fields = form.fields.filter(f => f.uiId !== uiId);
+            return { ...p, [subId]: form };
+        });
     };
 
     const saveSubEdit = async (subId) => {
@@ -377,6 +371,11 @@ const B2BCategories = () => {
             const fd = new FormData();
             fd.append('name', form.name.trim());
             if (form.file) fd.append('image', form.file);
+            if (form.fields && form.fields.length > 0) {
+                fd.append('fields', JSON.stringify(form.fields.map(({ label, type, options, isVariant }) => ({ label, type, options, isVariant }))));
+            } else {
+                fd.append('fields', JSON.stringify([]));
+            }
             await api.put(`/admin/b2b-categories/${subId}`, fd);
             toast.success('Subcategory updated!');
             closeSubEdit(subId);
@@ -389,7 +388,28 @@ const B2BCategories = () => {
     };
 
     /* ADD SUBCATEGORY (level 2) inline in detail view */
-    const [addSubForm, setAddSubForm] = useState({ open: false, name: '', file: null, preview: null, saving: false });
+    const [addSubForm, setAddSubForm] = useState({ open: false, name: '', file: null, preview: null, fields: [], saving: false });
+
+    const addFieldToNewSub = () => {
+        setAddSubForm(p => ({
+            ...p,
+            fields: [...(p.fields || []), { uiId: uid(), label: '', type: 'text', options: [] }]
+        }));
+    };
+
+    const updateNewSubField = (uiId, key, value) => {
+        setAddSubForm(p => ({
+            ...p,
+            fields: p.fields.map(f => f.uiId !== uiId ? f : { ...f, [key]: value })
+        }));
+    };
+
+    const removeNewSubField = (uiId) => {
+        setAddSubForm(p => ({
+            ...p,
+            fields: p.fields.filter(f => f.uiId !== uiId)
+        }));
+    };
 
     const saveNewSub = async () => {
         if (!addSubForm.name.trim()) return toast.error('Subcategory name is required');
@@ -401,9 +421,12 @@ const B2BCategories = () => {
             fd.append('level', 2);
             fd.append('parent', catId);
             if (addSubForm.file) fd.append('image', addSubForm.file);
+            if (addSubForm.fields && addSubForm.fields.length > 0) {
+                fd.append('fields', JSON.stringify(addSubForm.fields.map(({ label, type, options, isVariant }) => ({ label, type, options, isVariant }))));
+            }
             await api.post('/admin/b2b-categories', fd);
             toast.success('Subcategory added!');
-            setAddSubForm({ open: false, name: '', file: null, preview: null, saving: false });
+            setAddSubForm({ open: false, name: '', file: null, preview: null, fields: [], saving: false });
             await refreshActive(catId);
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed');
@@ -630,7 +653,7 @@ const B2BCategories = () => {
                                     <FiEdit2 size={14} /> Edit Category
                                 </button>
                                 <button
-                                    onClick={() => setAddSubForm({ open: true, name: '', file: null, preview: null, saving: false })}
+                                    onClick={() => setAddSubForm({ open: true, name: '', file: null, preview: null, fields: [], saving: false })}
                                     className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl flex items-center gap-2 transition-colors shadow-md shadow-indigo-200"
                                 >
                                     <FiPlus strokeWidth={2.5} /> Add Subcategory
@@ -648,57 +671,119 @@ const B2BCategories = () => {
                                     className="bg-white border border-indigo-200 rounded-2xl p-5 shadow-sm overflow-hidden"
                                 >
                                     <p className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-3">New Subcategory</p>
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                        <input
-                                            type="text"
-                                            value={addSubForm.name}
-                                            onChange={e => setAddSubForm(p => ({ ...p, name: e.target.value }))}
-                                            onKeyDown={e => e.key === 'Enter' && saveNewSub()}
-                                            placeholder="Subcategory name…"
-                                            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none font-medium"
-                                            autoFocus
-                                        />
+                                    <div className="space-y-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                            <input
+                                                type="text"
+                                                value={addSubForm.name}
+                                                onChange={e => setAddSubForm(p => ({ ...p, name: e.target.value }))}
+                                                onKeyDown={e => e.key === 'Enter' && saveNewSub()}
+                                                placeholder="Subcategory name…"
+                                                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none font-medium"
+                                                autoFocus
+                                            />
 
-                                        {/* Image Upload for New Subcategory */}
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-10 h-10 rounded-lg border border-dashed border-gray-300 bg-gray-55 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                {addSubForm.preview ? (
-                                                    <img src={addSubForm.preview} alt="preview" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <FiImage className="text-gray-400 text-sm" />
-                                                )}
+                                            {/* Image Upload for New Subcategory */}
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-10 h-10 rounded-lg border border-dashed border-gray-300 bg-gray-55 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                    {addSubForm.preview ? (
+                                                        <img src={addSubForm.preview} alt="preview" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <FiImage className="text-gray-400 text-sm" />
+                                                    )}
+                                                </div>
+                                                <label className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-55 cursor-pointer transition-colors">
+                                                    <FiImage size={13} />
+                                                    {addSubForm.file ? 'Change Image' : 'Upload Image'}
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={e => {
+                                                            const file = e.target.files[0];
+                                                            if (file) {
+                                                                setAddSubForm(p => ({ ...p, file, preview: URL.createObjectURL(file) }));
+                                                            }
+                                                        }}
+                                                        className="hidden"
+                                                    />
+                                                </label>
                                             </div>
-                                            <label className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-55 cursor-pointer transition-colors">
-                                                <FiImage size={13} />
-                                                {addSubForm.file ? 'Change Image' : 'Upload Image'}
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={e => {
-                                                        const file = e.target.files[0];
-                                                        if (file) {
-                                                            setAddSubForm(p => ({ ...p, file, preview: URL.createObjectURL(file) }));
-                                                        }
-                                                    }}
-                                                    className="hidden"
-                                                />
-                                            </label>
+
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={saveNewSub}
+                                                    disabled={addSubForm.saving}
+                                                    className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
+                                                >
+                                                    {addSubForm.saving ? <FiLoader className="animate-spin" /> : <FiCheck />} Save Subcategory
+                                                </button>
+                                                <button
+                                                    onClick={() => setAddSubForm({ open: false, name: '', file: null, preview: null, fields: [], saving: false })}
+                                                    className="p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                                                >
+                                                    <FiX />
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={saveNewSub}
-                                                disabled={addSubForm.saving}
-                                                className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1.5 transition-colors"
-                                            >
-                                                {addSubForm.saving ? <FiLoader className="animate-spin" /> : <FiCheck />} Save
-                                            </button>
-                                            <button
-                                                onClick={() => setAddSubForm({ open: false, name: '', file: null, preview: null, saving: false })}
-                                                className="p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
-                                            >
-                                                <FiX />
-                                            </button>
+                                        {/* Subcategory Fields Section */}
+                                        <div className="border-t border-gray-100 pt-4 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-xs font-black text-indigo-700 uppercase tracking-widest">Subcategory Fields</h4>
+                                                <button
+                                                    type="button"
+                                                    onClick={addFieldToNewSub}
+                                                    className="text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors"
+                                                >
+                                                    <FiPlus size={12} /> Field
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {(addSubForm.fields || []).map((field) => (
+                                                    <div key={field.uiId} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative flex flex-col gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeNewSubField(field.uiId)}
+                                                            className="absolute right-2 top-2 text-gray-400 hover:text-red-600"
+                                                        >
+                                                            <FiX size={14} />
+                                                        </button>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Field Label (e.g. Fabric, Size)"
+                                                                value={field.label}
+                                                                onChange={e => updateNewSubField(field.uiId, 'label', e.target.value)}
+                                                                className="px-3 py-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-400 bg-white"
+                                                            />
+                                                            <select
+                                                                value={field.type}
+                                                                onChange={e => updateNewSubField(field.uiId, 'type', e.target.value)}
+                                                                className="px-3 py-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-400 bg-white"
+                                                            >
+                                                                {FIELD_TYPES.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <label className="flex items-center gap-1.5 cursor-pointer mt-1 pl-1">
+                                                            <input 
+                                                                type="checkbox"
+                                                                checked={field.isVariant || false}
+                                                                onChange={e => updateNewSubField(field.uiId, 'isVariant', e.target.checked)}
+                                                                className="w-3.5 h-3.5 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                            />
+                                                            <span className="text-[11px] text-gray-500 font-bold select-none cursor-pointer">Is Selectable Variant?</span>
+                                                        </label>
+                                                        {(field.type === 'select' || field.type === 'multi-select') && (
+                                                            <TagInput
+                                                                options={field.options || []}
+                                                                onChange={newOpts => updateNewSubField(field.uiId, 'options', newOpts)}
+                                                                placeholder="Options (press Enter or comma)"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -767,7 +852,7 @@ const B2BCategories = () => {
                                                                     <FiImage className="text-gray-400 text-xs" />
                                                                 )}
                                                             </div>
-                                                            <label className="flex-1 flex items-center justify-center gap-1 px-2 py-1 border border-gray-200 rounded text-[10px] font-bold text-gray-600 hover:bg-gray-50 cursor-pointer bg-white">
+                                                            <label className="flex-1 flex items-center justify-center gap-1 px-2 py-1 border border-gray-200 rounded text-[10px] font-bold text-gray-600 hover:bg-gray-55 cursor-pointer bg-white">
                                                                 <FiImage size={11} />
                                                                 {subEdit.file ? 'Changed' : (subEdit.existingImage ? 'Replace' : 'Upload')}
                                                                 <input
@@ -786,44 +871,124 @@ const B2BCategories = () => {
                                                                 />
                                                             </label>
                                                         </div>
+
+                                                        {/* Subcategory Fields Section inside Subcategory Edit */}
+                                                        <div className="border-t border-gray-200 pt-3 mt-3 space-y-2">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Fields</span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => addFieldToSubEdit(subId)}
+                                                                    className="text-[10px] font-black text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-0.5 rounded-full flex items-center gap-0.5 animate-pulse"
+                                                                >
+                                                                    <FiPlus size={9} /> Field
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                                                                {(subEdit.fields || []).map(field => (
+                                                                    <div key={field.uiId} className="bg-white rounded-xl border border-indigo-100 p-2.5 relative flex flex-col gap-1.5 shadow-sm">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => removeSubEditField(subId, field.uiId)}
+                                                                            className="absolute right-2 top-2 text-red-400 hover:text-red-600"
+                                                                        >
+                                                                            <FiX size={10} />
+                                                                        </button>
+                                                                        <div className="space-y-1.5 pr-4">
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder="Label"
+                                                                                value={field.label}
+                                                                                onChange={e => updateSubEditField(subId, field.uiId, 'label', e.target.value)}
+                                                                                className="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs outline-none focus:border-indigo-400"
+                                                                            />
+                                                                            <div className="flex gap-1.5 items-center">
+                                                                                <select
+                                                                                    value={field.type}
+                                                                                    onChange={e => updateSubEditField(subId, field.uiId, 'type', e.target.value)}
+                                                                                    className="flex-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs outline-none focus:border-indigo-400"
+                                                                                >
+                                                                                    {FIELD_TYPES.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
+                                                                                </select>
+                                                                                <label className="flex items-center gap-1 cursor-pointer flex-shrink-0">
+                                                                                    <input 
+                                                                                        type="checkbox"
+                                                                                        checked={field.isVariant || false}
+                                                                                        onChange={e => updateSubEditField(subId, field.uiId, 'isVariant', e.target.checked)}
+                                                                                        className="w-3.5 h-3.5 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                                                    />
+                                                                                    <span className="text-[10px] text-gray-500 font-bold select-none cursor-pointer">Variant?</span>
+                                                                                </label>
+                                                                            </div>
+                                                                            {(field.type === 'select' || field.type === 'multi-select') && (
+                                                                                <TagInput
+                                                                                    options={field.options || []}
+                                                                                    onChange={newOpts => updateSubEditField(subId, field.uiId, 'options', newOpts)}
+                                                                                    placeholder="e.g. Cotton, Silk"
+                                                                                />
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                                {(subEdit.fields || []).length === 0 && (
+                                                                    <p className="text-[10px] text-gray-400 text-center py-1">No fields defined.</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="flex items-center min-w-0 flex-1 pr-2">
-                                                            {sub.image && (
-                                                                <img src={sub.image} alt={sub.name} className="w-7 h-7 rounded object-cover border border-gray-200 mr-2 flex-shrink-0" />
-                                                            )}
-                                                            <h3 className="font-black text-gray-800 text-[15px] leading-tight truncate">{sub.name}</h3>
+                                                    <div>
+                                                        <div className="flex items-start justify-between">
+                                                            <div className="flex items-center min-w-0 flex-1 pr-2">
+                                                                {sub.image && (
+                                                                    <img src={sub.image} alt={sub.name} className="w-7 h-7 rounded object-cover border border-gray-200 mr-2 flex-shrink-0" />
+                                                                )}
+                                                                <div className="min-w-0">
+                                                                    <h3 className="font-black text-gray-800 text-[15px] leading-tight truncate">{sub.name}</h3>
+                                                                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">{(sub.fields || []).length} field{(sub.fields || []).length !== 1 ? 's' : ''} defined</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex gap-1 flex-shrink-0">
+                                                                <button
+                                                                    onClick={e => openSubEdit(sub, e)}
+                                                                    className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                                                    title="Edit subcategory"
+                                                                >
+                                                                    <FiEdit2 size={13} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={e => handleDeleteSub(sub, e)}
+                                                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                                    title="Delete subcategory"
+                                                                >
+                                                                    <FiTrash2 size={13} />
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex gap-1 flex-shrink-0">
-                                                            <button
-                                                                onClick={e => openSubEdit(sub, e)}
-                                                                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                                                                title="Edit subcategory"
-                                                            >
-                                                                <FiEdit2 size={13} />
-                                                            </button>
-                                                            <button
-                                                                onClick={e => handleDeleteSub(sub, e)}
-                                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                                                title="Delete subcategory"
-                                                            >
-                                                                <FiTrash2 size={13} />
-                                                            </button>
-                                                        </div>
+                                                        {sub.fields && sub.fields.length > 0 && (
+                                                            <div className="mt-2 flex flex-wrap gap-1">
+                                                                {sub.fields.map((f, i) => (
+                                                                    <span key={i} className="text-[9px] px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-indigo-700 font-bold uppercase tracking-wider">
+                                                                        {f.label}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
+                                            </div>
 
-                                                <div className="flex items-center justify-between mt-3">
-                                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Subcategories</span>
-                                                    <button
-                                                        onClick={() => addForm.open ? closeColAdd(subId) : openColAdd(subId)}
-                                                        className="text-[11px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 transition-colors"
-                                                    >
-                                                        {addForm.open ? <FiX size={11} /> : <FiPlus size={11} />}
-                                                        {addForm.open ? 'Cancel' : 'Add'}
-                                                    </button>
-                                                </div>
+                                            {/* Subcategories list header */}
+                                            <div className="flex items-center justify-between mt-3 px-4">
+                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sub-categories</span>
+                                                <button
+                                                    onClick={() => addForm.open ? closeColAdd(subId) : openColAdd(subId)}
+                                                    className="text-[11px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 transition-colors"
+                                                >
+                                                    {addForm.open ? <FiX size={11} /> : <FiPlus size={11} />}
+                                                    {addForm.open ? 'Cancel' : 'Add'}
+                                                </button>
                                             </div>
 
                                             {/* Add sub-sub form */}
@@ -854,7 +1019,7 @@ const B2BCategories = () => {
                                                                         <FiImage className="text-gray-400 text-xs" />
                                                                     )}
                                                                 </div>
-                                                                <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-[10px] font-bold text-gray-600 hover:bg-gray-50 cursor-pointer bg-white transition-colors">
+                                                                <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-[10px] font-bold text-gray-600 hover:bg-gray-55 cursor-pointer bg-white transition-colors">
                                                                     <FiImage size={11} />
                                                                     {addForm.file ? 'Change Image' : 'Upload Image'}
                                                                     <input
@@ -871,69 +1036,13 @@ const B2BCategories = () => {
                                                                 </label>
                                                             </div>
 
-                                                            {/* Fields */}
-                                                            <div className="space-y-1.5">
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Subcategory Fields</span>
-                                                                    <button
-                                                                        onClick={() => addFieldToColForm(subId)}
-                                                                        className="text-[10px] font-black text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded-full flex items-center gap-0.5 transition-colors"
-                                                                    >
-                                                                        <FiPlus size={9} /> Field
-                                                                    </button>
-                                                                </div>
-
-                                                                {(addForm.fields || []).map(field => (
-                                                                    <div key={field.uiId} className="flex items-start gap-2 bg-white p-2.5 rounded-xl border border-indigo-100 relative">
-                                                                        <button
-                                                                            onClick={() => removeColFormField(subId, field.uiId)}
-                                                                            className="absolute right-2 top-2 text-red-400 hover:text-red-600 p-0.5"
-                                                                        >
-                                                                            <FiX size={11} />
-                                                                        </button>
-                                                                        <div className="flex-1 space-y-1.5 pr-4">
-                                                                            <input
-                                                                                type="text"
-                                                                                placeholder="Label"
-                                                                                value={field.label}
-                                                                                onChange={e => updateColFormField(subId, field.uiId, 'label', e.target.value)}
-                                                                                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-400"
-                                                                            />
-                                                                            <select
-                                                                                value={field.type}
-                                                                                onChange={e => updateColFormField(subId, field.uiId, 'type', e.target.value)}
-                                                                                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-400"
-                                                                            >
-                                                                                {FIELD_TYPES.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
-                                                                            </select>
-                                                                            <label className="flex items-center gap-1.5 cursor-pointer mt-1 pl-1">
-                                                                                <input 
-                                                                                    type="checkbox"
-                                                                                    checked={field.isVariant || false}
-                                                                                    onChange={e => updateColFormField(subId, field.uiId, 'isVariant', e.target.checked)}
-                                                                                    className="w-3.5 h-3.5 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                                                                />
-                                                                                <span className="text-[10px] text-gray-500 font-bold select-none cursor-pointer">Is Selectable Variant?</span>
-                                                                            </label>
-                                                                            {(field.type === 'select' || field.type === 'multi-select') && (
-                                                                                <TagInput
-                                                                                    options={field.options || []}
-                                                                                    onChange={newOpts => updateColFormField(subId, field.uiId, 'options', newOpts)}
-                                                                                    placeholder="e.g. Cotton, Silk, Polyester"
-                                                                                />
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-
                                                             <button
                                                                 onClick={() => saveSubSub(subId)}
                                                                 disabled={addForm.saving}
                                                                 className="w-full py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
                                                             >
                                                                 {addForm.saving ? <FiLoader className="animate-spin" size={14} /> : <FiSave size={14} />}
-                                                                Save Subcategory
+                                                                Save Sub-subcategory
                                                             </button>
                                                         </div>
                                                     </motion.div>
@@ -949,19 +1058,17 @@ const B2BCategories = () => {
                                                 {subSubs.map((ss) => {
                                                     const ssId = ss._id || ss.id;
                                                     const isEditing = editForm.open && editForm.subSubId === ssId;
-                                                    const fields = ss.fields || [];
 
                                                     return (
-                                                        <div key={ssId} className="rounded-xl border border-gray-100 bg-gray-50/50 overflow-hidden">
+                                                        <div key={ssId} className="rounded-xl border border-gray-100 bg-gray-55/50 overflow-hidden">
                                                             {/* Sub-sub header */}
                                                             <div className="flex items-start justify-between px-3 py-2.5 group">
                                                                 <div className="flex items-center min-w-0 flex-1 pr-2">
                                                                     {ss.image && (
-                                                                <img src={ss.image} alt={ss.name} className="w-7 h-7 rounded object-cover border border-gray-200 mr-2 flex-shrink-0" />
+                                                                        <img src={ss.image} alt={ss.name} className="w-7 h-7 rounded object-cover border border-gray-200 mr-2 flex-shrink-0" />
                                                                     )}
                                                                     <div className="min-w-0">
                                                                         <h4 className="font-bold text-gray-800 text-sm leading-tight truncate">{ss.name}</h4>
-                                                                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">{fields.length} field{fields.length !== 1 ? 's' : ''} defined</p>
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -974,27 +1081,13 @@ const B2BCategories = () => {
                                                                     </button>
                                                                     <button
                                                                         onClick={e => handleDeleteSubSub(ss, e)}
-                                                                        className="p-1 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"
+                                                                        className="p-1 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-55"
                                                                         title="Delete"
                                                                     >
                                                                         <FiTrash2 size={12} />
                                                                     </button>
                                                                 </div>
                                                             </div>
-
-                                                            {/* Field chips */}
-                                                            {fields.length > 0 && !isEditing && (
-                                                                <div className="px-3 pb-2.5 flex flex-wrap gap-1.5">
-                                                                    {fields.slice(0, 3).map((f, i) => (
-                                                                        <span key={i} className="text-[9px] px-2 py-1 bg-white border border-gray-200 rounded text-gray-600 font-black uppercase tracking-wider shadow-sm">
-                                                                            {f.label}
-                                                                        </span>
-                                                                    ))}
-                                                                    {fields.length > 3 && (
-                                                                        <span className="text-[10px] text-gray-400 font-bold px-1 py-0.5">+{fields.length - 3} more</span>
-                                                                    )}
-                                                                </div>
-                                                            )}
 
                                                             {/* Inline edit form */}
                                                             <AnimatePresence>
@@ -1051,69 +1144,6 @@ const B2BCategories = () => {
                                                                                         className="hidden"
                                                                                     />
                                                                                 </label>
-                                                                            </div>
-
-                                                                            {/* Edit fields */}
-                                                                            <div>
-                                                                                <div className="flex items-center justify-between mb-1.5">
-                                                                                    <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Edit Fields</span>
-                                                                                    <button
-                                                                                        onClick={() => addFieldToEditForm(subId)}
-                                                                                        className="text-[10px] font-black text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-0.5 rounded-full flex items-center gap-0.5"
-                                                                                    >
-                                                                                        <FiPlus size={9} /> Field
-                                                                                    </button>
-                                                                                </div>
-
-                                                                                <div className="space-y-1.5">
-                                                                                    {(editForm.fields || []).map(field => (
-                                                                                        <div key={field.uiId} className="bg-white rounded-xl border border-indigo-100 p-2.5 relative">
-                                                                                            <button
-                                                                                                onClick={() => removeEditFormField(subId, field.uiId)}
-                                                                                                className="absolute right-2 top-2 text-red-400 hover:text-red-600"
-                                                                                            >
-                                                                                                <FiX size={10} />
-                                                                                            </button>
-                                                                                            <div className="space-y-1.5 pr-4">
-                                                                                                <input
-                                                                                                    type="text"
-                                                                                                    placeholder="Label"
-                                                                                                    value={field.label}
-                                                                                                    onChange={e => updateEditFormField(subId, field.uiId, 'label', e.target.value)}
-                                                                                                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-400"
-                                                                                                />
-                                                                                                <div className="flex gap-1.5 items-center">
-                                                                                                    <select
-                                                                                                        value={field.type}
-                                                                                                        onChange={e => updateEditFormField(subId, field.uiId, 'type', e.target.value)}
-                                                                                                        className="flex-1 px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-400"
-                                                                                                    >
-                                                                                                        {FIELD_TYPES.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
-                                                                                                    </select>
-                                                                                                    <label className="flex items-center gap-1 cursor-pointer flex-shrink-0">
-                                                                                                        <input 
-                                                                                                            type="checkbox"
-                                                                                                            checked={field.isVariant || false}
-                                                                                                            onChange={e => updateEditFormField(subId, field.uiId, 'isVariant', e.target.checked)}
-                                                                                                            className="w-3.5 h-3.5 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                                                                                        />
-                                                                                                        <span className="text-[10px] text-gray-500 font-bold select-none cursor-pointer">Variant?</span>
-                                                                                                    </label>
-                                                                                                </div>
-                                                                                                {(field.type === 'select' || field.type === 'multi-select') && (
-                                                                                                    <TagInput
-                                                                                                        options={field.options || []}
-                                                                                                        onChange={newOpts => updateEditFormField(subId, field.uiId, 'options', newOpts)}
-                                                                                                        placeholder="e.g. Cotton, Silk, Polyester"
-                                                                                                    />
-                                                                                                )}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                    {(editForm.fields || []).length === 0 && (
-                                                                                        <p className="text-[10px] text-gray-400 text-center py-1">No fields yet. Click + Field to add.</p>
-                                                                                    )}
-                                                                                </div>
                                                                             </div>
                                                                         </div>
                                                                     </motion.div>
