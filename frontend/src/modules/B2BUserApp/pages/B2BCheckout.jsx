@@ -134,10 +134,28 @@ const B2BCheckout = () => {
     const selectedActiveItems = activeGroup ? activeGroup.items.filter(item => item.selected !== false) : [];
     const subtotal = selectedActiveItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
-    // Calculate total advance capped by the active vendor group subtotal
-    const totalAdvance = activeGroup && selectedActiveItems.length > 0 ? Math.min(advancePerOrder, subtotal) : 0;
+    const activeGrocerySubtotal = selectedActiveItems
+        .filter(item => item.productModel === 'GroceryProduct')
+        .reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
-    const numberOfOrders = selectedActiveItems.length > 0 ? 1 : 0;
+    const activeFashionSubtotal = selectedActiveItems
+        .filter(item => item.productModel !== 'GroceryProduct')
+        .reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+    const activeVendorData = selectedActiveItems.length > 0 ? selectedActiveItems[0].vendor : null;
+    const activeGroceryMinOrderAmount = activeVendorData?.groceryMinOrderAmount || 0;
+    const activeFashionMinOrderAmount = activeVendorData?.fashionMinOrderAmount || 0;
+
+    const isActiveGroceryMinNotMet = activeGroceryMinOrderAmount > 0 && activeGrocerySubtotal > 0 && activeGrocerySubtotal < activeGroceryMinOrderAmount;
+    const isActiveFashionMinNotMet = activeFashionMinOrderAmount > 0 && activeFashionSubtotal > 0 && activeFashionSubtotal < activeFashionMinOrderAmount;
+    const isMinOrderAmountNotMet = isActiveGroceryMinNotMet || isActiveFashionMinNotMet;
+
+    // Calculate total advance capped by the active vendor group subtotal split by module (matching backend)
+    const groceryAdvance = activeGrocerySubtotal > 0 ? Math.min(advancePerOrder, activeGrocerySubtotal) : 0;
+    const fashionAdvance = activeFashionSubtotal > 0 ? Math.min(advancePerOrder, activeFashionSubtotal) : 0;
+    const totalAdvance = activeGroup && selectedActiveItems.length > 0 ? (groceryAdvance + fashionAdvance) : 0;
+
+    const numberOfOrders = (activeGrocerySubtotal > 0 ? 1 : 0) + (activeFashionSubtotal > 0 ? 1 : 0);
     const remainingBalance = subtotal - totalAdvance > 0 ? subtotal - totalAdvance : 0;
 
     const handleQuantityChange = async (productId, currentQty, change, size = null, color = null, selectedVariants = {}) => {
@@ -177,10 +195,10 @@ const B2BCheckout = () => {
                 shippingAddress,
                 paymentMethod: 'Online',
                 vendorId: activeVendorId
-            });
+            }, { silent: true });
 
             if (!initRes.success) {
-                toast.error(initRes.message);
+                toast.error(initRes.message || 'Checkout failed');
                 setIsPlacingOrder(false);
                 return;
             }
@@ -204,7 +222,7 @@ const B2BCheckout = () => {
                             razorpay_signature: response.razorpay_signature,
                             shippingAddress,
                             vendorId: activeVendorId
-                        });
+                        }, { silent: true });
 
                         if (verifyRes.success) {
                             toast.success('Orders placed successfully!');
@@ -220,7 +238,8 @@ const B2BCheckout = () => {
                             toast.error('Payment verification failed');
                         }
                     } catch (err) {
-                        toast.error('Payment verification error');
+                        const errorMsg = err.response?.data?.message || err.message || 'Payment verification error';
+                        toast.error(errorMsg);
                     }
                 },
                 prefill: {
@@ -241,7 +260,8 @@ const B2BCheckout = () => {
             rzp.open();
 
         } catch (err) {
-            toast.error('Checkout failed. Please try again.');
+            const errorMsg = err.response?.data?.message || err.message || 'Checkout failed. Please try again.';
+            toast.error(errorMsg);
             setIsPlacingOrder(false);
         }
     };
@@ -363,6 +383,43 @@ const B2BCheckout = () => {
                                                 {isActive ? 'Processing Now' : `Next in Queue (${groupIdx + 1}/${vendorIds.length})`}
                                             </span>
                                         </div>
+
+                                        {/* Warning Banners for Minimum Order Limits */}
+                                        {(() => {
+                                            const groupSelectedItems = group.items.filter(item => item.selected !== false);
+                                            const groupGrocerySubtotal = groupSelectedItems
+                                                .filter(item => item.productModel === 'GroceryProduct')
+                                                .reduce((acc, item) => acc + (item.price * item.quantity), 0);
+                                            const groupFashionSubtotal = groupSelectedItems
+                                                .filter(item => item.productModel !== 'GroceryProduct')
+                                                .reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+                                            const groupVendor = group.items[0]?.vendor || {};
+                                            const gMin = groupVendor.groceryMinOrderAmount || 0;
+                                            const fMin = groupVendor.fashionMinOrderAmount || 0;
+
+                                            const gMinNotMet = gMin > 0 && groupGrocerySubtotal > 0 && groupGrocerySubtotal < gMin;
+                                            const fMinNotMet = fMin > 0 && groupFashionSubtotal > 0 && groupFashionSubtotal < fMin;
+
+                                            if (!gMinNotMet && !fMinNotMet) return null;
+
+                                            return (
+                                                <div className="mb-4 space-y-2">
+                                                    {gMinNotMet && (
+                                                        <div className="p-3 bg-rose-50 border border-rose-100 text-rose-800 rounded-xl text-xs font-semibold flex items-center justify-between">
+                                                            <span>⚠️ Grocery Order limit not met: ₹{groupGrocerySubtotal} / min ₹{gMin}</span>
+                                                            <span className="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full uppercase tracking-wider">Required: +₹{gMin - groupGrocerySubtotal}</span>
+                                                        </div>
+                                                    )}
+                                                    {fMinNotMet && (
+                                                        <div className="p-3 bg-rose-50 border border-rose-100 text-rose-800 rounded-xl text-xs font-semibold flex items-center justify-between">
+                                                            <span>⚠️ Fashion Order limit not met: ₹{groupFashionSubtotal} / min ₹{fMin}</span>
+                                                            <span className="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full uppercase tracking-wider">Required: +₹{fMin - groupFashionSubtotal}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                         
                                         <div className="divide-y divide-gray-100">
                                             {group.items.map((item) => {
@@ -491,11 +548,16 @@ const B2BCheckout = () => {
 
                         <button 
                             onClick={handleCheckout}
-                            disabled={selectedIndex === null || selectedIndex >= addresses.length || isPlacingOrder || cartItems.length === 0}
-                            className={`w-full text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-colors flex items-center justify-center gap-2 shadow-lg ${selectedIndex === null || selectedIndex >= addresses.length || isPlacingOrder || cartItems.length === 0 ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-[#ff6b00] hover:bg-[#e66000] shadow-orange-200'}`}
+                            disabled={selectedIndex === null || selectedIndex >= addresses.length || isPlacingOrder || cartItems.length === 0 || isMinOrderAmountNotMet}
+                            className={`w-full text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-colors flex items-center justify-center gap-2 shadow-lg ${selectedIndex === null || selectedIndex >= addresses.length || isPlacingOrder || cartItems.length === 0 || isMinOrderAmountNotMet ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-[#ff6b00] hover:bg-[#e66000] shadow-orange-200'}`}
                         >
                             {isPlacingOrder ? 'Processing...' : `Pay ₹${totalAdvance.toLocaleString('en-IN')} & Place Order`}
                         </button>
+                        {isMinOrderAmountNotMet && (
+                            <p className="text-[10px] text-rose-600 font-bold text-center mt-2 uppercase tracking-wide">
+                                ❌ Cannot Checkout: Minimum Order Amount limits not met for {activeGroup?.name}
+                            </p>
+                        )}
                         
                         <div className="hidden lg:flex items-center justify-center gap-2 mt-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                             <FiShield size={14} /> Safe and Secure Payments

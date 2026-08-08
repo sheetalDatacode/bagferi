@@ -37,6 +37,8 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                     shopUnitId: null,
                     groceryDeliveryTime: parsed.groceryDeliveryTime || { minTime: '', maxTime: '' },
                     fashionDeliveryTime: parsed.fashionDeliveryTime || { minDays: '', maxDays: '' },
+                    groceryMinOrderAmount: parsed.groceryMinOrderAmount || "0",
+                    fashionMinOrderAmount: parsed.fashionMinOrderAmount || "0",
                 };
             } catch (e) {
                 console.error("Failed to parse draft:", e);
@@ -57,6 +59,8 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             shopUnitId: null,
             groceryDeliveryTime: { minTime: '', maxTime: '' },
             fashionDeliveryTime: { minDays: '', maxDays: '' },
+            groceryMinOrderAmount: "0",
+            fashionMinOrderAmount: "0",
         };
     });
 
@@ -116,7 +120,9 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                         details: unit.details?.length > 0 ? unit.details : [{ name: "", post: "", mobile: "" }],
                         shopUnitId: unit._id,
                         groceryDeliveryTime: unit.groceryDeliveryTime || { minTime: '', maxTime: '' },
-                        fashionDeliveryTime: unit.fashionDeliveryTime || { minDays: '', maxDays: '' }
+                        fashionDeliveryTime: unit.fashionDeliveryTime || { minDays: '', maxDays: '' },
+                        groceryMinOrderAmount: unit.groceryMinOrderAmount !== undefined ? String(unit.groceryMinOrderAmount) : "0",
+                        fashionMinOrderAmount: unit.fashionMinOrderAmount !== undefined ? String(unit.fashionMinOrderAmount) : "0"
                     };
                     setFormData(prev => ({ ...prev, ...shopData }));
                     setOriginalShopData(shopData);
@@ -445,7 +451,9 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
             fashionDeliveryTime: {
                 minDays: minDaysVal ? Number(minDaysVal) : null,
                 maxDays: maxDaysVal ? Number(maxDaysVal) : null,
-            }
+            },
+            groceryMinOrderAmount: formData.groceryMinOrderAmount ? Number(formData.groceryMinOrderAmount) : 0,
+            fashionMinOrderAmount: formData.fashionMinOrderAmount ? Number(formData.fashionMinOrderAmount) : 0
         };
 
         // Clear draft on successful submit
@@ -1031,6 +1039,48 @@ const ShopListingForm = ({ onSubmit, isLoading = false }) => {
                                     Preview: ✅ Delivery within {formData.fashionDeliveryTime.minDays}–{formData.fashionDeliveryTime.maxDays} days
                                 </p>
                             )}
+                        </div>
+ 
+                        {/* Minimum Order Amount Section */}
+                        <div className="space-y-4 pt-6 border-t border-gray-100">
+                            <label className={labelStyle}>Minimum Delivery / Order Amount</label>
+                            <p className="text-[10px] text-gray-500 -mt-2">Minimum value of products required to place an order from this shop (₹0 means no minimum)</p>
+                            <div className="grid grid-cols-2 gap-4 max-w-md">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-wider">Grocery Minimum Amount (₹)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={formData.groceryMinOrderAmount}
+                                        onChange={(e) => {
+                                            setFormData({
+                                                ...formData,
+                                                groceryMinOrderAmount: e.target.value
+                                            });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="e.g. 500"
+                                        className={inputStyle}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-wider">Fashion Minimum Amount (₹)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={formData.fashionMinOrderAmount}
+                                        onChange={(e) => {
+                                            setFormData({
+                                                ...formData,
+                                                fashionMinOrderAmount: e.target.value
+                                            });
+                                            setIsShopModified(true);
+                                        }}
+                                        placeholder="e.g. 1000"
+                                        className={inputStyle}
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         {/* 5. Bank Details Section */}

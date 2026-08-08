@@ -68,6 +68,14 @@ const shopUnitSchema = new mongoose.Schema(
             minDays: { type: Number, default: null },
             maxDays: { type: Number, default: null }
         },
+        groceryMinOrderAmount: {
+            type: Number,
+            default: 0
+        },
+        fashionMinOrderAmount: {
+            type: Number,
+            default: 0
+        },
         isActive: {
             type: Boolean,
             default: true,

@@ -17,9 +17,28 @@ export const getCart = async (req, res, next) => {
       cart = await Cart.create({ user: userId, items: [] });
     }
 
+    const cartObj = cart.toObject();
+    if (cartObj.items && cartObj.items.length > 0) {
+      const vendorIds = [...new Set(cartObj.items.map(item => item.vendor?._id?.toString()).filter(Boolean))];
+      const ShopUnit = (await import('../models/ShopUnit.model.js')).default;
+      const shopUnits = await ShopUnit.find({ vendorId: { $in: vendorIds } }).lean();
+      const shopUnitMap = shopUnits.reduce((acc, unit) => {
+        acc[unit.vendorId.toString()] = unit;
+        return acc;
+      }, {});
+
+      cartObj.items.forEach(item => {
+        if (item.vendor && item.vendor._id) {
+          const unit = shopUnitMap[item.vendor._id.toString()];
+          item.vendor.groceryMinOrderAmount = unit ? (unit.groceryMinOrderAmount || 0) : 0;
+          item.vendor.fashionMinOrderAmount = unit ? (unit.fashionMinOrderAmount || 0) : 0;
+        }
+      });
+    }
+
     res.status(200).json({
       success: true,
-      data: cart,
+      data: cartObj,
     });
   } catch (error) {
     next(error);

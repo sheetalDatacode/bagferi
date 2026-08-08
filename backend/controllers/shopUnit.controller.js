@@ -13,7 +13,7 @@ export const getMyUnit = async (req, res, next) => {
 
 export const createOrUpdateUnit = async (req, res, next) => {
     try {
-        const { name, description, images, minPrice, maxPrice, details, mapUrl, zoneId, companyName, accountDetails, deliveryZones, groceryDeliveryTime, fashionDeliveryTime } = req.body;
+        const { name, description, images, minPrice, maxPrice, details, mapUrl, zoneId, companyName, accountDetails, deliveryZones, groceryDeliveryTime, fashionDeliveryTime, groceryMinOrderAmount, fashionMinOrderAmount } = req.body;
         const vendorId = req.user.vendorId;
 
         // 1. Basic input validation
@@ -58,6 +58,12 @@ export const createOrUpdateUnit = async (req, res, next) => {
         const { minDays, maxDays } = fashionDeliveryTime || {};
         if (minDays && maxDays && (Number(minDays) > Number(maxDays))) {
             return res.status(400).json({ success: false, message: 'Min delivery days cannot exceed max delivery days' });
+        }
+
+        const parsedGroceryMin = groceryMinOrderAmount !== undefined ? parseFloat(groceryMinOrderAmount) : 0;
+        const parsedFashionMin = fashionMinOrderAmount !== undefined ? parseFloat(fashionMinOrderAmount) : 0;
+        if (isNaN(parsedGroceryMin) || isNaN(parsedFashionMin) || parsedGroceryMin < 0 || parsedFashionMin < 0) {
+            return res.status(400).json({ success: false, message: 'Minimum order amount cannot be negative' });
         }
 
         if (mapUrl && mapUrl.trim()) {
@@ -154,6 +160,8 @@ export const createOrUpdateUnit = async (req, res, next) => {
                 minDays: fashionDeliveryTime.minDays ? Number(fashionDeliveryTime.minDays) : null,
                 maxDays: fashionDeliveryTime.maxDays ? Number(fashionDeliveryTime.maxDays) : null,
             } : undefined,
+            groceryMinOrderAmount: parsedGroceryMin,
+            fashionMinOrderAmount: parsedFashionMin,
         };
 
         if (shop) {

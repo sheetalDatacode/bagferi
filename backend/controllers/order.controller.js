@@ -1,5 +1,6 @@
 import Order from '../models/Order.model.js';
 import Cart from '../models/Cart.model.js';
+import ShopUnit from '../models/ShopUnit.model.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import B2BSettings from '../models/B2BSettings.model.js';
@@ -48,6 +49,41 @@ export const initiateCheckout = async (req, res, next) => {
     console.log('initiateCheckout selectedItems after filter:', selectedItems.map(item => item.vendor?.toString()));
     if (selectedItems.length === 0) {
       return res.status(400).json({ success: false, message: 'No items selected for checkout' });
+    }
+
+    // Validate minimum order amounts for each vendor in selectedItems
+    const uniqueVendorIds = [...new Set(selectedItems.map(item => item.vendor.toString()))];
+    const shopUnits = await ShopUnit.find({ vendorId: { $in: uniqueVendorIds } }).lean();
+    const shopUnitMap = shopUnits.reduce((acc, unit) => {
+      acc[unit.vendorId.toString()] = unit;
+      return acc;
+    }, {});
+
+    for (const vId of uniqueVendorIds) {
+      const shopUnit = shopUnitMap[vId];
+      if (!shopUnit) continue;
+
+      const vendorItems = selectedItems.filter(item => item.vendor.toString() === vId);
+      const grocerySubtotal = vendorItems
+        .filter(item => item.productModel === 'GroceryProduct')
+        .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const fashionSubtotal = vendorItems
+        .filter(item => item.productModel !== 'GroceryProduct')
+        .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+      if (shopUnit.groceryMinOrderAmount > 0 && grocerySubtotal > 0 && grocerySubtotal < shopUnit.groceryMinOrderAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Minimum grocery order amount for ${shopUnit.name || 'this shop'} is ₹${shopUnit.groceryMinOrderAmount}. Current total is ₹${grocerySubtotal}.`
+        });
+      }
+
+      if (shopUnit.fashionMinOrderAmount > 0 && fashionSubtotal > 0 && fashionSubtotal < shopUnit.fashionMinOrderAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Minimum fashion order amount for ${shopUnit.name || 'this shop'} is ₹${shopUnit.fashionMinOrderAmount}. Current total is ₹${fashionSubtotal}.`
+        });
+      }
     }
 
     // Group items by vendor and module
@@ -145,6 +181,41 @@ export const verifyCheckoutPayment = async (req, res, next) => {
     }
     if (selectedItems.length === 0) {
       return res.status(400).json({ success: false, message: 'No items selected for checkout' });
+    }
+
+    // Validate minimum order amounts for each vendor in selectedItems
+    const uniqueVendorIdsVerify = [...new Set(selectedItems.map(item => item.vendor.toString()))];
+    const shopUnitsVerify = await ShopUnit.find({ vendorId: { $in: uniqueVendorIdsVerify } }).lean();
+    const shopUnitMapVerify = shopUnitsVerify.reduce((acc, unit) => {
+      acc[unit.vendorId.toString()] = unit;
+      return acc;
+    }, {});
+
+    for (const vId of uniqueVendorIdsVerify) {
+      const shopUnit = shopUnitMapVerify[vId];
+      if (!shopUnit) continue;
+
+      const vendorItems = selectedItems.filter(item => item.vendor.toString() === vId);
+      const grocerySubtotal = vendorItems
+        .filter(item => item.productModel === 'GroceryProduct')
+        .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const fashionSubtotal = vendorItems
+        .filter(item => item.productModel !== 'GroceryProduct')
+        .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+      if (shopUnit.groceryMinOrderAmount > 0 && grocerySubtotal > 0 && grocerySubtotal < shopUnit.groceryMinOrderAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Minimum grocery order amount for ${shopUnit.name || 'this shop'} is ₹${shopUnit.groceryMinOrderAmount}. Current total is ₹${grocerySubtotal}.`
+        });
+      }
+
+      if (shopUnit.fashionMinOrderAmount > 0 && fashionSubtotal > 0 && fashionSubtotal < shopUnit.fashionMinOrderAmount) {
+        return res.status(400).json({
+          success: false,
+          message: `Minimum fashion order amount for ${shopUnit.name || 'this shop'} is ₹${shopUnit.fashionMinOrderAmount}. Current total is ₹${fashionSubtotal}.`
+        });
+      }
     }
 
     // Group items by vendor and module
