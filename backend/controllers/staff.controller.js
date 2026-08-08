@@ -15,12 +15,13 @@ export const getAssignedOrders = asyncHandler(async (req, res) => {
         return res.status(401).json({ success: false, message: 'Unauthorized. Staff mobile not found in token.' });
     }
 
-    // Find orders where vendor matches, and assignedStaff.mobile matches
-    // Only return Dispatched orders for delivery
+    // Find orders where vendor matches, and assignedStaff.mobile matches or exchangeRequest.assignedStaff.mobile matches
     const orders = await Order.find({ 
         vendor: vendorId, 
-        'assignedStaff.mobile': staffMobile,
-        status: { $in: ['Dispatched', 'Completed'] } // Include completed so they can see history if needed
+        $or: [
+            { 'assignedStaff.mobile': staffMobile, status: { $in: ['Dispatched', 'Completed'] } },
+            { 'exchangeRequest.assignedStaff.mobile': staffMobile, 'exchangeRequest.status': { $in: ['Accepted', 'Completed'] } }
+        ]
     })
     .populate('items.product', 'name images image')
     .populate('user', 'name phone')
@@ -96,7 +97,7 @@ export const verifyExchangeOtpByStaff = asyncHandler(async (req, res) => {
 
     const order = await Order.findOne({ 
         _id: orderId,
-        'assignedStaff.mobile': staffMobile
+        'exchangeRequest.assignedStaff.mobile': staffMobile
     });
 
     if (!order) {

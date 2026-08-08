@@ -671,17 +671,21 @@ const B2BLanding = () => {
                     baseParams.city = selectedCity;
                 }
 
-                const [productRes, vendorRes, propertyRes] = await Promise.all([
+                const [productRes, groceryRes, vendorRes] = await Promise.all([
                     api.get('/products', { params: { ...baseParams, vendorType: 'b2b' } }),
-                    api.get('/vendors', { params: baseParams }),
-                    api.get('/property/all', { params: baseParams })
+                    api.get('/grocery/products', { params: { search: searchTerm, limit: 10 } }),
+                    api.get('/vendors', { params: baseParams })
                 ]);
 
                 const products = productRes.success && productRes.data ? (Array.isArray(productRes.data) ? productRes.data : (productRes.data.products || [])) : [];
+                const groceryProducts = groceryRes.success && groceryRes.data ? (Array.isArray(groceryRes.data) ? groceryRes.data : (groceryRes.data.products || [])) : [];
                 const vendors = vendorRes.success && vendorRes.data ? (Array.isArray(vendorRes.data) ? vendorRes.data : (vendorRes.data.vendors || [])) : [];
-                const properties = propertyRes.success && propertyRes.data ? propertyRes.data : [];
+                const properties = [];
 
-                setPopupProducts(products.map(p => ({ ...p, moq: p.moq || p.minimumOrderQuantity || 1 })));
+                const mappedGrocery = groceryProducts.map(gp => ({ ...gp, isGrocery: true, itemType: 'grocery', formType: 'grocery' }));
+                const mergedProducts = [...products, ...mappedGrocery];
+
+                setPopupProducts(mergedProducts.map(p => ({ ...p, moq: p.moq || p.minimumOrderQuantity || 1 })));
                 setPopupVendors(vendors);
                 setPopupProperties(properties);
 
@@ -1023,7 +1027,11 @@ const B2BLanding = () => {
                                     requireAuthForActions={true}
                                     onCardClick={() => {
                                         closePopup();
-                                        navigateWithAuth(`/b2b/product/${product._id}`);
+                                        if (product.isGrocery || product.itemType === 'grocery' || product.formType === 'grocery') {
+                                            navigateWithAuth(`/b2b/grocery/product/${product._id}`);
+                                        } else {
+                                            navigateWithAuth(`/b2b/product/${product._id}`);
+                                        }
                                     }}
                                 />
                             ))}
@@ -1042,7 +1050,11 @@ const B2BLanding = () => {
                         onClick={() => {
                             closePopup();
                             if (onViewAll) onViewAll();
-                            else navigateWithAuth('/b2b/catalog');
+                            else {
+                                const hasGrocery = popupProducts.some(p => p.isGrocery || p.itemType === 'grocery' || p.formType === 'grocery');
+                                const routePath = hasGrocery ? '/b2b/grocery' : '/b2b/catalog';
+                                navigateWithAuth(`${routePath}?search=${encodeURIComponent(searchQuery)}`);
+                            }
                         }}
                         className="w-full md:w-auto px-6 py-3 bg-gray-900 text-white rounded-xl md:rounded-full font-black text-[9px] uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-gray-200 flex items-center justify-center gap-3"
                     >
@@ -1946,7 +1958,11 @@ const B2BLanding = () => {
                 {activePopup === 'products' && (
                     <ProductPopup
                         title={`Related Products for "${searchQuery}"`}
-                        onViewAll={() => navigateWithAuth(`/b2b/catalog?search=${encodeURIComponent(searchQuery)}`)}
+                        onViewAll={() => {
+                            const hasGrocery = popupProducts.some(p => p.isGrocery || p.itemType === 'grocery' || p.formType === 'grocery');
+                            const routePath = hasGrocery ? '/b2b/grocery' : '/b2b/catalog';
+                            navigateWithAuth(`${routePath}?search=${encodeURIComponent(searchQuery)}`);
+                        }}
                     />
                 )}
                 {activePopup === 'properties' && (

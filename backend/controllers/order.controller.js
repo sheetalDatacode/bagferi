@@ -274,6 +274,38 @@ export const verifyCheckoutPayment = async (req, res, next) => {
       await order.save();
       createdOrders.push(order);
 
+      // ── Reduce stock for each ordered item ──────────────────────────────────
+      for (const item of items) {
+        try {
+          if (item.productModel === 'GroceryProduct') {
+            const GroceryProduct = (await import('../models/GroceryProduct.model.js')).default;
+            await GroceryProduct.findByIdAndUpdate(
+              item.product,
+              { $inc: { stockQuantity: -item.quantity } },
+              { new: true }
+            ).then(async (updated) => {
+              if (updated && updated.stockQuantity < 0) {
+                await GroceryProduct.findByIdAndUpdate(item.product, { stockQuantity: 0 });
+              }
+            });
+          } else {
+            const Product = (await import('../models/Product.model.js')).default;
+            await Product.findByIdAndUpdate(
+              item.product,
+              { $inc: { stockQuantity: -item.quantity } },
+              { new: true }
+            ).then(async (updated) => {
+              if (updated && updated.stockQuantity < 0) {
+                await Product.findByIdAndUpdate(item.product, { stockQuantity: 0 });
+              }
+            });
+          }
+        } catch (stockErr) {
+          console.error('Failed to reduce stock for product', item.product, stockErr);
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       const vendorShare = advancePaidForGroup * (1 - (commissionPct / 100));
 
       // Platform Ledger (Full Advance comes to Platform)
@@ -498,9 +530,8 @@ export const requestExchange = async (req, res, next) => {
     const { orderId } = req.params;
     const { reason, currentSize, currentColor, expectedSize, expectedColor } = req.body;
     const userId = req.user._id || req.user.id;
-
-    if (!reason || !currentSize || !currentColor || !expectedSize || !expectedColor) {
-      return res.status(400).json({ success: false, message: 'All exchange details are required' });
+    if (!reason) {
+      return res.status(400).json({ success: false, message: 'Reason is required' });
     }
 
     const order = await Order.findOne({ _id: orderId, user: userId });
@@ -527,8 +558,8 @@ export const requestExchange = async (req, res, next) => {
       reason,
       currentSize,
       currentColor,
-      expectedSize,
-      expectedColor,
+      expectedSize: expectedSize || '',
+      expectedColor: expectedColor || '',
       requestedAt: new Date(),
     };
 
@@ -551,6 +582,7 @@ export const requestExchange = async (req, res, next) => {
 export const acceptExchange = async (req, res, next) => {
   try {
     const { orderId } = req.params;
+    const { assignedStaff } = req.body;
     const vendorId = req.user.vendorId;
 
     const order = await Order.findOne({ _id: orderId, vendor: vendorId });
@@ -568,6 +600,14 @@ export const acceptExchange = async (req, res, next) => {
     order.exchangeRequest.status = 'Accepted';
     order.exchangeRequest.otp = otp;
     order.exchangeRequest.acceptedAt = new Date();
+
+    if (assignedStaff) {
+      order.exchangeRequest.assignedStaff = {
+        name: assignedStaff.name,
+        mobile: assignedStaff.mobile,
+        assignedAt: new Date()
+      };
+    }
 
     await order.save();
 

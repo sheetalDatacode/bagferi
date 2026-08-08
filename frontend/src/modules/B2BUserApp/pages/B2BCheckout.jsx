@@ -351,13 +351,21 @@ const B2BCheckout = () => {
                         </h2>
                         
                         <div className="space-y-6">
-                             {Object.entries(groupedItems).map(([vendorId, group], groupIdx) => {
+                              {Object.entries(groupedItems).map(([vendorId, group], groupIdx) => {
                                 const isGroupSelected = group.items.every(item => item.selected !== false);
                                 const isActive = vendorId === activeVendorId;
+                                const groupVendor = group.items[0]?.vendor || {};
+                                const gMin = groupVendor.groceryMinOrderAmount || 0;
+                                const fMin = groupVendor.fashionMinOrderAmount || 0;
+                                const minOrderTexts = [];
+                                if (gMin > 0) minOrderTexts.push(`Min Grocery: ₹${gMin}`);
+                                if (fMin > 0) minOrderTexts.push(`Min Fashion: ₹${fMin}`);
+                                const minOrderLabel = minOrderTexts.length > 0 ? `(${minOrderTexts.join(', ')})` : '';
+
                                 return (
                                     <div key={vendorId} className={`rounded-xl border p-4 ${isActive ? 'border-primary-200 bg-white' : 'border-gray-100 bg-gray-50/50 opacity-60'}`}>
                                         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 <input
                                                     type="checkbox"
                                                     checked={isGroupSelected}
@@ -375,9 +383,17 @@ const B2BCheckout = () => {
                                                     className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer mr-1"
                                                 />
                                                 <FiShield className={isActive ? 'text-primary-600' : 'text-gray-400'} />
-                                                <span className="text-xs font-black text-gray-700 uppercase tracking-wider">
+                                                <span 
+                                                    onClick={() => navigate(`/b2b/vendor/${vendorId}`)}
+                                                    className="text-xs font-black text-gray-700 uppercase tracking-wider cursor-pointer hover:underline"
+                                                >
                                                     Sold by: {group.name}
                                                 </span>
+                                                {minOrderLabel && (
+                                                    <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider ml-1 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">
+                                                        {minOrderLabel}
+                                                    </span>
+                                                )}
                                             </div>
                                             <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${isActive ? 'bg-primary-50 text-primary-600' : 'bg-gray-100 text-gray-500'}`}>
                                                 {isActive ? 'Processing Now' : `Next in Queue (${groupIdx + 1}/${vendorIds.length})`}

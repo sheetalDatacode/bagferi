@@ -47,8 +47,8 @@ const Orders = () => {
 
     const handleExchangeSubmit = async (e) => {
         e.preventDefault();
-        if (!exchangeForm.reason || !exchangeForm.currentSize || !exchangeForm.currentColor || !exchangeForm.expectedSize || !exchangeForm.expectedColor) {
-            return toast.error("All exchange details are required");
+        if (!exchangeForm.reason) {
+            return toast.error("Reason for exchange is required");
         }
         try {
             setIsExchanging(true);
@@ -167,45 +167,52 @@ const Orders = () => {
                             
                             return (
                                 <div key={order._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                                    <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Order ID: {order.orderNumber}</p>
-                                            <p className="text-sm font-bold text-gray-900 mt-0.5">{new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
-                                        </div>
-                                        <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
-                                            <button 
-                                                onClick={() => {
-                                                    setSelectedOrderForInvoice(order);
-                                                    setIsInvoiceModalOpen(true);
-                                                }}
-                                                className="px-3 py-1 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
-                                            >
-                                                <FiPrinter size={12} /> Invoice
-                                            </button>
-                                            {!['Dispatched', 'Completed', 'Cancelled'].includes(order.status) && (
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedOrderForCancel(order);
-                                                        setIsCancelModalOpen(true);
-                                                    }}
-                                                    className="px-3 py-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-black uppercase tracking-wider rounded-lg transition-colors shadow-sm"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            )}
-                                            <button 
-                                                onClick={() => toggleOrderDetails(order._id)}
-                                                className="px-3 py-1 bg-primary-50 hover:bg-primary-100 border border-primary-200 text-primary-700 text-xs font-black uppercase tracking-wider rounded-lg transition-colors shadow-sm"
-                                            >
-                                                {expandedOrders[order._id] ? 'Hide Details' : 'View Details'}
-                                            </button>
-                                            <div className="text-left md:text-right">
-                                                <p className="text-[10px] font-bold text-gray-500 uppercase">Total Amount</p>
-                                                <p className="text-sm font-black text-primary-600">₹{order.totalAmount?.toLocaleString('en-IN')}</p>
+                                    <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+                                        {/* Top Row: Order ID, Date & Status */}
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Order ID: {order.orderNumber}</p>
+                                                <p className="text-sm font-bold text-gray-900 mt-0.5">{new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                                             </div>
                                             <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order.status)}`}>
                                                 {order.status}
                                             </span>
+                                        </div>
+
+                                        {/* Bottom Row: Total Amount & Actions */}
+                                        <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-100">
+                                            <div>
+                                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Total Amount</p>
+                                                <p className="text-base font-black text-primary-600">₹{order.totalAmount?.toLocaleString('en-IN')}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <button 
+                                                    onClick={() => {
+                                                        setSelectedOrderForInvoice(order);
+                                                        setIsInvoiceModalOpen(true);
+                                                    }}
+                                                    className="px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+                                                >
+                                                    <FiPrinter size={12} /> Invoice
+                                                </button>
+                                                {!['Dispatched', 'Completed', 'Cancelled'].includes(order.status) && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedOrderForCancel(order);
+                                                            setIsCancelModalOpen(true);
+                                                        }}
+                                                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-black uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                )}
+                                                <button 
+                                                    onClick={() => toggleOrderDetails(order._id)}
+                                                    className="px-3 py-1.5 bg-primary-50 hover:bg-primary-100 border border-primary-200 text-primary-700 text-xs font-black uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+                                                >
+                                                    {expandedOrders[order._id] ? 'Hide Details' : 'View Details'}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -601,54 +608,46 @@ const Orders = () => {
                             </button>
                         </div>
                         <form onSubmit={handleExchangeSubmit} className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Current Size</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        value={exchangeForm.currentSize}
-                                        onChange={(e) => setExchangeForm({ ...exchangeForm, currentSize: e.target.value })}
-                                        placeholder="e.g. M, 32"
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white"
-                                    />
+                            {/* Dynamically fetched Current Size & Color displayed as read-only info */}
+                            {(exchangeForm.currentSize || exchangeForm.currentColor) && (
+                                <div className="bg-slate-50 border border-gray-100 p-3 rounded-xl flex items-center justify-between text-xs font-bold text-gray-600">
+                                    {exchangeForm.currentSize && (
+                                        <span>Current Size: <span className="text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-100">{exchangeForm.currentSize}</span></span>
+                                    )}
+                                    {exchangeForm.currentColor && (
+                                        <span>Current Color: <span className="text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-100">{exchangeForm.currentColor}</span></span>
+                                    )}
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Current Color</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        value={exchangeForm.currentColor}
-                                        onChange={(e) => setExchangeForm({ ...exchangeForm, currentColor: e.target.value })}
-                                        placeholder="e.g. Red, Blue"
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white"
-                                    />
+                            )}
+
+                            {(exchangeForm.currentSize || exchangeForm.currentColor) && (
+                                <div className={`grid ${exchangeForm.currentSize && exchangeForm.currentColor ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                                    {exchangeForm.currentSize && (
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">New Size Wanted (Optional)</label>
+                                            <input
+                                                type="text"
+                                                value={exchangeForm.expectedSize}
+                                                onChange={(e) => setExchangeForm({ ...exchangeForm, expectedSize: e.target.value })}
+                                                placeholder="e.g. L, 34"
+                                                className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white"
+                                            />
+                                        </div>
+                                    )}
+                                    {exchangeForm.currentColor && (
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">New Color Wanted (Optional)</label>
+                                            <input
+                                                type="text"
+                                                value={exchangeForm.expectedColor}
+                                                onChange={(e) => setExchangeForm({ ...exchangeForm, expectedColor: e.target.value })}
+                                                placeholder="e.g. Green, Black"
+                                                className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">New Size Wanted</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        value={exchangeForm.expectedSize}
-                                        onChange={(e) => setExchangeForm({ ...exchangeForm, expectedSize: e.target.value })}
-                                        placeholder="e.g. L, 34"
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">New Color Wanted</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        value={exchangeForm.expectedColor}
-                                        onChange={(e) => setExchangeForm({ ...exchangeForm, expectedColor: e.target.value })}
-                                        placeholder="e.g. Green, Black"
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 rounded-xl outline-none text-xs font-bold text-gray-700 focus:border-green-500 focus:bg-white"
-                                    />
-                                </div>
-                            </div>
+                            )}
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Reason for Exchange</label>
                                 <textarea

@@ -91,8 +91,16 @@ const B2BCart = () => {
                         
                         {/* Left Column: Cart Items */}
                         <div className="flex-1 flex flex-col gap-6">
-                            {Object.entries(groupedItems).map(([vendorId, group]) => {
+                             {Object.entries(groupedItems).map(([vendorId, group]) => {
                                 const isGroupSelected = group.items.every(item => item.selected !== false);
+                                const groupVendor = group.items[0]?.vendor || {};
+                                const gMin = groupVendor.groceryMinOrderAmount || 0;
+                                const fMin = groupVendor.fashionMinOrderAmount || 0;
+                                const minOrderTexts = [];
+                                if (gMin > 0) minOrderTexts.push(`Min Grocery: ₹${gMin}`);
+                                if (fMin > 0) minOrderTexts.push(`Min Fashion: ₹${fMin}`);
+                                const minOrderLabel = minOrderTexts.length > 0 ? `(${minOrderTexts.join(', ')})` : '';
+
                                 return (
                                     <div key={vendorId} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
                                         {updatingItemId === `group_${vendorId}` && (
@@ -121,17 +129,37 @@ const B2BCart = () => {
                                                     className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
                                                 />
                                                 <FiShield className="text-primary-600" />
-                                                <span className="text-[11px] md:text-xs font-black text-gray-700 uppercase tracking-[0.15em]">Sold by: {group.name}</span>
+                                                <span 
+                                                    onClick={() => navigate(`/b2b/vendor/${vendorId}`)}
+                                                    className="text-[11px] md:text-xs font-black text-gray-700 uppercase tracking-[0.15em] cursor-pointer hover:underline"
+                                                >
+                                                    Sold by: {group.name}
+                                                </span>
+                                                {minOrderLabel && (
+                                                    <span className="text-[10px] md:text-xs font-bold text-rose-600 uppercase tracking-wider ml-1 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">
+                                                        {minOrderLabel}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         
                                         <div className="divide-y divide-gray-100">
                                         {group.items.map((item) => {
-                                            const itemKey = `${item.product._id || item.product}_${item.size || ''}_${item.color || ''}_${JSON.stringify(item.selectedVariants || {})}`;
+                                            const productId = item.product?._id || item.product;
+                                            const isGrocery = item.module === 'grocery' || item.productModel === 'GroceryProduct';
+                                            const productName = item.product?.name || item.product?.title || 'Product';
+                                            const productImages = item.product?.images || [];
+                                            const productImage = productImages.length > 0 ? productImages[0] : (item.product?.image || null);
+                                            const productMoq = item.product?.moq || item.product?.minOrderQuantity || 1;
+                                            const productDetailPath = isGrocery
+                                                ? `/b2b/grocery/product/${productId}`
+                                                : `/b2b/product/${productId}`;
+                                            const itemKey = `${productId}_${item.size || ''}_${item.color || ''}_${JSON.stringify(item.selectedVariants || {})}`;
+
                                             return (
                                                 <div key={itemKey} className="p-4 md:p-6 flex flex-row items-center gap-4 md:gap-6 group/item relative">
                                                     {updatingItemId === itemKey && <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10" />}
-                                                    
+
                                                     {/* Selection Checkbox */}
                                                     <div className="flex-shrink-0 flex items-center justify-center">
                                                         <input
@@ -139,7 +167,7 @@ const B2BCart = () => {
                                                             checked={item.selected !== false}
                                                             onChange={async (e) => {
                                                                 setUpdatingItemId(itemKey);
-                                                                await toggleSelection(item.product._id || item.product, item.size, item.color, item.selectedVariants, e.target.checked);
+                                                                await toggleSelection(productId, item.size, item.color, item.selectedVariants, e.target.checked);
                                                                 setUpdatingItemId(null);
                                                             }}
                                                             className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
@@ -147,37 +175,52 @@ const B2BCart = () => {
                                                     </div>
 
                                                     {/* Product Image */}
-                                                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50 cursor-pointer" onClick={() => navigate(item.module === 'grocery' ? `/b2b/grocery/product/${item.product._id || item.product}` : `/b2b/product/${item.product._id || item.product}`)}>
-                                                        {(item.product.images && item.product.images.length > 0) || item.product.image || item.product.media ? (
-                                                            <img src={item.product.images?.length > 0 ? item.product.images[0] : (item.product.image || item.product.media?.[0]?.url)} alt={item.product.name || item.product.title} className="w-full h-full object-cover mix-blend-multiply" />
+                                                    <div
+                                                        className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl border border-gray-100 overflow-hidden flex-shrink-0 bg-gray-50 cursor-pointer"
+                                                        onClick={() => navigate(productDetailPath)}
+                                                    >
+                                                        {productImage ? (
+                                                            <img src={productImage} alt={productName} className="w-full h-full object-cover mix-blend-multiply" />
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                                                 <FiShoppingBag size={24} />
+                                                                <FiShoppingBag size={24} />
                                                             </div>
                                                         )}
                                                     </div>
 
                                                     {/* Product Details */}
-                                                    <div className="flex-1 flex flex-col">
-                                                        <div className="flex justify-between items-start gap-4 mb-2">
-                                                            <h3 
-                                                                className="text-sm md:text-base font-bold text-gray-900 leading-tight hover:text-primary-600 cursor-pointer line-clamp-2"
-                                                                onClick={() => navigate(item.module === 'grocery' ? `/b2b/grocery/product/${item.product._id || item.product}` : `/b2b/product/${item.product._id || item.product}`)}
+                                                    <div className="flex-1 flex flex-col min-w-0">
+                                                        {/* Name row + Delete button always visible */}
+                                                        <div className="flex justify-between items-start gap-2 mb-2">
+                                                            <h3
+                                                                className="text-sm md:text-base font-bold text-gray-900 leading-tight hover:text-primary-600 cursor-pointer line-clamp-2 flex-1 min-w-0"
+                                                                onClick={() => navigate(productDetailPath)}
                                                             >
-                                                                {item.product.name || item.product.title}
+                                                                {productName}
                                                             </h3>
-                                                            <button 
-                                                                onClick={() => handleRemoveItem(item.product._id || item.product, item.size, item.color, item.selectedVariants)}
-                                                                className="text-gray-400 hover:text-red-500 p-1 transition-colors bg-gray-50 rounded-lg"
-                                                                title="Remove Item"
+                                                            {/* Delete button — always visible for ALL items */}
+                                                            <button
+                                                                onClick={async () => {
+                                                                    setUpdatingItemId(itemKey);
+                                                                    await handleRemoveItem(productId, item.size, item.color, item.selectedVariants);
+                                                                    setUpdatingItemId(null);
+                                                                }}
+                                                                className="flex-shrink-0 text-gray-400 hover:text-red-500 p-1.5 transition-colors bg-gray-50 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200"
+                                                                title="Remove from cart"
                                                             >
-                                                                <FiTrash2 size={16} />
+                                                                <FiTrash2 size={15} />
                                                             </button>
                                                         </div>
-                                                        
-                                                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+
+                                                        {/* Tags: Module badge + size + color + variants */}
+                                                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                                            {isGrocery && (
+                                                                <span className="text-[9px] text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded uppercase tracking-widest border border-green-100">
+                                                                    Grocery
+                                                                </span>
+                                                            )}
                                                             <span className="text-[10px] text-gray-500 font-bold bg-gray-100 px-2 py-0.5 rounded uppercase tracking-widest">
-                                                                Min Qty: {item.product.moq || 1}
+                                                                Min Qty: {productMoq}
                                                             </span>
                                                             {item.size && (
                                                                 <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-widest">
@@ -205,20 +248,27 @@ const B2BCart = () => {
 
                                                             {/* Quantity Controls */}
                                                             <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 border border-gray-200">
-                                                                <button 
-                                                                    onClick={() => handleQuantityChange(item.product._id || item.product, item.quantity, -1, item.size, item.color, item.selectedVariants)}
+                                                                <button
+                                                                    onClick={() => handleQuantityChange(productId, item.quantity, -1, item.size, item.color, item.selectedVariants)}
                                                                     className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                                                                    disabled={item.quantity <= (item.product.moq || 1) || loading}
+                                                                    disabled={item.quantity <= productMoq || loading}
                                                                 >
                                                                     <FiMinus size={14} />
                                                                 </button>
                                                                 <span className="w-8 text-center text-sm font-black text-gray-900">
                                                                     {item.quantity}
                                                                 </span>
-                                                                <button 
-                                                                    onClick={() => handleQuantityChange(item.product._id || item.product, item.quantity, 1, item.size, item.color, item.selectedVariants)}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const stockLimit = item.product?.stockQuantity ?? 999;
+                                                                        if (item.quantity >= stockLimit) {
+                                                                            toast.error(`Only ${stockLimit} units available in stock`);
+                                                                            return;
+                                                                        }
+                                                                        handleQuantityChange(productId, item.quantity, 1, item.size, item.color, item.selectedVariants);
+                                                                    }}
                                                                     className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                                                                    disabled={loading}
+                                                                    disabled={loading || item.quantity >= (item.product?.stockQuantity ?? 999)}
                                                                 >
                                                                     <FiPlus size={14} />
                                                                 </button>

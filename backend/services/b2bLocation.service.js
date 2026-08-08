@@ -1,5 +1,6 @@
 import Vendor from '../models/Vendor.model.js';
 import Product from '../models/Product.model.js';
+import Property from '../models/Property.model.js';
 import { toTitleCase, normalizeState, normalizeCity } from '../utils/addressNormalizer.util.js';
 
 /**
@@ -392,7 +393,7 @@ export const getB2BListingLocations = async (options = {}) => {
 
   // Property locations prefer property.location, fallback vendor address.
   if (includeProperties) {
-    const properties = await []
+    const properties = await Property.find({ isActive: true })
       .select('location vendorId propertyType')
       .lean();
 

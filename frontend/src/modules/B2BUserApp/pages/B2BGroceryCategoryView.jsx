@@ -164,11 +164,14 @@ const B2BGroceryCategoryView = () => {
     }
   };
 
+  // Debounce search query changes
   useEffect(() => {
-    if (!localSearch && selectedSub) {
+    if (!selectedSub) return;
+    const delayDebounce = setTimeout(() => {
       setPage(1);
       fetchProducts(1, true);
-    }
+    }, 500); // 500ms delay
+    return () => clearTimeout(delayDebounce);
   }, [localSearch]);
 
   useEffect(() => {
@@ -198,35 +201,31 @@ const B2BGroceryCategoryView = () => {
   return (
     <div className="bg-white min-h-screen flex flex-col font-sans overflow-hidden h-screen">
       {/* Header */}
-      <div className="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate('/b2b/grocery')} className="p-2 -ml-2 rounded-full hover:bg-gray-50 text-gray-700">
+      <div className="bg-white sticky top-0 z-50 border-b border-gray-100 shadow-sm px-3 py-2.5 flex items-center gap-2">
+        <button onClick={() => navigate('/b2b/grocery')} className="p-2 -ml-1 rounded-full hover:bg-gray-50 text-gray-700 shrink-0">
           <FiArrowLeft size={20} />
         </button>
-        <h1 className="font-black text-gray-900 text-lg flex-1 truncate">{rootCategory?.name}</h1>
-        <div className="flex items-center gap-2 flex-1 max-w-[280px]">
-          <div className="flex items-center bg-gray-50 rounded-lg px-3 py-1.5 border border-gray-100 flex-1">
-            <FiSearch className="text-gray-400 mr-2" />
-            <input 
-              type="text" 
-              placeholder="Search..."
-              className="bg-transparent border-none outline-none w-full text-sm font-medium" 
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  fetchProducts(1, true);
-                }
-              }}
-            />
-          </div>
-          <button 
-            onClick={() => fetchProducts(1, true)}
-            className="px-3 py-1.5 bg-primary-600 text-white font-bold text-xs rounded-lg hover:bg-primary-700 transition-all uppercase tracking-wider shadow-sm"
-          >
-            Search
-          </button>
+        <h1 className="font-black text-gray-900 text-base shrink-0 truncate max-w-[90px]">{rootCategory?.name}</h1>
+        <div className="flex items-center bg-gray-50 rounded-xl px-3 py-2 border border-gray-200 flex-1 gap-2 min-w-0">
+          <FiSearch className="text-gray-400 shrink-0" size={15} />
+          <input
+            type="text"
+            placeholder={`Search in ${rootCategory?.name || 'products'}...`}
+            className="bg-transparent border-none outline-none w-full text-sm font-medium text-gray-800 placeholder-gray-400 min-w-0"
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+          />
+          {localSearch && (
+            <button
+              onClick={() => setLocalSearch('')}
+              className="text-gray-400 hover:text-gray-600 shrink-0 text-xs"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
+
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar (Subcategories) */}

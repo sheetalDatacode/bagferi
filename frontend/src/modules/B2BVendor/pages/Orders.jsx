@@ -35,12 +35,21 @@ const VendorOrders = () => {
     // Exchange states
     const [exchangeOtpInputs, setExchangeOtpInputs] = useState({});
     const [verifyingExchangeOrder, setVerifyingExchangeOrder] = useState({});
+    const [isExchangeStaffModalOpen, setIsExchangeStaffModalOpen] = useState(false);
+    const [orderToAcceptExchange, setOrderToAcceptExchange] = useState(null);
 
-    const handleAcceptExchange = async (orderId) => {
+    const handleAcceptExchange = async (orderId, staff = null) => {
         try {
-            const res = await api.post(`/order/vendor/orders/${orderId}/accept-exchange`);
+            const payload = {};
+            if (staff) {
+                payload.assignedStaff = { name: staff.name, mobile: staff.mobile };
+            }
+            const res = await api.post(`/order/vendor/orders/${orderId}/accept-exchange`, payload);
             if (res.success) {
                 toast.success("Exchange request accepted and OTP generated");
+                setIsExchangeStaffModalOpen(false);
+                setOrderToAcceptExchange(null);
+                setSelectedStaffIndex('');
                 fetchOrders();
             } else {
                 toast.error(res.message || "Failed to accept exchange");
@@ -421,7 +430,13 @@ const VendorOrders = () => {
                                                     </span>
                                                 </td>
                                                 <td className="p-4 text-center text-xs font-medium text-gray-700">
-                                                    {order.assignedStaff?.name ? (
+                                                    {order.exchangeRequest && order.exchangeRequest.status !== 'None' && order.exchangeRequest.assignedStaff?.name ? (
+                                                        <div>
+                                                            <p className="font-bold text-gray-950">{order.exchangeRequest.assignedStaff.name}</p>
+                                                            <p className="text-gray-500 mt-0.5">{order.exchangeRequest.assignedStaff.mobile}</p>
+                                                            <span className="text-[9px] font-black uppercase text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded mt-1 inline-block">Exchange Staff</span>
+                                                        </div>
+                                                    ) : order.assignedStaff?.name ? (
                                                         <div>
                                                             <p className="font-bold text-gray-950">{order.assignedStaff.name}</p>
                                                             <p className="text-gray-500 mt-0.5">{order.assignedStaff.mobile}</p>
@@ -436,7 +451,11 @@ const VendorOrders = () => {
                                                             <>
                                                                 {order.exchangeRequest.status === 'Requested' && (
                                                                     <button 
-                                                                        onClick={() => handleAcceptExchange(order._id)}
+                                                                        onClick={() => {
+                                                                            setOrderToAcceptExchange(order);
+                                                                            setIsExchangeStaffModalOpen(true);
+                                                                            setSelectedStaffIndex('');
+                                                                        }}
                                                                         className="text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl transition-all shadow-md shadow-indigo-200 flex items-center gap-1.5 uppercase tracking-wider"
                                                                     >
                                                                         Accept Exchange
@@ -740,7 +759,96 @@ const VendorOrders = () => {
                     </div>
                 </div>
             )}
+            {/* Exchange Staff Assign Modal */}
+            {isExchangeStaffModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h3 className="font-black text-gray-900 uppercase tracking-tight flex items-center gap-2">
+                                <FiTruck className="text-indigo-600" /> Assign Staff to Exchange
+                            </h3>
+                            <button onClick={() => { setIsExchangeStaffModalOpen(false); setOrderToAcceptExchange(null); }} className="text-gray-400 hover:text-gray-600">
+                                <FiX size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4 text-left">
+                            <p className="text-sm text-gray-600">Please assign a staff member to handle the product exchange for Order <span className="font-bold text-gray-900">{orderToAcceptExchange?.orderNumber}</span>.</p>
+                            
+                            {!isAddingStaff ? (
+                                <>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Select Staff Member</label>
+                                        <select 
+                                            value={selectedStaffIndex}
+                                            onChange={(e) => setSelectedStaffIndex(e.target.value)}
+                                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-indigo-500 outline-none"
+                                        >
+                                            <option value="">-- Choose a staff --</option>
+                                            {shopDetails?.details?.map((staff, idx) => (
+                                                <option key={idx} value={idx}>{staff.name} ({staff.mobile})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex justify-end">
+                                        <button 
+                                            onClick={() => setIsAddingStaff(true)}
+                                            className="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:underline"
+                                        >
+                                            <FiPlus /> Add New Staff
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider flex items-center gap-1">
+                                            <FiUser /> Quick Add Staff
+                                        </h4>
+                                        <button onClick={() => setIsAddingStaff(false)} className="text-xs font-bold text-gray-400 hover:text-gray-600">Cancel</button>
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Staff Name" 
+                                        value={newStaff.name}
+                                        onChange={(e) => setNewStaff({...newStaff, name: e.target.value})}
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none"
+                                    />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Mobile Number (10 digits)" 
+                                        value={newStaff.mobile}
+                                        onChange={(e) => setNewStaff({...newStaff, mobile: e.target.value})}
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium outline-none"
+                                    />
+                                    <button 
+                                        onClick={handleQuickAddStaff}
+                                        className="w-full bg-gray-900 text-white font-bold text-xs py-2 rounded-lg uppercase tracking-wider hover:bg-gray-800 transition-colors"
+                                    >
+                                        Save Staff
+                                    </button>
+                                </div>
+                            )}
 
+                        </div>
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                            <button onClick={() => { setIsExchangeStaffModalOpen(false); setOrderToAcceptExchange(null); }} className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-gray-900">Cancel</button>
+                            <button 
+                                onClick={() => {
+                                    if (selectedStaffIndex === '') {
+                                        return toast.error("Please assign a staff member");
+                                    }
+                                    const staff = shopDetails.details[parseInt(selectedStaffIndex)];
+                                    handleAcceptExchange(orderToAcceptExchange._id, staff);
+                                }}
+                                disabled={isAddingStaff}
+                                className="px-5 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+                            >
+                                <FiTruck /> Assign & Accept
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Customer Detail Modal */}
             {isDetailModalOpen && selectedOrderForDetail && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

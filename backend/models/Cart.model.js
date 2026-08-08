@@ -13,6 +13,11 @@ const cartItemSchema = new mongoose.Schema(
       enum: ['Product', 'GroceryProduct'],
       default: 'Product',
     },
+    module: {
+      type: String,
+      enum: ['fashion', 'grocery'],
+      default: 'fashion',
+    },
     vendor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Vendor',

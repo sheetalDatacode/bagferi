@@ -649,15 +649,26 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 value: Array.isArray(spec.value) ? spec.value.join(', ') : String(spec.value || '')
             }));
 
-            // Clean up and validate variants payload
-            const formattedVariants = (formData.variants || []).map(v => ({
-                size: v.size?.trim(),
-                color: v.color?.trim() || null,
-                price: parseFloat(v.price),
-                mrp: parseFloat(v.mrp),
-                stockQuantity: parseInt(v.stockQuantity) || 0,
-                sku: v.sku?.trim() || null
-            })).filter(v => v.size && !isNaN(v.price) && !isNaN(v.mrp));
+            // Clean up and validate variants payload, expanding comma-separated color options
+            const rawVariants = [];
+            (formData.variants || []).forEach(v => {
+                const colors = v.color && String(v.color).includes(',')
+                    ? String(v.color).split(',').map(c => c.trim()).filter(Boolean)
+                    : [v.color?.trim() || null];
+
+                colors.forEach(col => {
+                    rawVariants.push({
+                        size: v.size?.trim(),
+                        color: col,
+                        price: parseFloat(v.price),
+                        mrp: parseFloat(v.mrp),
+                        stockQuantity: parseInt(v.stockQuantity) || 0,
+                        sku: v.sku?.trim() || null
+                    });
+                });
+            });
+
+            const formattedVariants = rawVariants.filter(v => v.size && !isNaN(v.price) && !isNaN(v.mrp));
 
             let basePrice = parseFloat(formData.price);
             let baseMrp = formData.mrp ? parseFloat(formData.mrp) : undefined;
@@ -1292,7 +1303,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                     <input
                                                         type="text"
                                                         value={v.color || ""}
-                                                        placeholder="e.g. Red"
+                                                        placeholder="e.g. Red, Blue"
                                                         onChange={(e) => {
                                                             const newVariants = [...formData.variants];
                                                             newVariants[idx].color = e.target.value;

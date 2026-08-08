@@ -30,6 +30,7 @@ const B2BProductDetail = () => {
     const [selectedMedia, setSelectedMedia] = useState('image'); // 'image' | 'video'
     const [selectedSizes, setSelectedSizes] = useState([]);
     const [selectedColor, setSelectedColor] = useState(null);
+    const [selectedColorsForSizes, setSelectedColorsForSizes] = useState({});
     const [selectedVariants, setSelectedVariants] = useState({});
     const videoRef = useRef(null);
 
@@ -59,6 +60,8 @@ const B2BProductDetail = () => {
 
         if (type === 'inc' && quantity < currentStockQty) {
             setQuantity(prev => prev + 1);
+        } else if (type === 'inc' && quantity >= currentStockQty) {
+            toast.error(`Only ${currentStockQty} units available in stock`);
         } else if (type === 'dec' && quantity > moq) {
             setQuantity(prev => prev - 1);
         }
@@ -219,9 +222,16 @@ const B2BProductDetail = () => {
                       const uniqueSizes = Array.from(new Set(productData.variants.map(v => v.size).filter(Boolean)));
                       if (uniqueSizes.length > 0) {
                           setSelectedSizes([uniqueSizes[0]]);
-                          const uniqueColorsForSize = Array.from(new Set(productData.variants.filter(v => v.size === uniqueSizes[0]).map(v => v.color).filter(Boolean)));
-                          if (uniqueColorsForSize.length > 0) {
-                              setSelectedColor(uniqueColorsForSize[0]);
+                          const initialColors = {};
+                          uniqueSizes.forEach(s => {
+                              const colorsForSize = Array.from(new Set(productData.variants.filter(v => v.size === s).map(v => v.color).filter(Boolean)));
+                              if (colorsForSize.length > 0) {
+                                  initialColors[s] = colorsForSize[0];
+                              }
+                          });
+                          setSelectedColorsForSizes(initialColors);
+                          if (initialColors[uniqueSizes[0]]) {
+                              setSelectedColor(initialColors[uniqueSizes[0]]);
                           }
                       }
                   } else {
@@ -230,6 +240,11 @@ const B2BProductDetail = () => {
                       }
                       if (productData.colors && productData.colors.length > 0) {
                          setSelectedColor(productData.colors[0]);
+                         const initialColors = {};
+                         (productData.sizes || []).forEach(s => {
+                             initialColors[s] = productData.colors[0];
+                         });
+                         setSelectedColorsForSizes(initialColors);
                       }
                   }
                 
@@ -457,10 +472,11 @@ const B2BProductDetail = () => {
         : (product.colors || []);
 
     const activeVariant = hasVariants
-        ? product.variants.find(v => 
-            selectedSizes.includes(v.size) && 
-            (availableColors.length === 0 || v.color === selectedColor)
-          )
+        ? product.variants.find(v => {
+            const firstSize = selectedSizes[0];
+            const sizeColor = selectedColorsForSizes[firstSize] || selectedColor;
+            return v.size === firstSize && (v.color === sizeColor || !v.color);
+          })
         : null;
 
     const currentPrice = activeVariant ? activeVariant.price : (product.price || 0);
@@ -735,75 +751,96 @@ const B2BProductDetail = () => {
                              </div>
                          )}
 
-                         {availableColors && availableColors.length > 0 && (
-                             <div className="mt-4">
-                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Colors</span>
-                                 <div className="flex flex-wrap gap-2 mt-2">
-                                     {availableColors.map((c, idx) => (
-                                         <button
-                                             key={idx}
-                                             onClick={() => setSelectedColor(c)}
-                                             className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
-                                                 selectedColor === c
-                                                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                                                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                                             }`}
-                                         >
-                                             {c}
-                                         </button>
-                                     ))}
-                                 </div>
-                             </div>
-                         )}
+                          {selectedSizes.map((size) => {
+                              const colorsForThisSize = hasVariants
+                                  ? Array.from(new Set(product.variants.filter(v => v.size === size).map(v => v.color).filter(Boolean)))
+                                  : (product.colors || []);
 
-                        {/* Dynamic Multi-Select Variant Selectors */}
-                        {(() => {
-                            const fields = [];
-                            const addFields = (cat) => {
-                                if (cat && Array.isArray(cat.fields)) {
-                                    cat.fields.forEach(f => {
-                                        if (f.type === 'multi-select' && f.isVariant && f.label && !['color', 'colors', 'size', 'sizes'].includes(f.label.toLowerCase())) {
-                                            fields.push(f);
-                                        }
-                                    });
-                                }
-                            };
-                            addFields(product.category);
-                            addFields(product.subcategory);
-                            addFields(product.subSubcategory);
+                              if (colorsForThisSize.length === 0) return null;
 
-                            return fields.map((field) => {
-                                const spec = specifications.find(s => s.name?.toLowerCase() === field.label?.toLowerCase());
-                                if (!spec || !spec.value) return null;
-                                const opts = String(spec.value).split(',').map(v => v.trim()).filter(Boolean);
-                                if (opts.length === 0) return null;
+                              return (
+                                  <div key={size} className="mt-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                          Colors for Size {size.toUpperCase()}
+                                      </span>
+                                      <div className="flex flex-wrap gap-2 mt-2">
+                                          {colorsForThisSize.map((c, idx) => {
+                                              const isSelected = selectedColorsForSizes[size] === c;
+                                              return (
+                                                  <button
+                                                      key={idx}
+                                                      type="button"
+                                                      onClick={() => {
+                                                          setSelectedColorsForSizes(prev => ({
+                                                              ...prev,
+                                                              [size]: c
+                                                          }));
+                                                          // Also fallback select it globally
+                                                          setSelectedColor(c);
+                                                      }}
+                                                      className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
+                                                          isSelected
+                                                              ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                                      }`}
+                                                  >
+                                                      {c}
+                                                  </button>
+                                              );
+                                          })}
+                                      </div>
+                                  </div>
+                              );
+                          })}
 
-                                return (
-                                    <div key={field.label} className="mt-4">
-                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{field.label}</span>
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {opts.map((opt, idx) => {
-                                                const isSelected = selectedVariants[field.label] === opt;
-                                                return (
-                                                    <button
-                                                        key={idx}
-                                                        type="button"
-                                                        onClick={() => setSelectedVariants(p => ({ ...p, [field.label]: opt }))}
-                                                        className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
-                                                            isSelected
-                                                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                                                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                                                        }`}
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                );
-                            });
-                        })()}
+                         {/* Dynamic Multi-Select Variant Selectors */}
+                         {(() => {
+                             const fields = [];
+                             const addFields = (cat) => {
+                                 if (cat && Array.isArray(cat.fields)) {
+                                     cat.fields.forEach(f => {
+                                         if (f.type === 'multi-select' && f.isVariant && f.label && !['color', 'colors', 'size', 'sizes'].includes(f.label.toLowerCase())) {
+                                             fields.push(f);
+                                         }
+                                     });
+                                 }
+                             };
+                             addFields(product.category);
+                             addFields(product.subcategory);
+                             addFields(product.subSubcategory);
+
+                             return fields.map((field) => {
+                                 const spec = specifications.find(s => s.name?.toLowerCase() === field.label?.toLowerCase());
+                                 if (!spec || !spec.value) return null;
+                                 const opts = String(spec.value).split(',').map(v => v.trim()).filter(Boolean);
+                                 if (opts.length === 0) return null;
+
+                                 return (
+                                     <div key={field.label} className="mt-4">
+                                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{field.label}</span>
+                                         <div className="flex flex-wrap gap-2 mt-2">
+                                             {opts.map((opt, idx) => {
+                                                 const isSelected = selectedVariants[field.label] === opt;
+                                                 return (
+                                                     <button
+                                                         key={idx}
+                                                         type="button"
+                                                         onClick={() => setSelectedVariants(p => ({ ...p, [field.label]: opt }))}
+                                                         className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
+                                                             isSelected
+                                                                 ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                                                 : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                                         }`}
+                                                     >
+                                                         {opt}
+                                                     </button>
+                                                 );
+                                             })}
+                                         </div>
+                                     </div>
+                                 );
+                             });
+                         })()}
 
                         {/* Summary Grid / Specifications */}
                         <div className="mt-8 border-t border-b border-gray-100 py-4 grid grid-cols-[1fr_2fr] gap-y-3 text-sm">
@@ -820,12 +857,16 @@ const B2BProductDetail = () => {
                                 </React.Fragment>
                             ))}
 
-                            <span className="text-slate-400 font-medium uppercase text-[11px] tracking-wider">Stock</span>
+                            <span>Stock</span>
                             <div>
                                 {product.stock === 'out_of_stock' || currentStockQty === 0 ? (
-                                    <span className="text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-bold">Out of Stock</span>
+                                    <span className="text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded text-xs font-bold">⛔ Out of Stock</span>
                                 ) : product.stock === 'pre_order' ? (
                                     <span className="text-orange-600 bg-orange-50 px-2 py-1 rounded text-xs font-bold">Pre-Order</span>
+                                ) : currentStockQty <= 5 ? (
+                                    <span className="text-orange-600 bg-orange-50 border border-orange-100 px-2 py-1 rounded text-xs font-bold">
+                                        ⚠️ Low Stock ({currentStockQty} left)
+                                    </span>
                                 ) : (
                                     <span className="text-[#10b981] bg-[#10b981]/10 px-2 py-1 rounded text-xs font-bold">
                                         In Stock {currentStockQty ? `(${currentStockQty})` : ''}
@@ -883,7 +924,10 @@ const B2BProductDetail = () => {
                         </div>
 
                         {/* Sticky Action Buttons */}
-                        <div className="fixed bottom-[64px] left-0 right-0 px-4 py-3 bg-white border-t border-gray-100 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] md:static md:shadow-none md:border-none md:p-0 md:bg-transparent z-40 mt-8 grid grid-cols-2 gap-4">
+                        <div
+                            className="fixed left-0 right-0 px-4 py-3 bg-white border-t border-gray-100 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] md:static md:shadow-none md:border-none md:p-0 md:bg-transparent z-40 mt-8 grid grid-cols-2 gap-4"
+                            style={{ bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+                        >
                             <button
                                 onClick={async () => {
                                     if (!isAuthenticated) {
@@ -893,13 +937,21 @@ const B2BProductDetail = () => {
                                     if (selectedSizes.length === 0) {
                                         return toast.error('Please select at least one size');
                                     }
+                                    if (currentStockQty === 0) {
+                                        return toast.error('Product is out of stock');
+                                    }
+                                    if (quantity > currentStockQty) {
+                                        return toast.error(`Only ${currentStockQty} units available in stock`);
+                                    }
                                     const selectedImgUrl = selectedMedia === 'image' ? (productImages[safeSelectedImage] || null) : null;
-                                    const promises = selectedSizes.map(size => 
-                                        addToCart(product._id, quantity, size, selectedColor, selectedVariants, selectedImgUrl)
-                                    );
+                                    const promises = selectedSizes.map(size => {
+                                        const sizeColor = selectedColorsForSizes[size] || selectedColor;
+                                        return addToCart(product._id, quantity, size, sizeColor, selectedVariants, selectedImgUrl);
+                                    });
                                     await Promise.all(promises);
                                 }}
-                                className="bg-[#ff6b00] hover:bg-[#e66000] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
+                                disabled={currentStockQty === 0}
+                                className="bg-[#ff6b00] hover:bg-[#e66000] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <FiShoppingCart className="text-lg" /> Add to Cart
                             </button>
@@ -912,13 +964,21 @@ const B2BProductDetail = () => {
                                     if (selectedSizes.length === 0) {
                                         return toast.error('Please select at least one size');
                                     }
+                                    if (currentStockQty === 0) {
+                                        return toast.error('Product is out of stock');
+                                    }
+                                    if (quantity > currentStockQty) {
+                                        return toast.error(`Only ${currentStockQty} units available in stock`);
+                                    }
                                     const selectedImgUrl = selectedMedia === 'image' ? (productImages[safeSelectedImage] || null) : null;
                                     for (const size of selectedSizes) {
-                                        await addToCart(product._id, quantity, size, selectedColor, selectedVariants, selectedImgUrl, true);
+                                        const sizeColor = selectedColorsForSizes[size] || selectedColor;
+                                        await addToCart(product._id, quantity, size, sizeColor, selectedVariants, selectedImgUrl, true);
                                     }
                                     navigate('/b2b/checkout');
                                 }}
-                                className="bg-[#04439c] hover:bg-[#03367c] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors"
+                                disabled={currentStockQty === 0}
+                                className="bg-[#04439c] hover:bg-[#03367c] text-white py-3.5 px-4 rounded-xl font-bold uppercase tracking-wide text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M12.9868 6.94103C13.2519 6.64332 13.0405 6.16669 12.6416 6.16669H7.66667V0.833354C7.66667 0.395167 7.15174 0.158102 6.8188 0.443903L0.342611 6.00223C0.0336631 6.26732 0.222378 6.77259 0.635852 6.77259H5.5303V12.1667C5.5303 12.6049 6.04523 12.8419 6.37817 12.5561L12.9868 6.94103Z" fill="currentColor" />

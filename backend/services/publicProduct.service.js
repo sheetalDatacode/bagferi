@@ -3,6 +3,8 @@ import Product from '../models/Product.model.js';
 import Vendor from '../models/Vendor.model.js';
 import B2BCategory from '../models/B2BCategory.model.js';
 import ShopUnit from '../models/ShopUnit.model.js';
+import Property from '../models/Property.model.js';
+import GroceryProduct from '../models/GroceryProduct.model.js';
 import { normalizeState, normalizeCity } from '../utils/addressNormalizer.util.js';
 import { getRatingSummaries, getRatingSummary } from './rating.service.js';
 
@@ -595,7 +597,7 @@ export const getB2BSearchSuggestions = async (query, vendorFilterId) => {
     const searchRegex = { $regex: escapedQuery, $options: 'i' };
 
     // Fetch from all integrated collections with higher limits to ensure varied matching
-    const [products, lotSlots, vendors, shopUnits, properties, b2bCategories] = await Promise.all([
+    const [products, lotSlots, vendors, shopUnits, properties, b2bCategories, groceryProducts] = await Promise.all([
         Product.find({
             name: searchRegex,
             isActive: true
@@ -617,7 +619,7 @@ export const getB2BSearchSuggestions = async (query, vendorFilterId) => {
                 select: 'storeName storeLogo address status isActive businessType'
             })
             .lean(),
-        mongoose.model('Property').find({
+        Property.find({
             title: searchRegex,
             isActive: true
         }).limit(20).select('title media images location vendorId listingType').lean(),
@@ -627,7 +629,11 @@ export const getB2BSearchSuggestions = async (query, vendorFilterId) => {
                 { 'subcategories.name': searchRegex }
             ],
             isActive: { $ne: false }
-        }).limit(10).lean()
+        }).limit(10).lean(),
+        GroceryProduct.find({
+            name: searchRegex,
+            isActive: true
+        }).limit(100).select('name image vendorId').lean()
     ]);
 
     // Categories & Subcategories first (High Context)
@@ -674,6 +680,23 @@ export const getB2BSearchSuggestions = async (query, vendorFilterId) => {
                 image: p.image || null,
                 vendorId: p.vendorId?.toString(),
                 formType: p.formType
+            });
+        }
+    });
+
+    // Grocery Products - dedup by name (case-insensitive)
+    (groceryProducts || []).forEach(gp => {
+        const isDup = suggestions.some(s =>
+            s.text?.toLowerCase() === gp.name?.toLowerCase()
+        );
+        if (!isDup) {
+            suggestions.push({
+                text: gp.name,
+                context: 'In Grocery',
+                type: 'product',
+                image: gp.image || null,
+                vendorId: gp.vendorId?.toString(),
+                formType: 'grocery'
             });
         }
     });

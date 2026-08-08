@@ -924,7 +924,7 @@ const B2BVendorStore = () => {
                 {activeTab === "fashion" && (
                     <div className="mt-4 flex gap-0 min-h-[500px]">
                         {/* Left Categories Sidebar */}
-                        <div className="w-[80px] md:w-28 bg-white flex flex-col overflow-y-auto no-scrollbar border-r border-gray-100 p-1 shrink-0 sticky top-[200px] max-h-[calc(100vh-240px)]">
+                        <div className="w-[80px] md:w-28 bg-white flex flex-col overflow-y-auto no-scrollbar border-r border-gray-100 p-1 shrink-0 sticky top-[72px] lg:top-[96px] max-h-[calc(100vh-140px)] lg:max-h-[calc(100vh-120px)]">
                             {allCategories?.map((cat) => {
                                 const catId = cat._id || cat.id;
                                 const isSelected = String(selectedFashionCategory) === String(catId);
@@ -1049,7 +1049,7 @@ const B2BVendorStore = () => {
                 {activeTab === "grocery" && (
                     <div className="mt-4 flex gap-0 min-h-[500px]">
                         {/* Left Categories Sidebar */}
-                        <div className="w-[80px] md:w-28 bg-white flex flex-col overflow-y-auto no-scrollbar border-r border-gray-100 p-1 shrink-0 sticky top-[200px] max-h-[calc(100vh-240px)]">
+                        <div className="w-[80px] md:w-28 bg-white flex flex-col overflow-y-auto no-scrollbar border-r border-gray-100 p-1 shrink-0 sticky top-[72px] lg:top-[96px] max-h-[calc(100vh-140px)] lg:max-h-[calc(100vh-120px)]">
                             {groceryCategories?.map((cat) => {
                                 const catId = cat._id || cat.id;
                                 const isSelected = String(selectedGroceryCategory) === String(catId);

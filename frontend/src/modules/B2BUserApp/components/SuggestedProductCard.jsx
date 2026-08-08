@@ -195,6 +195,34 @@ const SuggestedProductCard = ({ product, linkPrefix = '/b2b/product/' }) => {
                     <span className="text-xs text-gray-400 line-through">{formatPrice(mrp)}</span>
                     <span className="text-sm font-black text-slate-900">{formatPrice(price)}</span>
                 </div>
+
+                {/* Delivery Time */}
+                {(() => {
+                    const groceryDT = product?.shopUnit?.groceryDeliveryTime;
+                    const fashionDT = product?.shopUnit?.fashionDeliveryTime || product?.vendorId?.fashionDeliveryTime || product?.vendorId?.shopUnit?.fashionDeliveryTime;
+
+                    if (groceryDT?.minTime && groceryDT?.maxTime) {
+                        return (
+                            <div className="flex items-center gap-1 mb-2">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0"></span>
+                                <span className="text-[10px] font-bold text-green-700">
+                                    Delivery in {groceryDT.minTime}–{groceryDT.maxTime} mins
+                                </span>
+                            </div>
+                        );
+                    }
+                    if (fashionDT?.minDays && fashionDT?.maxDays) {
+                        return (
+                            <div className="flex items-center gap-1 mb-2">
+                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse shrink-0"></span>
+                                <span className="text-[10px] font-bold text-blue-700">
+                                    Delivery in {fashionDT.minDays}–{fashionDT.maxDays} days
+                                </span>
+                            </div>
+                        );
+                    }
+                    return null;
+                })()}
             </Link>
 
             <div className="px-1 mt-auto pb-2 flex gap-2">

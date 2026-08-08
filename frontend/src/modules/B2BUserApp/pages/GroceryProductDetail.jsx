@@ -118,8 +118,11 @@ const GroceryProductDetail = () => {
     };
 
     const handleQuantityChange = (type) => {
-        if (type === 'inc' && quantity < (product?.stockQuantity || 999)) {
+        const maxStock = product?.stockQuantity ?? 999;
+        if (type === 'inc' && quantity < maxStock) {
             setQuantity(prev => prev + 1);
+        } else if (type === 'inc' && quantity >= maxStock) {
+            toast.error(`Only ${maxStock} units available in stock`);
         } else if (type === 'dec' && quantity > 1) {
             setQuantity(prev => prev - 1);
         }
@@ -130,7 +133,10 @@ const GroceryProductDetail = () => {
             navigate('/b2b/login', { state: { from: { pathname: `/b2b/grocery/product/${id}` } } });
             return;
         }
-
+        if (product?.stockQuantity === 0) {
+            toast.error('This product is out of stock');
+            return;
+        }
         try {
             setAddingToCart(true);
             const res = await api.post('/cart/add', {
@@ -146,7 +152,7 @@ const GroceryProductDetail = () => {
             }
         } catch (error) {
             console.error('Error adding to cart:', error);
-            toast.error(error.response?.data?.message || 'Failed to add to cart');
+            toast.error(error.response?.data?.message || error.message || 'Failed to add to cart');
         } finally {
             setAddingToCart(false);
         }
@@ -299,10 +305,12 @@ const GroceryProductDetail = () => {
                             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 mb-8 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-bold text-gray-700">Availability</span>
-                                    {product.stockQuantity > 0 ? (
-                                        <span className="flex items-center gap-1.5 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full"><FiCheckCircle /> In Stock ({product.stockQuantity})</span>
+                                    {product.stockQuantity === 0 ? (
+                                        <span className="text-red-600 font-bold text-sm bg-red-50 px-3 py-1 rounded-full border border-red-100">⛔ Out of Stock</span>
+                                    ) : product.stockQuantity <= 5 ? (
+                                        <span className="flex items-center gap-1.5 text-orange-600 font-bold text-sm bg-orange-50 px-3 py-1 rounded-full border border-orange-100">⚠️ Low Stock ({product.stockQuantity} left)</span>
                                     ) : (
-                                        <span className="text-red-500 font-bold text-sm bg-red-50 px-3 py-1 rounded-full">Out of Stock</span>
+                                        <span className="flex items-center gap-1.5 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full border border-green-100"><FiCheckCircle /> In Stock ({product.stockQuantity})</span>
                                     )}
                                 </div>
                                 {product.weight && (
@@ -341,7 +349,10 @@ const GroceryProductDetail = () => {
                             </div>
 
                             {/* Sticky Action Buttons */}
-                            <div className="fixed bottom-[64px] left-0 right-0 px-4 py-3 bg-white border-t border-gray-100 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] md:static md:shadow-none md:border-none md:p-0 md:bg-transparent z-40 mt-auto grid grid-cols-2 gap-4">
+                            <div
+                                className="fixed left-0 right-0 px-4 py-3 bg-white border-t border-gray-100 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] md:static md:shadow-none md:border-none md:p-0 md:bg-transparent z-40 mt-auto grid grid-cols-2 gap-4"
+                                style={{ bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+                            >
                                 <button
                                     onClick={handleAddToCart}
                                     disabled={addingToCart || product.stockQuantity === 0}

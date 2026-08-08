@@ -7,7 +7,7 @@ export const getCart = async (req, res, next) => {
     const userId = req.user._id || req.user.id;
     let cart = await Cart.findOne({ user: userId }).populate({
       path: 'items.product',
-      select: 'name price image images brandName stockQuantity minOrderQuantity sku formType items unit weight vendor vendorId',
+      select: 'name price mrp image images brandName stockQuantity minOrderQuantity moq sku formType items unit weight vendor vendorId',
     }).populate({
       path: 'items.vendor',
       select: 'storeName businessType address',
@@ -28,6 +28,10 @@ export const getCart = async (req, res, next) => {
       }, {});
 
       cartObj.items.forEach(item => {
+        // Ensure module field is always set (for old items that didn't have it)
+        if (!item.module) {
+          item.module = item.productModel === 'GroceryProduct' ? 'grocery' : 'fashion';
+        }
         if (item.vendor && item.vendor._id) {
           const unit = shopUnitMap[item.vendor._id.toString()];
           item.vendor.groceryMinOrderAmount = unit ? (unit.groceryMinOrderAmount || 0) : 0;
@@ -52,28 +56,39 @@ export const addToCart = async (req, res, next) => {
 
     let product;
     let productModel = 'Product';
+    let itemModule = 'fashion';
 
     if (productModule === 'grocery') {
       product = await GroceryProduct.findById(productId);
       productModel = 'GroceryProduct';
+      itemModule = 'grocery';
     } else if (productModule === 'product' || productModule === 'fashion') {
       product = await Product.findById(productId);
       productModel = 'Product';
+      itemModule = 'fashion';
     } else {
       // Fallback: check Product first, then GroceryProduct
       product = await Product.findById(productId);
       if (product) {
         productModel = 'Product';
+        itemModule = 'fashion';
       } else {
         product = await GroceryProduct.findById(productId);
         if (product) {
           productModel = 'GroceryProduct';
+          itemModule = 'grocery';
         }
       }
     }
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    // Stock validation
+    const availableStock = product.stockQuantity ?? 9999;
+    if (availableStock === 0) {
+      return res.status(400).json({ success: false, message: 'This product is out of stock' });
     }
 
     let price = product.price;
@@ -91,9 +106,13 @@ export const addToCart = async (req, res, next) => {
     let cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
+      // Check stock for new cart
+      if (quantity > availableStock) {
+        return res.status(400).json({ success: false, message: `Only ${availableStock} units available in stock` });
+      }
       cart = new Cart({
         user: userId,
-        items: [{ product: productId, productModel, vendor: vendorId, quantity, price, size: size || null, color: color || null, selectedVariants: selectedVariants || {}, selectedImageUrl: selectedImageUrl || null, selected: true }],
+        items: [{ product: productId, productModel, module: itemModule, vendor: vendorId, quantity, price, size: size || null, color: color || null, selectedVariants: selectedVariants || {}, selectedImageUrl: selectedImageUrl || null, selected: true }],
       });
     } else {
       if (buyNow) {
@@ -114,15 +133,23 @@ export const addToCart = async (req, res, next) => {
         return isProductMatch && isSizeMatch && isColorMatch && isVariantsMatch;
       });
       if (itemIndex > -1) {
+        const existingQty = cart.items[itemIndex].quantity;
+        const newQty = buyNow ? quantity : existingQty + quantity;
+        if (newQty > availableStock) {
+          return res.status(400).json({ success: false, message: `Only ${availableStock} units available. You already have ${existingQty} in your cart.` });
+        }
         if (buyNow) {
-          cart.items[itemIndex].quantity = quantity; // override quantity for direct buy
+          cart.items[itemIndex].quantity = quantity;
         } else {
-          cart.items[itemIndex].quantity += quantity;
+          cart.items[itemIndex].quantity = newQty;
         }
         cart.items[itemIndex].price = price;
         cart.items[itemIndex].selected = true;
       } else {
-        cart.items.push({ product: productId, productModel, vendor: vendorId, quantity, price, size: size || null, color: color || null, selectedVariants: selectedVariants || {}, selectedImageUrl: selectedImageUrl || null, selected: true });
+        if (quantity > availableStock) {
+          return res.status(400).json({ success: false, message: `Only ${availableStock} units available in stock` });
+        }
+        cart.items.push({ product: productId, productModel, module: itemModule, vendor: vendorId, quantity, price, size: size || null, color: color || null, selectedVariants: selectedVariants || {}, selectedImageUrl: selectedImageUrl || null, selected: true });
       }
     }
 

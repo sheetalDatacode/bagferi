@@ -156,6 +156,11 @@ const orderSchema = new mongoose.Schema(
       requestedAt: { type: Date, default: null },
       acceptedAt: { type: Date, default: null },
       completedAt: { type: Date, default: null },
+      assignedStaff: {
+        name: { type: String, default: null },
+        mobile: { type: String, default: null },
+        assignedAt: { type: Date, default: null },
+      },
     },
   },
   { timestamps: true }
