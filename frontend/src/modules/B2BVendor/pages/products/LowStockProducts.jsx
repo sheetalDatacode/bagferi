@@ -2,56 +2,57 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiSearch, FiEdit, FiTrash2, FiPackage } from "react-icons/fi";
 import { motion } from "framer-motion";
-import Badge from "../../../../shared/components/Badge";
 import ConfirmModal from "../../../Admin/components/ConfirmModal";
 import toast from "../../../../shared/utils/toast";
 import api from "../../../../shared/utils/api";
-import RatingSummaryBadge from "../../../../shared/components/RatingSummaryBadge";
 
 const LowStockProducts = () => {
     const navigate = useNavigate();
     const [hasShop, setHasShop] = useState(true);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
-    const [products, setProducts] = useState([]);
+    const [activeTab, setActiveTab] = useState("fashion");
+    const [onlyLowStock, setOnlyLowStock] = useState(false);
+    const [fashionProducts, setFashionProducts] = useState([]);
+    const [groceryProducts, setGroceryProducts] = useState([]);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null });
 
     // Fetch products from API after checking if a shop exists
-    useEffect(() => {
-        const checkShopAndFetch = async () => {
-            try {
-                setLoading(true);
-                const shopRes = await api.get('/b2b-vendor/shop-units');
-                if (!shopRes.success || !shopRes.data) {
-                    setHasShop(false);
-                    setLoading(false);
-                    return;
-                }
-                setHasShop(true);
-                await fetchProducts();
-            } catch (error) {
-                console.error(error);
+    const checkShopAndFetch = async () => {
+        try {
+            setLoading(true);
+            const shopRes = await api.get('/b2b-vendor/shop-units');
+            if (!shopRes.success || !shopRes.data) {
                 setHasShop(false);
                 setLoading(false);
+                return;
             }
-        };
+            setHasShop(true);
+            await Promise.all([fetchFashionProducts(), fetchGroceryProducts()]);
+        } catch (error) {
+            console.error(error);
+            setHasShop(false);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         checkShopAndFetch();
     }, []);
 
-    const fetchProducts = async () => {
-        setLoading(true);
+    const fetchFashionProducts = async () => {
         try {
             const response = await api.get('/b2b-vendor/products', {
                 params: {
                     page: 1,
-                    limit: 100, // Get all products for now
+                    limit: 100,
                 },
                 silent: true
             });
 
             if (response.success && response.data) {
-                // Transform API response to match table format
-                const transformedProducts = response.data.products.map(product => {
+                const transformed = response.data.products.map(product => {
                     const categoryAttr = product.attributes?.find(attr => attr.name === 'category');
                     const category = product.category || categoryAttr?.value || 'N/A';
 
@@ -64,29 +65,57 @@ const LowStockProducts = () => {
                         unit: product.unit || 'Pcs',
                         category: category,
                         visibility: product.isVisible ? 'Visible' : 'Hidden',
-                        formType: 'standard',
-                        storeName: product.vendorId?.storeName || product.vendorName || null,
                         stockQuantity: product.stockQuantity,
                     };
                 });
-                // Filter only products with low stock (stockQuantity <= 10)
-                const lowStockList = transformedProducts.filter(p => (p.stockQuantity ?? 0) <= 10);
-                setProducts(lowStockList);
+                setFashionProducts(transformed);
             }
         } catch (error) {
-            console.error('Error fetching products:', error);
-            toast.error('Failed to load products');
-        } finally {
-            setLoading(false);
+            console.error('Error fetching fashion products:', error);
+        }
+    };
+
+    const fetchGroceryProducts = async () => {
+        try {
+            const response = await api.get('/grocery/vendor/products', {
+                silent: true
+            });
+
+            if (response.success && response.data) {
+                const transformed = response.data.map(product => {
+                    return {
+                        _id: product._id,
+                        name: product.name,
+                        image: product.image,
+                        price: product.price,
+                        moq: product.minimumOrderQuantity || 1,
+                        unit: product.unit || 'Pcs',
+                        category: product.category?.name || 'Grocery',
+                        visibility: product.isVisible ? 'Visible' : 'Hidden',
+                        stockQuantity: product.stockQuantity,
+                    };
+                });
+                setGroceryProducts(transformed);
+            }
+        } catch (error) {
+            console.error('Error fetching grocery products:', error);
         }
     };
 
     const confirmDelete = async () => {
         try {
-            await api.delete(`/b2b-vendor/products/${deleteModal.productId}`);
+            if (activeTab === "grocery") {
+                await api.delete(`/grocery/vendor/products/${deleteModal.productId}`);
+            } else {
+                await api.delete(`/b2b-vendor/products/${deleteModal.productId}`);
+            }
             toast.success("Product listing removed");
             setDeleteModal({ isOpen: false, productId: null });
-            fetchProducts();
+            if (activeTab === "grocery") {
+                fetchGroceryProducts();
+            } else {
+                fetchFashionProducts();
+            }
         } catch (error) {
             console.error('Error deleting product:', error);
             toast.error('Failed to delete product');
@@ -115,130 +144,174 @@ const LowStockProducts = () => {
         );
     }
 
+    const currentProducts = activeTab === "grocery" ? groceryProducts : fashionProducts;
+
+    const filteredProducts = currentProducts.filter(p => {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesSearch = !q || p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q);
+        const matchesLowStock = !onlyLowStock || (p.stockQuantity ?? 0) <= 10;
+        return matchesSearch && matchesLowStock;
+    });
+
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold text-gray-800 mb-1">Low Stock Products</h1>
-                <p className="text-gray-500">Manage B2B product listings with low or critical inventory levels (10 units or less).</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-1">Stock Availability</h1>
+                    <p className="text-gray-500">Monitor inventory counts and track items reaching critical stock levels.</p>
+                </div>
+            </div>
+
+            {/* Tabs Selector */}
+            <div className="flex border-b border-gray-155">
+                <button
+                    onClick={() => setActiveTab("fashion")}
+                    className={`px-6 py-3 text-sm font-black uppercase tracking-wider transition-all border-b-2 ${
+                        activeTab === "fashion"
+                            ? "border-primary-600 text-primary-600 font-extrabold"
+                            : "border-transparent text-gray-500 hover:text-gray-900"
+                    }`}
+                >
+                    Fashion ({fashionProducts.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab("grocery")}
+                    className={`px-6 py-3 text-sm font-black uppercase tracking-wider transition-all border-b-2 ${
+                        activeTab === "grocery"
+                            ? "border-primary-600 text-primary-600 font-extrabold"
+                            : "border-transparent text-gray-500 hover:text-gray-900"
+                    }`}
+                >
+                    Grocery ({groceryProducts.length})
+                </button>
             </div>
 
             <div className="relative">
-                <div className="mb-6 flex flex-col md:flex-row gap-4">
-                    <div className="relative flex-1">
+                <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div className="relative flex-1 w-full">
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search by name, category..."
+                            placeholder="Search by product name or category..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-6 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-slate-900 outline-none transition-all font-bold text-sm text-gray-700"
+                            className="w-full pl-12 pr-6 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-primary-500 transition-all font-bold text-sm text-gray-700"
                         />
+                    </div>
+                    
+                    {/* Low Stock Only Filter */}
+                    <div className="flex items-center gap-2 shrink-0">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={onlyLowStock} 
+                                onChange={(e) => setOnlyLowStock(e.target.checked)}
+                                className="sr-only peer" 
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            <span className="ml-2 text-sm font-black uppercase text-gray-700 tracking-wider">Show Low Stock Only</span>
+                        </label>
                     </div>
                 </div>
 
                 {loading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3].map(i => <div key={i} className="h-64 bg-gray-50 animate-pulse rounded-[2.5rem]" />)}
+                    <div className="space-y-4">
+                        {[1, 2, 3].map(i => <div key={i} className="h-16 bg-gray-50 animate-pulse rounded-xl" />)}
                     </div>
                 ) : (
-                    <>
-                        {(() => {
-                            const filterProducts = (list) => list.filter(p => {
-                                const q = searchQuery.toLowerCase().trim();
-                                if (!q) return true;
-                                const matchName = p.name?.toLowerCase().includes(q);
-                                const matchCategory = p.category?.toLowerCase().includes(q);
-                                const matchStore = p.storeName?.toLowerCase().includes(q);
-                                return matchName || matchCategory || matchStore;
-                            });
-                            const productListings = filterProducts(products);
-
-                            return (
-                                <div className="space-y-8">
-                                    {productListings.length > 0 ? (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                                            {productListings.map((product) => (
-                                                <motion.div
-                                                    key={product._id}
-                                                    initial={{ opacity: 0, scale: 0.95 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
-                                                >
-                                                    <div className="relative h-48 overflow-hidden bg-slate-50">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        {filteredProducts.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-50 border-b border-gray-100">
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest">Product</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest">Category</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest">Price</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest">MOQ</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest">Stock Qty</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest">Status</th>
+                                            <th className="p-4 text-xs font-black text-gray-500 uppercase tracking-widest text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredProducts.map((product) => (
+                                            <tr key={product._id} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
+                                                <td className="p-4 flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-slate-50 overflow-hidden shrink-0 border border-gray-100 flex items-center justify-center text-gray-400">
                                                         {product.image ? (
-                                                            <img 
-                                                                src={product.image} 
-                                                                alt={product.name} 
-                                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                                                            />
+                                                            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
                                                         ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-gray-200">
-                                                                <FiPackage size={48} />
-                                                            </div>
+                                                            <FiPackage size={18} />
                                                         )}
-                                                        <div className="absolute top-4 left-4">
-                                                            <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-[10px] font-black uppercase rounded-lg shadow-sm border border-gray-100">
-                                                                {product.category}
-                                                            </span>
-                                                        </div>
-                                                        <div className="absolute top-4 right-4">
-                                                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase shadow-sm border ${product.stockQuantity === 0 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
-                                                                {product.stockQuantity === 0 ? 'Out of Stock' : `Low Stock (${product.stockQuantity})`}
-                                                            </span>
-                                                        </div>
                                                     </div>
-
-                                                    <div className="p-6">
-                                                        <h3 className="text-lg font-black text-slate-800 mb-2 truncate leading-tight">{product.name}</h3>
-                                                        <div className="mb-4">
-                                                            <RatingSummaryBadge targetType="product" targetId={product._id} />
-                                                        </div>
-                                                        
-                                                        <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-2xl mb-6">
-                                                            <div className="text-center">
-                                                                <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Price</p>
-                                                                <p className="text-xs font-black text-slate-700">₹{product.price}</p>
-                                                            </div>
-                                                            <div className="text-center border-l border-slate-200">
-                                                                <p className="text-[8px] font-black text-slate-400 uppercase mb-1">MOQ</p>
-                                                                <p className="text-xs font-black text-slate-700">{product.moq} {product.unit}</p>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                                                            <span className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg ${product.visibility === 'Visible' ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
-                                                                {product.visibility}
-                                                            </span>
-                                                            <div className="flex items-center gap-2">
-                                                                <button 
-                                                                    onClick={() => navigate(`/b2b-vendor/products/edit/${product._id}`)} 
-                                                                    className="p-2.5 bg-slate-50 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
-                                                                >
-                                                                    <FiEdit size={16} />
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => setDeleteModal({ isOpen: true, productId: product._id })} 
-                                                                    className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
-                                                                >
-                                                                    <FiTrash2 size={16} />
-                                                                </button>
-                                                            </div>
-                                                        </div>
+                                                    <span className="text-sm font-bold text-slate-800 truncate max-w-[200px]" title={product.name}>
+                                                        {product.name}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-sm font-semibold text-slate-500">
+                                                    {product.category}
+                                                </td>
+                                                <td className="p-4 text-sm font-bold text-primary-600">
+                                                    ₹{product.price}
+                                                </td>
+                                                <td className="p-4 text-sm font-semibold text-slate-600">
+                                                    {product.moq} {product.unit}
+                                                </td>
+                                                <td className="p-4 text-sm font-extrabold text-slate-700">
+                                                    {product.stockQuantity ?? 0}
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${
+                                                        (product.stockQuantity ?? 0) === 0 
+                                                            ? 'bg-red-50 text-red-600 border-red-100' 
+                                                            : (product.stockQuantity ?? 0) <= 10 
+                                                                ? 'bg-orange-50 text-orange-600 border-orange-100' 
+                                                                : 'bg-green-50 text-green-600 border-green-100'
+                                                    }`}>
+                                                        {(product.stockQuantity ?? 0) === 0 
+                                                            ? 'Out of Stock' 
+                                                            : (product.stockQuantity ?? 0) <= 10 
+                                                                ? 'Low Stock' 
+                                                                : 'In Stock'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <button 
+                                                            onClick={() => {
+                                                                const editRoute = activeTab === "grocery" 
+                                                                    ? `/b2b-vendor/grocery-products/edit/${product._id}` 
+                                                                    : `/b2b-vendor/products/edit/${product._id}`;
+                                                                navigate(editRoute);
+                                                            }} 
+                                                            className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+                                                            title="Edit Product"
+                                                        >
+                                                            <FiEdit size={16} />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => setDeleteModal({ isOpen: true, productId: product._id })} 
+                                                            className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all"
+                                                            title="Delete Product"
+                                                        >
+                                                            <FiTrash2 size={16} />
+                                                        </button>
                                                     </div>
-                                                </motion.div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="bg-white rounded-[3rem] p-20 text-center border-2 border-dashed border-gray-100">
-                                            <FiPackage size={48} className="mx-auto text-gray-200 mb-4" />
-                                            <h3 className="text-xl font-bold text-slate-400 uppercase tracking-widest">No low stock listings</h3>
-                                            <p className="text-sm text-gray-400 font-semibold">Excellent! All B2B product stock quantities are healthy.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })()}
-                    </>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="p-20 text-center border-2 border-dashed border-gray-100 rounded-2xl m-4 bg-white">
+                                <FiPackage size={48} className="mx-auto text-gray-200 mb-4" />
+                                <h3 className="text-xl font-bold text-slate-400 uppercase tracking-widest">No listings found</h3>
+                                <p className="text-sm text-gray-400 font-semibold">You don't have any products matching the current filters.</p>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
 

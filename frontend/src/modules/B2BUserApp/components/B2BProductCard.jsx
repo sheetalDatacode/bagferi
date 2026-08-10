@@ -39,6 +39,10 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
             product.coverImage || product.image,
             ...(Array.isArray(product.images) ? product.images : [])
         ].filter(Boolean);
+        if (allImages.length === 0 && Array.isArray(product.variants)) {
+            const variantImages = product.variants.map(v => v.imageUrl).filter(Boolean);
+            allImages = [...new Set(variantImages)];
+        }
     }
 
     const getYouTubeId = (url) => {
@@ -158,7 +162,11 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
             whileHover={{ y: -4, shadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)" }}
             onClick={() => {
                 if (redirectToLoginIfRequired()) return;
-                navigate(`/b2b/product/${product._id}`);
+                if (product.isGrocery || product.itemType === 'grocery' || product.formType === 'grocery') {
+                    navigate(`/b2b/grocery/product/${product._id}`);
+                } else {
+                    navigate(`/b2b/product/${product._id}`);
+                }
             }}
             className={`group bg-white rounded-xl overflow-hidden border border-gray-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] hover:shadow-xl transition-all duration-300 cursor-pointer flex ${viewMode === 'grid' ? 'flex-col h-auto md:h-[400px]' : 'flex-row items-center gap-6 p-4 h-fit'}`}
         >

@@ -1049,16 +1049,25 @@ const B2BLanding = () => {
                     <button
                         onClick={() => {
                             closePopup();
-                            if (onViewAll) onViewAll();
-                            else {
-                                const hasGrocery = popupProducts.some(p => p.isGrocery || p.itemType === 'grocery' || p.formType === 'grocery');
-                                const routePath = hasGrocery ? '/b2b/grocery' : '/b2b/catalog';
-                                navigateWithAuth(`${routePath}?search=${encodeURIComponent(searchQuery)}`);
+                            if (popupProducts.length === 1) {
+                                const product = popupProducts[0];
+                                if (product.isGrocery || product.itemType === 'grocery' || product.formType === 'grocery') {
+                                    navigateWithAuth(`/b2b/grocery/product/${product._id}`);
+                                } else {
+                                    navigateWithAuth(`/b2b/product/${product._id}`);
+                                }
+                            } else {
+                                if (onViewAll) onViewAll();
+                                else {
+                                    const hasGrocery = popupProducts.some(p => p.isGrocery || p.itemType === 'grocery' || p.formType === 'grocery');
+                                    const routePath = hasGrocery ? '/b2b/grocery' : '/b2b/catalog';
+                                    navigateWithAuth(`${routePath}?search=${encodeURIComponent(searchQuery)}`);
+                                }
                             }
                         }}
                         className="w-full md:w-auto px-6 py-3 bg-gray-900 text-white rounded-xl md:rounded-full font-black text-[9px] uppercase tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-gray-200 flex items-center justify-center gap-3"
                     >
-                        View Full Marketplace <FiArrowRight />
+                        {popupProducts.length === 1 ? 'View Product Details' : 'View Full Marketplace'} <FiArrowRight />
                     </button>
                 </div>
             </motion.div>

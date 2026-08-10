@@ -297,6 +297,13 @@ const B2BCategories = () => {
         setColEditForms(p => ({ ...p, [subId]: { ...p[subId], open: false } }));
     };
 
+    const updateEditForm = (subId, patch) => {
+        setColEditForms(p => ({
+            ...p,
+            [subId]: { ...p[subId], ...patch }
+        }));
+    };
+
     const saveSubSubEdit = async (subId) => {
         const form = colEditForms[subId];
         if (!form?.name?.trim()) return toast.error('Name is required');

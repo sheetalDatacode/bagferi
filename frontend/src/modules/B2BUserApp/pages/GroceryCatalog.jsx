@@ -217,7 +217,7 @@ const GroceryCatalog = () => {
                                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
+                                    className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
                                   >
                                     {/* Price Range */}
                                     <div className="mb-4">

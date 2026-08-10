@@ -171,7 +171,7 @@ const B2BVendorSidebar = ({ isOpen, onClose }) => {
 
         if (item.title === "Dashboard" || item.title === "Orders") return true;
 
-        const alwaysVisible = ["Billing & Invoices", "My Wallet", "Banner Booking", "Notifications", "Account Settings", "Product Listings", "Grocery Products", "Shop Listing", "Reels"];
+        const alwaysVisible = ["Billing & Invoices", "My Wallet", "Banner Booking", "Notifications", "Account Settings", "Product Listings", "Grocery Products", "Shop Listing", "Reels", "Low Stock Products"];
         if (alwaysVisible.includes(item.title)) return true;
 
         if (!settings || !settings.enabledModules) return false;

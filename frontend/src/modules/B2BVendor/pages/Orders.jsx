@@ -243,6 +243,7 @@ const VendorOrders = () => {
             case 'Dispatched': return 'bg-blue-100 text-blue-800 border-blue-200';
             case 'Completed': return 'bg-green-100 text-green-800 border-green-200';
             case 'Cancelled': return 'bg-red-100 text-red-800 border-red-200';
+            case 'Exchanged': return 'bg-purple-100 text-purple-800 border-purple-200';
             default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
@@ -374,7 +375,7 @@ const VendorOrders = () => {
                                 ))}
                             </div>
                             <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap overflow-x-auto max-w-full">
-                                {['All', 'Pending', 'Accepted', 'Dispatched', 'Completed', 'Cancelled'].map(f => (
+                                {['All', 'Pending', 'Accepted', 'Dispatched', 'Completed', 'Cancelled', 'Exchanged'].map(f => (
                                     <button
                                         key={f}
                                         onClick={() => setFilter(f)}
@@ -490,9 +491,16 @@ const VendorOrders = () => {
                                                     </p>
                                                 </td>
                                                 <td className="p-4 text-center">
-                                                    <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order.status)}`}>
-                                                        {order.status}
-                                                    </span>
+                                                    <div className="flex flex-col gap-1 items-center justify-center">
+                                                        <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order.status)}`}>
+                                                            {order.status}
+                                                        </span>
+                                                        {order.status === 'Cancelled' && order.cancelledBy && (
+                                                            <span className="text-[9px] font-bold text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded capitalize">
+                                                                By {order.cancelledBy}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="p-4 text-center text-xs font-medium text-gray-700">
                                                     {order.exchangeRequest && order.exchangeRequest.status !== 'None' && order.exchangeRequest.assignedStaff?.name ? (

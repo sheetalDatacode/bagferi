@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useStaffAuthStore } from '../store/staffAuthStore';
 import toast from 'react-hot-toast';
+import { FiMapPin } from 'react-icons/fi';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
@@ -114,11 +115,19 @@ export default function StaffDashboard() {
                                     <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                                         <p style={{ margin: 0, fontWeight: '750', color: '#1a202c', fontSize: '0.875rem' }}>#{order.orderNumber}</p>
                                         <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096' }}>{order.items?.length || 0} item(s)</p>
+                                        {order.createdAt && (
+                                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#a0aec0' }}>
+                                                Booked: {new Date(order.createdAt).toLocaleDateString('en-IN')} {new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        )}
                                     </td>
                                     <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                                         <p style={{ margin: 0, fontWeight: '700', color: '#2d3748', fontSize: '0.875rem' }}>{order.shippingAddress?.fullName}</p>
                                         <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096', lineHeight: '1.4', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.25rem' }}>
-                                            <span>📍 {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city}</span>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                                <FiMapPin style={{ color: '#e53e3e', marginRight: '4px', flexShrink: 0 }} size={14} />
+                                                {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city}
+                                            </span>
                                             <a 
                                                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${order.shippingAddress?.addressLine1 || ''}, ${order.shippingAddress?.city || ''}`)}`}
                                                 target="_blank"
@@ -212,11 +221,17 @@ export default function StaffDashboard() {
                                         <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                                             <p style={{ margin: 0, fontWeight: '750', color: '#1a202c', fontSize: '0.875rem' }}>#{order.orderNumber}</p>
                                             <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096' }}>{order.items?.length || 0} item(s)</p>
+                                            {order.createdAt && (
+                                                <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#a0aec0' }}>
+                                                    Booked: {new Date(order.createdAt).toLocaleDateString('en-IN')} {new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            )}
                                         </td>
                                         <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                                             <p style={{ margin: 0, fontWeight: '700', color: '#2d3748', fontSize: '0.875rem' }}>{order.shippingAddress?.fullName}</p>
-                                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096', lineHeight: '1.4' }}>
-                                                📍 {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city}
+                                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096', lineHeight: '1.4', display: 'flex', alignItems: 'center' }}>
+                                                <FiMapPin style={{ color: '#e53e3e', marginRight: '4px', flexShrink: 0 }} size={14} />
+                                                {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city}
                                             </p>
                                         </td>
                                         <td style={{ padding: '1rem', verticalAlign: 'middle', fontSize: '0.8rem', color: '#4a5568' }}>
@@ -278,25 +293,59 @@ export default function StaffDashboard() {
                         ✅ Completed Today
                     </h2>
                     <div style={{ overflowX: 'auto', borderRadius: '1rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', background: 'white' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '400px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
                             <thead>
                                 <tr style={{ background: '#f7fafc', borderBottom: '1.5px solid #e2e8f0' }}>
-                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase' }}>Order Number</th>
-                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase' }}>Completed Time</th>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase' }}>Order Info</th>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase' }}>Customer & Address</th>
+                                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase' }}>Collected</th>
                                     <th style={{ padding: '0.75rem 1rem', fontSize: '0.8rem', fontWeight: '800', color: '#4a5568', textTransform: 'uppercase', textAlign: 'center' }}>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {completedDeliveries.map(order => (
-                                    <tr key={order._id} style={{ borderBottom: '1px solid #e2e8f0', opacity: 0.8 }}>
-                                        <td style={{ padding: '0.75rem 1rem', verticalAlign: 'middle', fontWeight: '700', color: '#4a5568' }}>
-                                            #{order.orderNumber}
+                                    <tr key={order._id} style={{ borderBottom: '1px solid #e2e8f0', opacity: 0.9 }}>
+                                        <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
+                                            <p style={{ margin: 0, fontWeight: '750', color: '#1a202c', fontSize: '0.875rem' }}>#{order.orderNumber}</p>
+                                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096' }}>{order.items?.length || 0} item(s)</p>
+                                            {order.createdAt && (
+                                                <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#a0aec0' }}>
+                                                    Booked: {new Date(order.createdAt).toLocaleDateString('en-IN')} {new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            )}
                                         </td>
-                                        <td style={{ padding: '0.75rem 1rem', verticalAlign: 'middle', fontSize: '0.8rem', color: '#718096' }}>
-                                            {new Date(order.updatedAt).toLocaleDateString('en-IN')} {new Date(order.updatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                        <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
+                                            <p style={{ margin: 0, fontWeight: '700', color: '#2d3748', fontSize: '0.875rem' }}>{order.shippingAddress?.fullName}</p>
+                                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096', lineHeight: '1.4', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                                    <FiMapPin style={{ color: '#e53e3e', marginRight: '4px', flexShrink: 0 }} size={14} />
+                                                    {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city}
+                                                </span>
+                                                <a 
+                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${order.shippingAddress?.addressLine1 || ''}, ${order.shippingAddress?.city || ''}`)}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{ display: 'inline-flex', alignItems: 'center', color: '#3182ce', textDecoration: 'none' }}
+                                                    title="View on Google Maps"
+                                                >
+                                                    <img 
+                                                        src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Google_Maps_icon_%282020%29.svg" 
+                                                        alt="Map" 
+                                                        style={{ width: '14px', height: '14px', verticalAlign: 'middle', marginLeft: '4px' }} 
+                                                    />
+                                                </a>
+                                            </p>
                                         </td>
-                                        <td style={{ padding: '0.75rem 1rem', verticalAlign: 'middle', textAlign: 'center', color: '#38a169', fontWeight: '750', fontSize: '0.8rem' }}>
-                                            ✓ Delivered
+                                        <td style={{ padding: '1rem', verticalAlign: 'middle', fontWeight: '800', color: '#38a169', fontSize: '1rem' }}>
+                                            ₹{order.remainingBalance !== undefined ? order.remainingBalance.toLocaleString('en-IN') : (order.totalAmount - (order.advancePayment || 0)).toLocaleString('en-IN')}
+                                        </td>
+                                        <td style={{ padding: '1rem', verticalAlign: 'middle', textAlign: 'center', color: '#38a169', fontWeight: '750', fontSize: '0.875rem' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center' }}>
+                                                <span>✓ Delivered</span>
+                                                <span style={{ fontSize: '0.7rem', color: '#718096', fontWeight: 'normal' }}>
+                                                    {new Date(order.updatedAt).toLocaleDateString('en-IN')} {new Date(order.updatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

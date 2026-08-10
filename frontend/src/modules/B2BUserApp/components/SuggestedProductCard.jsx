@@ -56,6 +56,11 @@ const SuggestedProductCard = ({ product, linkPrefix = '/b2b/product/' }) => {
             else if (img?.url) productImages.push(img.url);
         });
     }
+    if (productImages.length === 0 && Array.isArray(product?.variants)) {
+        product.variants.forEach(v => {
+            if (v.imageUrl) productImages.push(v.imageUrl);
+        });
+    }
     const getYouTubeId = (url) => {
         if (!url) return null;
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;

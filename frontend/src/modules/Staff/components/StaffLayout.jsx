@@ -59,7 +59,7 @@ export default function StaffLayout() {
             </header>
 
             {/* Main Content */}
-            <main style={{ flex: 1, overflowY: 'auto', padding: '1rem', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
+            <main style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
                 <Outlet />
             </main>
         </div>

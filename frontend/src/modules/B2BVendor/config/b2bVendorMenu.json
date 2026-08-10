@@ -14,9 +14,13 @@
         "route": "/b2b-vendor/products",
         "children": [
             "Manage Products",
-            "Add Product",
-            "Low Stock Products"
+            "Add Product"
         ]
+    },
+    {
+        "title": "Low Stock Products",
+        "route": "/b2b-vendor/products/low-stock",
+        "children": []
     },
     {
         "title": "Grocery Products",

@@ -974,7 +974,7 @@ const B2BVendorStore = () => {
                                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                        className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] p-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
+                                                        className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] p-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
                                                     >
                                                         {/* Price Range */}
                                                         <div className="mb-4">
@@ -1159,7 +1159,7 @@ const B2BVendorStore = () => {
                                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                        className="absolute top-full right-0 mt-2 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] overflow-hidden"
+                                                        className="absolute top-full left-0 mt-2 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] overflow-hidden"
                                                     >
                                                         <div className="p-1.5 space-y-0.5">
                                                             {['All', 'Men', 'Women', 'Kids', 'Unisex'].map(opt => (
@@ -1192,7 +1192,7 @@ const B2BVendorStore = () => {
                                                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                        className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] overflow-hidden"
+                                                        className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] overflow-hidden"
                                                     >
                                                         <div className="p-1.5 space-y-0.5">
                                                             {[
