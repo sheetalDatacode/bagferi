@@ -9,7 +9,8 @@ const brandSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
-brandSchema.index({ type: 1, categories: 1, subcategories: 1 });
+brandSchema.index({ type: 1, categories: 1 });
+brandSchema.index({ type: 1, subcategories: 1 });
 
 const Brand = mongoose.model('Brand', brandSchema);
 export default Brand;

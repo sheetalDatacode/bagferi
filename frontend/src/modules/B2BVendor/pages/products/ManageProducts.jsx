@@ -69,6 +69,7 @@ const ManageProducts = () => {
                         visibility: product.isVisible ? 'Visible' : 'Hidden',
                         formType: 'standard',
                         storeName: product.vendorId?.storeName || product.vendorName || null,
+                        stockQuantity: product.stockQuantity,
                     };
                 });
                 setProducts(transformedProducts);
@@ -150,6 +151,14 @@ const ManageProducts = () => {
         { key: "category", label: "Category", sortable: true },
         { key: "price", label: "Exp. Price", sortable: true, render: (v) => `₹${v}` },
         { key: "moq", label: "Min. Order (MOQ)", sortable: true, render: (v, row) => `${v} ${row.unit}` },
+        { key: "stockQuantity", label: "Stock", sortable: true, render: (v, row) => {
+            const stockQty = row.stockQuantity ?? 0;
+            return (
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${stockQty === 0 ? 'bg-red-100 text-red-700' : stockQty <= 10 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                    {stockQty === 0 ? 'Out of Stock' : stockQty <= 10 ? `Low Stock (${stockQty})` : `In Stock (${stockQty})`}
+                </span>
+            );
+        }},
         { key: "visibility", label: "Status", render: statusCell },
         { key: "actions", label: "Actions", render: actionsCell },
     ];

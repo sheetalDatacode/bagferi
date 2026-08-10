@@ -355,6 +355,9 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
     if (availability === 'Out of Stock') {
       stock = 'out_of_stock';
       stockQuantity = 0;
+    } else if (availability === 'Low Stock') {
+      stock = 'low_stock';
+      if (stockQuantity <= 0 || stockQuantity > 10) stockQuantity = 5;
     } else if (availability === 'Available on Order') {
       stock = 'pre_order';
     }
@@ -610,6 +613,9 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
       if (availability === 'Out of Stock') {
         stock = 'out_of_stock';
         stockQuantity = 0;
+      } else if (availability === 'Low Stock') {
+        stock = 'low_stock';
+        if (stockQuantity <= 0 || stockQuantity > 10) stockQuantity = 5;
       } else if (availability === 'Available on Order') {
         stock = 'pre_order';
       } else if (availability === 'In Stock') {

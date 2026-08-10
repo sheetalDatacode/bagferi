@@ -1196,14 +1196,34 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Availability Status</label>
                                 <select
                                     name="availability"
-                                    value={formData.availability || ""}
+                                    value={
+                                        formData.stockQuantity !== "" && formData.stockQuantity !== undefined
+                                            ? parseInt(formData.stockQuantity) === 0
+                                                ? "Out of Stock"
+                                                : parseInt(formData.stockQuantity) <= 10
+                                                    ? "Low Stock"
+                                                    : "In Stock"
+                                            : formData.availability || "In Stock"
+                                    }
+                                    disabled={formData.stockQuantity !== "" && formData.stockQuantity !== undefined}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none disabled:opacity-75 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                 >
                                     <option value="In Stock">In Stock</option>
+                                    <option value="Low Stock">Low Stock</option>
                                     <option value="Out of Stock">Out of Stock</option>
                                     <option value="Available on Order">Available on Order</option>
                                 </select>
+                                {formData.stockQuantity !== "" && formData.stockQuantity !== undefined && (
+                                    <p className="text-[10px] text-gray-500 mt-1 ml-1">
+                                        Status locked: Derived from Stock Quantity.
+                                    </p>
+                                )}
+                                {formData.stockQuantity !== "" && formData.stockQuantity !== undefined && parseInt(formData.stockQuantity) <= 10 && parseInt(formData.stockQuantity) > 0 && (
+                                    <p className="text-xs text-orange-600 font-bold mt-1.5 ml-1 flex items-center gap-1">
+                                        ⚠️ Low Stock - Please restore inventory!
+                                    </p>
+                                )}
                             </div>
 
                             <div>

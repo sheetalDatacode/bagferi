@@ -18,6 +18,23 @@ const connectDB = async () => {
       family: 4, // Force IPv4 to fix MongoServerSelectionError timeouts
     });
 
+    try {
+      const db = mongoose.connection.db;
+      const collections = await db.listCollections({ name: 'brands' }).toArray();
+      if (collections.length > 0) {
+        const collection = db.collection('brands');
+        const indexes = await collection.indexes();
+        const indexName = 'type_1_categories_1_subcategories_1';
+        if (indexes.some(idx => idx.name === indexName)) {
+          console.log(`🧹 Auto-dropping obsolete brand index: ${indexName}`);
+          await collection.dropIndex(indexName);
+          console.log('✅ Index dropped successfully!');
+        }
+      }
+    } catch (indexErr) {
+      console.error('⚠️ Failed to auto-drop obsolete brand index:', indexErr.message);
+    }
+
     // console.log(`✅ MongoDB Connected Successfully!`);
     // console.log(`   Host: ${conn.connection.host}`);
     // console.log(`   Database: ${conn.connection.name}`);

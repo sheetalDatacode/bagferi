@@ -21,11 +21,15 @@ const CompactProductCard = ({ product }) => {
   const handleAdd = async (e) => {
     e.stopPropagation();
     try {
+      const stockLimit = product.stockQuantity ?? 999;
+      if (stockLimit <= 0 || product.stock === 'out_of_stock') {
+        toast.error('This product is out of stock');
+        return;
+      }
       setIsAdding(true);
       await addToCart(product._id, 1);
-      toast.success('Added to cart');
     } catch (error) {
-      toast.error('Failed to add to cart');
+      toast.error(error.message || 'Failed to add to cart');
     } finally {
       setIsAdding(false);
     }
@@ -159,7 +163,11 @@ const CompactProductCard = ({ product }) => {
             </div>
 
             {/* ADD Button */}
-            {cartItem ? (
+            {product.stockQuantity === 0 || product.stock === 'out_of_stock' ? (
+              <div className="bg-red-50 text-red-600 border border-red-200 px-3 py-1 rounded text-[10px] font-bold self-end mb-1 uppercase">
+                Out of Stock
+              </div>
+            ) : cartItem ? (
               <div className="bg-primary-600 text-white px-3 py-1 rounded text-[10px] font-bold shadow-sm self-end mb-1">
                 {cartItem.quantity} In Cart
               </div>

@@ -30,6 +30,7 @@ const EditProduct = () => {
 
                         let availability = "In Stock";
                         if (productData.stock === 'out_of_stock') availability = "Out of Stock";
+                        else if (productData.stock === 'low_stock') availability = "Low Stock";
                         else if (productData.stock === 'pre_order') availability = "Available on Order";
 
                         const images = [];

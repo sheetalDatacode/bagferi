@@ -200,6 +200,19 @@ export const updateCartItem = async (req, res, next) => {
         if (quantity <= 0) {
           cart.items.splice(itemIndex, 1);
         } else {
+          const item = cart.items[itemIndex];
+          let product;
+          if (item.productModel === 'GroceryProduct') {
+            product = await GroceryProduct.findById(item.product);
+          } else {
+            product = await Product.findById(item.product);
+          }
+          if (product) {
+            const availableStock = product.stockQuantity ?? 9999;
+            if (quantity > availableStock) {
+              return res.status(400).json({ success: false, message: `Only ${availableStock} units available in stock` });
+            }
+          }
           cart.items[itemIndex].quantity = quantity;
         }
       }

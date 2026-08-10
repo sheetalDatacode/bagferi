@@ -247,31 +247,38 @@ const B2BCart = () => {
                                                             </div>
 
                                                             {/* Quantity Controls */}
-                                                            <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 border border-gray-200">
-                                                                <button
-                                                                    onClick={() => handleQuantityChange(productId, item.quantity, -1, item.size, item.color, item.selectedVariants)}
-                                                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                                                                    disabled={item.quantity <= productMoq || loading}
-                                                                >
-                                                                    <FiMinus size={14} />
-                                                                </button>
-                                                                <span className="w-8 text-center text-sm font-black text-gray-900">
-                                                                    {item.quantity}
-                                                                </span>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        const stockLimit = item.product?.stockQuantity ?? 999;
-                                                                        if (item.quantity >= stockLimit) {
-                                                                            toast.error(`Only ${stockLimit} units available in stock`);
-                                                                            return;
-                                                                        }
-                                                                        handleQuantityChange(productId, item.quantity, 1, item.size, item.color, item.selectedVariants);
-                                                                    }}
-                                                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                                                                    disabled={loading || item.quantity >= (item.product?.stockQuantity ?? 999)}
-                                                                >
-                                                                    <FiPlus size={14} />
-                                                                </button>
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1 border border-gray-200">
+                                                                    <button
+                                                                        onClick={() => handleQuantityChange(productId, item.quantity, -1, item.size, item.color, item.selectedVariants)}
+                                                                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                                                                        disabled={item.quantity <= productMoq || loading}
+                                                                    >
+                                                                        <FiMinus size={14} />
+                                                                    </button>
+                                                                    <span className="w-8 text-center text-sm font-black text-gray-900">
+                                                                        {item.quantity}
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const stockLimit = item.product?.stockQuantity ?? 999;
+                                                                            if (item.quantity >= stockLimit) {
+                                                                                toast.error(`Only ${stockLimit} units available in stock`);
+                                                                                return;
+                                                                            }
+                                                                            handleQuantityChange(productId, item.quantity, 1, item.size, item.color, item.selectedVariants);
+                                                                        }}
+                                                                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                                                                        disabled={loading || item.quantity >= (item.product?.stockQuantity ?? 999)}
+                                                                    >
+                                                                        <FiPlus size={14} />
+                                                                    </button>
+                                                                </div>
+                                                                {item.product?.stockQuantity !== undefined && item.product?.stockQuantity !== null && item.quantity >= item.product.stockQuantity && (
+                                                                    <p className="text-[10px] text-red-500 font-bold">
+                                                                        Only {item.product.stockQuantity} units available
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>

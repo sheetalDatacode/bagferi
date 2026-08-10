@@ -16,6 +16,7 @@ import {
     FiUserCheck,
     FiVideo,
     FiSearch,
+    FiCheck,
 } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,6 +55,21 @@ const B2BVendorStore = () => {
     const [viewMode, setViewMode] = useState("grid");
     const [sortBy, setSortBy] = useState("popular");
     const [searchQuery, setSearchQuery] = useState("");
+    
+    // Grocery specific filters
+    const [minPrice, setMinPrice] = useState("");
+    const [maxPrice, setMaxPrice] = useState("");
+    const [selectedBrands, setSelectedBrands] = useState([]);
+    const [selectedWeights, setSelectedWeights] = useState([]);
+    const [maxMoq, setMaxMoq] = useState(null);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [isSortOpen, setIsSortOpen] = useState(false);
+    const [isQtyOpen, setIsQtyOpen] = useState(false);
+
+    // Fashion specific filters
+    const [genderFilter, setGenderFilter] = useState("All");
+    const [isGenderOpen, setIsGenderOpen] = useState(false);
+    const [isFashionSortOpen, setIsFashionSortOpen] = useState(false);
     
     // Tabs: "fashion", "grocery", "reels", "properties"
     const [activeTab, setActiveTab] = useState("fashion");
@@ -328,6 +344,17 @@ const B2BVendorStore = () => {
         return productListing;
     }, [products, vendor]);
 
+    // Extract unique brands and weights dynamically from the grocery products list
+    const availableGroceryFilters = useMemo(() => {
+        const filteredByCat = groceryProducts.filter(p => 
+            (!selectedGroceryCategory || String(p.category?._id || p.category) === String(selectedGroceryCategory)) &&
+            (!selectedGrocerySubcategory || String(p.subcategory?._id || p.subcategory) === String(selectedGrocerySubcategory))
+        );
+        const brands = [...new Set(filteredByCat.map(p => p.brandName || p.brand).filter(Boolean))].sort();
+        const weights = [...new Set(filteredByCat.map(p => p.weight ? `${p.weight} ${p.unit || ''}`.trim() : null).filter(Boolean))].sort();
+        return { brands, weights };
+    }, [groceryProducts, selectedGroceryCategory, selectedGrocerySubcategory]);
+
     // Filter and sort products (Fashion)
     const displayedFashionProducts = useMemo(() => {
         let filtered = [...products];
@@ -350,11 +377,18 @@ const B2BVendorStore = () => {
             });
         }
 
+        // Apply Gender Filter
+        if (genderFilter && genderFilter !== "All") {
+            filtered = filtered.filter(p => String(p.gender).toLowerCase() === genderFilter.toLowerCase());
+        }
+
         switch (sortBy) {
             case "price-low":
+            case "price_asc":
                 filtered.sort((a, b) => a.price - b.price);
                 break;
             case "price-high":
+            case "price_desc":
                 filtered.sort((a, b) => b.price - a.price);
                 break;
             case "newest":
@@ -365,7 +399,7 @@ const B2BVendorStore = () => {
         }
 
         return filtered;
-    }, [products, selectedFashionCategory, selectedFashionSubcategory, searchQuery, sortBy]);
+    }, [products, selectedFashionCategory, selectedFashionSubcategory, searchQuery, sortBy, genderFilter]);
 
     // Filter and sort products (Grocery)
     const displayedGroceryProducts = useMemo(() => {
@@ -383,22 +417,55 @@ const B2BVendorStore = () => {
             filtered = filtered.filter(p => (p.name || '').toLowerCase().includes(q));
         }
 
+        // Apply Price Range Filters
+        if (minPrice) {
+            filtered = filtered.filter(p => p.price >= parseFloat(minPrice));
+        }
+        if (maxPrice) {
+            filtered = filtered.filter(p => p.price <= parseFloat(maxPrice));
+        }
+
+        // Apply Brands Filter
+        if (selectedBrands.length > 0) {
+            filtered = filtered.filter(p => selectedBrands.includes(p.brandName || p.brand));
+        }
+
+        // Apply Weights Filter
+        if (selectedWeights.length > 0) {
+            filtered = filtered.filter(p => {
+                const w = p.weight ? `${p.weight} ${p.unit || ''}`.trim() : '';
+                return selectedWeights.includes(w) || selectedWeights.includes(p.weight);
+            });
+        }
+
+        // Apply MOQ Filter
+        if (maxMoq) {
+            filtered = filtered.filter(p => (p.minimumOrderQuantity || p.moq || 1) <= maxMoq);
+        }
+
         switch (sortBy) {
             case "price-low":
+            case "price_asc":
                 filtered.sort((a, b) => a.price - b.price);
                 break;
             case "price-high":
+            case "price_desc":
                 filtered.sort((a, b) => b.price - a.price);
                 break;
             case "newest":
                 filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                 break;
+            case "discount_desc":
+                filtered.sort((a, b) => (b.discountPercent || 0) - (a.discountPercent || 0));
+                break;
             default:
-            // popular/default
+                if (sortBy === "rating_desc") {
+                    filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+                }
         }
 
         return filtered;
-    }, [groceryProducts, selectedGroceryCategory, selectedGrocerySubcategory, searchQuery, sortBy]);
+    }, [groceryProducts, selectedGroceryCategory, selectedGrocerySubcategory, searchQuery, sortBy, minPrice, maxPrice, selectedBrands, selectedWeights, maxMoq]);
 
     // Filter properties within this vendor store
     const filteredProperties = useMemo(() => {
@@ -872,7 +939,8 @@ const B2BVendorStore = () => {
 
                     {/* Main Tab Controls for Fashion, Grocery, Properties */}
                     {(activeTab === "fashion" || activeTab === "grocery" || activeTab === "properties") && (
-                        <div className="flex flex-col md:flex-row items-center gap-4 w-full">
+                        <div className="flex flex-col md:flex-row items-center gap-4 w-full justify-between">
+                            {/* Search Inventory */}
                             <div className="relative w-full md:w-64">
                                 <input
                                     type="text"
@@ -886,21 +954,293 @@ const B2BVendorStore = () => {
                                 </svg>
                             </div>
 
-                            <div className="flex items-center gap-3 w-full md:w-auto">
-                                <div className="relative group flex-1 md:flex-initial min-w-[150px]">
-                                    <FiFilter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-primary-600 transition-colors" />
-                                    <select
-                                        value={sortBy}
-                                        onChange={(e) => setSortBy(e.target.value)}
-                                        className="w-full pl-10 pr-6 py-3 bg-white border border-gray-100 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest text-gray-500 outline-none focus:border-primary-200 transition-all appearance-none shadow-sm"
-                                    >
-                                        <option value="popular">MOST RELEVANT</option>
-                                        <option value="newest">NEWEST STOCK</option>
-                                        <option value="price-low">PRICE: LOW-HIGH</option>
-                                        <option value="price-high">PRICE: HIGH-LOW</option>
-                                    </select>
-                                    <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                </div>
+                            {/* Filters Bar for active tabs */}
+                            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                                
+                                {/* 1. GROCERY TAB FILTERS */}
+                                {activeTab === "grocery" && (
+                                    <>
+                                        {/* Filters Dropdown */}
+                                        <div className="relative">
+                                            <button 
+                                                onClick={() => { setIsFilterOpen(!isFilterOpen); setIsSortOpen(false); setIsQtyOpen(false); }}
+                                                className="flex items-center gap-1.5 text-[10px] font-black text-gray-600 bg-white px-3 py-1.5 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all uppercase tracking-wider shadow-sm"
+                                            >
+                                                <FiFilter size={12} /> Filters <FiChevronDown size={12} className={`transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            <AnimatePresence>
+                                                {isFilterOpen && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] p-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
+                                                    >
+                                                        {/* Price Range */}
+                                                        <div className="mb-4">
+                                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Price Range (₹)</h4>
+                                                            <div className="grid grid-cols-2 gap-2 items-center">
+                                                                <input 
+                                                                    type="number" 
+                                                                    placeholder="Min" 
+                                                                    value={minPrice}
+                                                                    onChange={(e) => setMinPrice(e.target.value)}
+                                                                    className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs font-bold outline-none focus:border-primary-300"
+                                                                />
+                                                                <input 
+                                                                    type="number" 
+                                                                    placeholder="Max" 
+                                                                    value={maxPrice}
+                                                                    onChange={(e) => setMaxPrice(e.target.value)}
+                                                                    className="w-full bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 text-xs font-bold outline-none focus:border-primary-300"
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Brands Filter */}
+                                                        {availableGroceryFilters.brands && availableGroceryFilters.brands.length > 0 && (
+                                                            <div className="mb-4">
+                                                                <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Brand</h4>
+                                                                <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar">
+                                                                    {availableGroceryFilters.brands.map(brand => (
+                                                                        <label key={brand} className="flex items-center gap-2 cursor-pointer group">
+                                                                            <div className="relative flex items-center justify-center">
+                                                                                <input 
+                                                                                    type="checkbox"
+                                                                                    checked={selectedBrands.includes(brand)}
+                                                                                    onChange={(e) => {
+                                                                                        if (e.target.checked) setSelectedBrands([...selectedBrands, brand]);
+                                                                                        else setSelectedBrands(selectedBrands.filter(b => b !== brand));
+                                                                                    }}
+                                                                                    className="appearance-none w-4 h-4 rounded border border-gray-300 checked:bg-primary-600 checked:border-primary-600 transition-colors cursor-pointer"
+                                                                                />
+                                                                                {selectedBrands.includes(brand) && <FiCheck size={10} className="absolute text-white pointer-events-none" />}
+                                                                            </div>
+                                                                            <span className="text-xs font-semibold text-gray-600 group-hover:text-primary-600 truncate">{brand}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Weight/Size Filter */}
+                                                        {availableGroceryFilters.weights && availableGroceryFilters.weights.length > 0 && (
+                                                            <div className="mb-4">
+                                                                <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Weight / Size</h4>
+                                                                <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar">
+                                                                    {availableGroceryFilters.weights.map(weight => (
+                                                                        <label key={weight} className="flex items-center gap-2 cursor-pointer group">
+                                                                            <div className="relative flex items-center justify-center">
+                                                                                <input 
+                                                                                    type="checkbox"
+                                                                                    checked={selectedWeights.includes(weight)}
+                                                                                    onChange={(e) => {
+                                                                                        if (e.target.checked) setSelectedWeights([...selectedWeights, weight]);
+                                                                                        else setSelectedWeights(selectedWeights.filter(w => w !== weight));
+                                                                                    }}
+                                                                                    className="appearance-none w-4 h-4 rounded border border-gray-300 checked:bg-primary-600 checked:border-primary-600 transition-colors cursor-pointer"
+                                                                                />
+                                                                                {selectedWeights.includes(weight) && <FiCheck size={10} className="absolute text-white pointer-events-none" />}
+                                                                            </div>
+                                                                            <span className="text-xs font-semibold text-gray-600 group-hover:text-primary-600 truncate">{weight}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex gap-2 sticky bottom-0 bg-white pt-2 border-t border-gray-100">
+                                                            <button onClick={() => { setMinPrice(''); setMaxPrice(''); setSelectedBrands([]); setSelectedWeights([]); setIsFilterOpen(false); }} className="flex-1 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-gray-200">Clear</button>
+                                                            <button onClick={() => setIsFilterOpen(false)} className="flex-1 px-3 py-2 bg-primary-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-primary-700 shadow-md shadow-primary-500/20">Apply</button>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+
+                                        {/* Sort Dropdown */}
+                                        <div className="relative">
+                                            <button 
+                                                onClick={() => { setIsSortOpen(!isSortOpen); setIsFilterOpen(false); setIsQtyOpen(false); }}
+                                                className="flex items-center gap-1.5 text-[10px] font-black text-gray-600 bg-white px-3 py-1.5 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all uppercase tracking-wider shadow-sm"
+                                            >
+                                                Sort <FiChevronDown size={12} className={`transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            <AnimatePresence>
+                                                {isSortOpen && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        className="absolute top-full right-0 mt-2 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] overflow-hidden"
+                                                    >
+                                                        <div className="p-1.5 space-y-0.5">
+                                                            {[
+                                                                { id: 'newest', label: 'Newest First' },
+                                                                { id: 'price_asc', label: 'Price (low to high)' },
+                                                                { id: 'price_desc', label: 'Price (high to low)' },
+                                                                { id: 'rating_desc', label: 'Rating (high to low)' },
+                                                                { id: 'discount_desc', label: 'Discount (high to low)' }
+                                                            ].map(opt => (
+                                                                <button
+                                                                    key={opt.id}
+                                                                    onClick={() => { setSortBy(opt.id); setIsSortOpen(false); }}
+                                                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-between ${sortBy === opt.id ? 'bg-primary-50 text-primary-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                                                >
+                                                                    {opt.label}
+                                                                    {sortBy === opt.id && <FiCheck size={12} className="text-primary-600" />}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+
+                                        {/* Quantity Dropdown */}
+                                        <div className="relative">
+                                            <button 
+                                                onClick={() => { setIsQtyOpen(!isQtyOpen); setIsFilterOpen(false); setIsSortOpen(false); }}
+                                                className="flex items-center gap-1.5 text-[10px] font-black text-gray-600 bg-white px-3 py-1.5 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all uppercase tracking-wider shadow-sm"
+                                            >
+                                                Quantity <FiChevronDown size={12} className={`transition-transform ${isQtyOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            <AnimatePresence>
+                                                {isQtyOpen && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        className="absolute top-full right-0 mt-2 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] overflow-hidden"
+                                                    >
+                                                        <div className="p-1.5 space-y-0.5">
+                                                            {[
+                                                                { id: null, label: 'Any Quantity' },
+                                                                { id: 10, label: 'MOQ ≤ 10' },
+                                                                { id: 50, label: 'MOQ ≤ 50' },
+                                                                { id: 100, label: 'MOQ ≤ 100' }
+                                                            ].map(opt => (
+                                                                <button
+                                                                    key={opt.id || 'any'}
+                                                                    onClick={() => { setMaxMoq(opt.id); setIsQtyOpen(false); }}
+                                                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-between ${maxMoq === opt.id ? 'bg-primary-50 text-primary-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                                                >
+                                                                    {opt.label}
+                                                                    {maxMoq === opt.id && <FiCheck size={12} className="text-primary-600" />}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+
+                                        {/* Items Count Badge */}
+                                        <span className="px-3 py-1.5 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wider rounded-lg border border-green-100 shadow-sm">
+                                            {displayedGroceryProducts.length} Items
+                                        </span>
+                                    </>
+                                )}
+
+                                {/* 2. FASHION TAB FILTERS */}
+                                {activeTab === "fashion" && (
+                                    <>
+                                        {/* Gender Filter */}
+                                        <div className="relative">
+                                            <button 
+                                                onClick={() => { setIsGenderOpen(!isGenderOpen); setIsFashionSortOpen(false); }}
+                                                className="flex items-center gap-1.5 text-[10px] font-black text-gray-600 bg-white px-3 py-1.5 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all uppercase tracking-wider shadow-sm"
+                                            >
+                                                Gender: {genderFilter} <FiChevronDown size={12} className={`transition-transform ${isGenderOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            <AnimatePresence>
+                                                {isGenderOpen && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        className="absolute top-full right-0 mt-2 w-40 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] overflow-hidden"
+                                                    >
+                                                        <div className="p-1.5 space-y-0.5">
+                                                            {['All', 'Men', 'Women', 'Kids', 'Unisex'].map(opt => (
+                                                                <button
+                                                                    key={opt}
+                                                                    onClick={() => { setGenderFilter(opt); setIsGenderOpen(false); }}
+                                                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-between ${genderFilter === opt ? 'bg-primary-50 text-primary-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                                                >
+                                                                    {opt}
+                                                                    {genderFilter === opt && <FiCheck size={12} className="text-primary-600" />}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+
+                                        {/* Sort Dropdown */}
+                                        <div className="relative">
+                                            <button 
+                                                onClick={() => { setIsFashionSortOpen(!isFashionSortOpen); setIsGenderOpen(false); }}
+                                                className="flex items-center gap-1.5 text-[10px] font-black text-gray-600 bg-white px-3 py-1.5 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all uppercase tracking-wider shadow-sm"
+                                            >
+                                                Sort: {sortBy === 'price-low' || sortBy === 'price_asc' ? 'Low to High' : sortBy === 'price-high' || sortBy === 'price_desc' ? 'High to Low' : 'Newest First'} <FiChevronDown size={12} className={`transition-transform ${isFashionSortOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            <AnimatePresence>
+                                                {isFashionSortOpen && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-[150] overflow-hidden"
+                                                    >
+                                                        <div className="p-1.5 space-y-0.5">
+                                                            {[
+                                                                { id: 'newest', label: 'Newest First' },
+                                                                { id: 'price_asc', label: 'Price: Low to High' },
+                                                                { id: 'price_desc', label: 'Price: High to Low' }
+                                                            ].map(opt => (
+                                                                <button
+                                                                    key={opt.id}
+                                                                    onClick={() => { setSortBy(opt.id); setIsFashionSortOpen(false); }}
+                                                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-between ${(sortBy === opt.id || (sortBy === 'price-low' && opt.id === 'price_asc') || (sortBy === 'price-high' && opt.id === 'price_desc')) ? 'bg-primary-50 text-primary-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                                                                >
+                                                                    {opt.label}
+                                                                    {(sortBy === opt.id || (sortBy === 'price-low' && opt.id === 'price_asc') || (sortBy === 'price-high' && opt.id === 'price_desc')) && <FiCheck size={12} className="text-primary-600" />}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+
+                                        {/* Items Count Badge */}
+                                        <span className="px-3 py-1.5 bg-purple-50 text-purple-700 text-[10px] font-black uppercase tracking-wider rounded-lg border border-purple-100 shadow-sm">
+                                            {displayedFashionProducts.length} Items
+                                        </span>
+                                    </>
+                                )}
+
+                                {/* 3. PROPERTIES TAB SORT (IF ACTIVE) */}
+                                {activeTab === "properties" && (
+                                    <div className="relative group min-w-[150px]">
+                                        <FiFilter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-primary-600 transition-colors" />
+                                        <select
+                                            value={sortBy}
+                                            onChange={(e) => setSortBy(e.target.value)}
+                                            className="w-full pl-10 pr-6 py-3 bg-white border border-gray-100 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest text-gray-500 outline-none focus:border-primary-200 transition-all appearance-none shadow-sm"
+                                        >
+                                            <option value="popular">MOST RELEVANT</option>
+                                            <option value="newest">NEWEST STOCK</option>
+                                            <option value="price-low">PRICE: LOW-HIGH</option>
+                                            <option value="price-high">PRICE: HIGH-LOW</option>
+                                        </select>
+                                        <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                    </div>
+                                )}
+
+                                {/* Grid/List layout toggle */}
                                 <div className="flex items-center p-1 bg-white border border-gray-100 rounded-xl shadow-sm">
                                     <button
                                         onClick={() => setViewMode("grid")}

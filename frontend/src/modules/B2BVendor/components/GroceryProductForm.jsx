@@ -306,6 +306,11 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-gray-700 uppercase">Stock Quantity *</label>
                         <input required type="number" min="0" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="100" />
+                        {formData.stock !== "" && formData.stock !== undefined && parseInt(formData.stock) <= 10 && parseInt(formData.stock) > 0 && (
+                            <p className="text-xs text-orange-600 font-bold mt-1 ml-1 flex items-center gap-1">
+                                ⚠️ Low Stock - Please restore inventory!
+                            </p>
+                        )}
                     </div>
                     <div className="space-y-1 flex gap-2">
                         <div className="flex-1 space-y-1">

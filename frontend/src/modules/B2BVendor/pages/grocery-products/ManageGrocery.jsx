@@ -78,6 +78,14 @@ const ManageGrocery = () => {
         { key: 'name', label: 'Product Name', render: (v, row) => v || row.title },
         { key: 'category', label: 'Category', render: (v) => v?.name || v },
         { key: 'price', label: 'Price (₹)', render: (v, row) => v || row.basePrice || 'N/A' },
+        { key: 'stockQuantity', label: 'Stock', render: (v, row) => {
+            const stockQty = row.stockQuantity ?? 0;
+            return (
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${stockQty === 0 ? 'bg-red-100 text-red-700' : stockQty <= 10 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                    {stockQty === 0 ? 'Out of Stock' : stockQty <= 10 ? `Low Stock (${stockQty})` : `In Stock (${stockQty})`}
+                </span>
+            );
+        }},
         { key: 'isVisible', label: 'Status', render: (v, row) => {
             const isVisible = v !== undefined ? v : row.isVisible !== false;
             return (

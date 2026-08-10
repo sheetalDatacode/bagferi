@@ -32,7 +32,7 @@ export const useCartStore = create((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to add to cart:', error);
-      toast.error('Failed to add to cart');
+      toast.error(error.message || 'Failed to add to cart');
     } finally {
       set({ loading: false });
     }
@@ -47,7 +47,7 @@ export const useCartStore = create((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to update cart:', error);
-      toast.error('Failed to update quantity');
+      toast.error(error.message || 'Failed to update quantity');
     } finally {
       set({ loading: false });
     }

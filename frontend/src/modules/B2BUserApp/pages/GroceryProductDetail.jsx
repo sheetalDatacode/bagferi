@@ -122,7 +122,7 @@ const GroceryProductDetail = () => {
         if (type === 'inc' && quantity < maxStock) {
             setQuantity(prev => prev + 1);
         } else if (type === 'inc' && quantity >= maxStock) {
-            toast.error(`Only ${maxStock} units available in stock`);
+            // No toast alert needed, warning message displays inline below quantity option.
         } else if (type === 'dec' && quantity > 1) {
             setQuantity(prev => prev - 1);
         }
@@ -307,8 +307,6 @@ const GroceryProductDetail = () => {
                                     <span className="text-sm font-bold text-gray-700">Availability</span>
                                     {product.stockQuantity === 0 ? (
                                         <span className="text-red-600 font-bold text-sm bg-red-50 px-3 py-1 rounded-full border border-red-100">⛔ Out of Stock</span>
-                                    ) : product.stockQuantity <= 5 ? (
-                                        <span className="flex items-center gap-1.5 text-orange-600 font-bold text-sm bg-orange-50 px-3 py-1 rounded-full border border-orange-100">⚠️ Low Stock ({product.stockQuantity} left)</span>
                                     ) : (
                                         <span className="flex items-center gap-1.5 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full border border-green-100"><FiCheckCircle /> In Stock ({product.stockQuantity})</span>
                                     )}
@@ -319,32 +317,38 @@ const GroceryProductDetail = () => {
                                         <span className="font-black text-gray-900">{product.weight} {product.unit}</span>
                                     </div>
                                 )}
-                            </div>
-
-                            {/* Quantity Selector */}
-                            <div className="flex items-center gap-4 mb-4">
-                                <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">Quantity:</span>
-                                <div className="flex items-center bg-gray-100 rounded-xl p-1 border border-gray-200">
-                                    <button 
-                                        onClick={() => handleQuantityChange('dec')}
-                                        disabled={quantity <= 1}
-                                        className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
-                                    >
-                                        <FiMinus />
-                                    </button>
-                                    <input 
-                                        type="number" 
-                                        value={quantity}
-                                        readOnly
-                                        className="w-12 h-10 bg-transparent text-center font-black text-gray-900 outline-none"
-                                    />
-                                    <button 
-                                        onClick={() => handleQuantityChange('inc')}
-                                        disabled={quantity >= (product.stockQuantity || 999)}
-                                        className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
-                                    >
-                                        <FiPlus />
-                                    </button>
+                                {/* Quantity Selector */}
+                                <div className="flex flex-col gap-1.5 border-t border-gray-200 pt-4 mb-8">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-bold text-gray-700">Quantity</span>
+                                        <div className="flex items-center bg-gray-100 rounded-xl p-1 border border-gray-200">
+                                            <button 
+                                                onClick={() => handleQuantityChange('dec')}
+                                                disabled={quantity <= 1}
+                                                className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
+                                            >
+                                                <FiMinus />
+                                            </button>
+                                            <input 
+                                                type="number" 
+                                                value={quantity}
+                                                readOnly
+                                                className="w-12 h-10 bg-transparent text-center font-black text-gray-900 outline-none"
+                                            />
+                                            <button 
+                                                onClick={() => handleQuantityChange('inc')}
+                                                disabled={quantity >= (product.stockQuantity || 999)}
+                                                className="w-10 h-10 flex items-center justify-center rounded-lg bg-white text-gray-700 font-bold shadow-sm disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
+                                            >
+                                                <FiPlus />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {product.stockQuantity !== undefined && product.stockQuantity !== null && quantity >= product.stockQuantity && (
+                                        <p className="text-xs text-red-500 font-bold text-right">
+                                            Only {product.stockQuantity} units available in stock
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
