@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FiUsers, FiUserCheck, FiPackage, FiHome, FiZap, FiImage,
   FiTrendingUp, FiTrendingDown, FiPhone, FiMessageCircle,
-  FiAlertCircle, FiCheckCircle, FiClock, FiXCircle, FiUserPlus, FiVideo, FiBriefcase
+  FiAlertCircle, FiCheckCircle, FiClock, FiXCircle, FiUserPlus, FiVideo, FiBriefcase, FiShoppingBag
 } from 'react-icons/fi';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
@@ -48,6 +48,7 @@ const Dashboard = () => {
     FiTrendingUp: <FiTrendingUp />,
     FiVideo: <FiVideo />,
     FiBriefcase: <FiBriefcase />,
+    FiShoppingBag: <FiShoppingBag />,
   };
 
   useEffect(() => {
@@ -61,6 +62,7 @@ const Dashboard = () => {
           setDashboardData({
             summary: [
               { label: 'Total Revenue', value: apiData.totalRevenue || 0, trend: '+24%', trendType: 'up', icon: 'FiTrendingUp', color: 'emerald', prefix: '₹', link: '/admin/transactions' },
+              { label: 'Total Orders', value: apiData.totalOrders || 0, trend: '+20%', trendType: 'up', icon: 'FiShoppingBag', color: 'blue', link: '/admin/orders' },
               { label: 'Total Users', value: apiData.totalCustomers || 0, trend: '+15%', trendType: 'up', icon: 'FiUserPlus', color: 'indigo', link: '/admin/users' },
               { label: 'Total Vendors', value: apiData.totalVendors, trend: '+12%', trendType: 'up', icon: 'FiUsers', color: 'blue', link: '/admin/b2b-vendors/manage' },
               { label: 'Active Vendors', value: apiData.activeVendors, trend: '+5%', trendType: 'up', icon: 'FiUserCheck', color: 'green', link: '/admin/b2b-vendors/manage' },

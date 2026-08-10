@@ -7,6 +7,7 @@ import {
 } from '../services/b2bCategoryManagement.service.js';
 import redisService from '../services/redis.service.js';
 import { uploadToCloudinary } from '../utils/cloudinary.util.js';
+import cloudinary from '../config/cloudinary.js';
 
 /**
  * Helper to clear B2B category-related cache
@@ -83,7 +84,7 @@ export const create = async (req, res, next) => {
         console.error('Image upload failed:', uploadError);
         return res.status(500).json({
           success: false,
-          message: 'Image upload failed',
+          message: `Image upload failed: ${uploadError.message}`,
         });
       }
     }
@@ -157,7 +158,7 @@ export const update = async (req, res, next) => {
         console.error('Image upload failed:', uploadError);
         return res.status(500).json({
           success: false,
-          message: 'Image upload failed',
+          message: `Image upload failed: ${uploadError.message}`,
         });
       }
     }

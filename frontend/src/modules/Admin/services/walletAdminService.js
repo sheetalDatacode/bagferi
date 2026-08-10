@@ -43,3 +43,37 @@ export const getWalletTransactions = async (params = {}) => {
         throw error;
     }
 };
+
+/**
+ * Get all vendor payout requests
+ * @param {String} status - Filter status
+ */
+export const getAdminPayoutRequests = async (status = '') => {
+    try {
+        const query = status ? `?status=${status}` : '';
+        const response = await api.get(`/admin/wallet/payout-requests${query}`);
+        if (response.success) {
+            return response.data;
+        }
+        throw new Error(response.message || 'Failed to fetch payout requests');
+    } catch (error) {
+        console.error('Error fetching payout requests:', error);
+        throw error;
+    }
+};
+
+/**
+ * Approve or reject vendor payout request
+ */
+export const updatePayoutRequestStatus = async (requestId, status, referenceNumber = '') => {
+    try {
+        const response = await api.put(`/admin/wallet/payout-requests/${requestId}`, { status, referenceNumber });
+        if (response.success) {
+            return response.data;
+        }
+        throw new Error(response.message || 'Failed to update payout request');
+    } catch (error) {
+        console.error('Error updating payout request:', error);
+        throw error;
+    }
+};

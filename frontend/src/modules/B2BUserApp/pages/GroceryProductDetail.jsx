@@ -35,6 +35,23 @@ const GroceryProductDetail = () => {
     const [isSubmittingRating, setIsSubmittingRating] = useState(false);
     const [productReviews, setProductReviews] = useState([]);
     const [activeTab, setActiveTab] = useState('details');
+    const [selectedMedia, setSelectedMedia] = useState('image');
+    const videoRef = React.useRef(null);
+
+    useEffect(() => {
+        if (selectedMedia === 'video' && videoRef.current) {
+            videoRef.current.play().catch(err => {
+                console.log("Autoplay was prevented or video load failed:", err);
+            });
+        }
+    }, [selectedMedia]);
+
+    const getYouTubeId = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
 
     useEffect(() => {
         const fetchProductDetails = async () => {
@@ -185,6 +202,8 @@ const GroceryProductDetail = () => {
     }
 
     const images = product.media && product.media.length > 0 ? product.media.map(m => m.url) : (product.image ? [product.image] : []);
+    const videoLink = product.videoLink;
+    const ytId = getYouTubeId(videoLink);
 
     return (
         <div className="bg-gray-50 min-h-screen pb-24 lg:pb-0 font-sans">
@@ -200,10 +219,30 @@ const GroceryProductDetail = () => {
 
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="flex flex-col lg:flex-row">
-                        {/* Image Gallery */}
-                        <div className="w-full lg:w-1/2 p-6 lg:p-8 lg:border-r border-gray-100">
-                            <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 mb-4">
-                                {images.length > 0 ? (
+                            <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 mb-4 flex items-center justify-center">
+                                {selectedMedia === 'video' && videoLink ? (
+                                    ytId ? (
+                                        <iframe
+                                            className="w-full h-full"
+                                            src={`https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1`}
+                                            title="YouTube video player"
+                                            frameBorder="0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                        />
+                                    ) : (
+                                        <video
+                                            key={videoLink}
+                                            ref={videoRef}
+                                            src={videoLink}
+                                            className="w-full h-full object-contain"
+                                            controls
+                                            autoPlay
+                                            muted
+                                            playsInline
+                                        />
+                                    )
+                                ) : images.length > 0 ? (
                                     <img src={images[activeImageIndex]} alt={product.title} className="w-full h-full object-contain p-4" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-gray-300">
@@ -212,17 +251,45 @@ const GroceryProductDetail = () => {
                                 )}
                             </div>
                             
-                            {images.length > 1 && (
+                            {(images.length > 1 || videoLink) && (
                                 <div className="flex gap-3 overflow-x-auto no-scrollbar py-2">
                                     {images.map((img, idx) => (
                                         <button 
                                             key={idx}
-                                            onClick={() => setActiveImageIndex(idx)}
-                                            className={`w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-colors ${activeImageIndex === idx ? 'border-primary-600' : 'border-transparent'}`}
+                                            onClick={() => {
+                                                setSelectedMedia('image');
+                                                setActiveImageIndex(idx);
+                                            }}
+                                            className={`w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-colors ${selectedMedia === 'image' && activeImageIndex === idx ? 'border-primary-600' : 'border-transparent'}`}
                                         >
                                             <img src={img} className="w-full h-full object-cover" alt="" />
                                         </button>
                                     ))}
+
+                                    {/* Video Thumbnail Button */}
+                                    {videoLink && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedMedia('video')}
+                                            className={`w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-colors relative bg-slate-900 flex flex-col items-center justify-center text-white ${selectedMedia === 'video' ? 'border-primary-600' : 'border-transparent'}`}
+                                        >
+                                            {ytId ? (
+                                                <img 
+                                                    src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`} 
+                                                    className="absolute inset-0 w-full h-full object-cover opacity-60" 
+                                                    alt="Video Thumbnail" 
+                                                />
+                                            ) : (
+                                                <div className="absolute inset-0 bg-slate-800 opacity-60" />
+                                            )}
+                                            <div className="relative z-10 w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+                                                <svg className="w-4 h-4 text-white fill-current" viewBox="0 0 24 24">
+                                                    <path d="M8 5v14l11-7z" />
+                                                </svg>
+                                            </div>
+                                            <span className="relative z-10 text-[9px] font-bold uppercase tracking-wider mt-1 drop-shadow-md">Video</span>
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>

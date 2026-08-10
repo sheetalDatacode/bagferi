@@ -369,7 +369,7 @@ export const createGroceryProduct = async (req, res, next) => {
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
 
-    let { name, mrp, price, stockQuantity, category, subcategory, description, expiryDate, brand, weight, unit, attributes } = req.body;
+    let { name, mrp, price, stockQuantity, category, subcategory, description, expiryDate, brand, weight, unit, attributes, videoLink } = req.body;
     let image = null, imagePublicId = null;
 
     if (typeof attributes === 'string') {
@@ -397,7 +397,7 @@ export const createGroceryProduct = async (req, res, next) => {
       expiryDate, vendorId, vendorName: vendor.storeName, image, imagePublicId, sku,
       images: image ? [image] : [], imagesPublicIds: imagePublicId ? [imagePublicId] : [],
       brandName: brand || '',
-      weight, unit, attributes
+      weight, unit, attributes, videoLink
     });
 
     res.status(201).json({ success: true, data: product });

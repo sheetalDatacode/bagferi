@@ -38,6 +38,7 @@ const iconMap = {
     "Product Listings": FiPackage,
     "Manage Products": FiPackage,
     "Add Product": FiPackage,
+    "Low Stock Products": FiPackage,
     "Shop Listing": FiPackage,
     "Property Management": FiHome,
     "Manage Properties": FiHome,
@@ -71,7 +72,8 @@ const getChildRoute = (parentRoute, childName) => {
     const routeMap = {
         "/b2b-vendor/products": {
             "Manage Products": "/b2b-vendor/products/manage-products",
-            "Add Product": "/b2b-vendor/products/add-product"
+            "Add Product": "/b2b-vendor/products/add-product",
+            "Low Stock Products": "/b2b-vendor/products/low-stock"
         },
         "/b2b-vendor/grocery-products": {
             "Manage Grocery": "/b2b-vendor/grocery-products/manage-grocery",

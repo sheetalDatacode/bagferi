@@ -78,6 +78,10 @@ const groceryProductSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    videoLink: {
+      type: String,
+      default: '',
+    },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'GroceryCategory',

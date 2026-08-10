@@ -78,6 +78,7 @@ export const useB2BVendorAuthStore = create(
                         currentSubscription: vendor.currentSubscription || null,
                         businessType: vendor.businessType || 'Textile',
                         businessTypeRef: vendor.businessTypeRef || null,
+                        bankDetails: vendor.bankDetails || { bankName: '', accountHolderName: '', accountNumber: '', ifscCode: '' },
                     };
 
                     if (!token) {
@@ -188,6 +189,7 @@ export const useB2BVendorAuthStore = create(
                             currentSubscription: vendor.currentSubscription || null,
                             businessType: vendor.businessType || 'Textile',
                             businessTypeRef: vendor.businessTypeRef || null,
+                            bankDetails: vendor.bankDetails || { bankName: '', accountHolderName: '', accountNumber: '', ifscCode: '' },
                         };
 
                         set({

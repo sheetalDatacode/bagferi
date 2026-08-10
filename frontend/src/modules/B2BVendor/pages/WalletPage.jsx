@@ -13,9 +13,10 @@ import {
     FiLayers,
     FiGift
 } from 'react-icons/fi';
-import { getMyWallet, initiateRecharge, verifyRecharge } from '../services/vendorWalletService';
+import { getMyWallet, initiateRecharge, verifyRecharge, getPayoutSummary, requestPayout } from '../services/vendorWalletService';
 import toast from 'react-hot-toast';
 import { useScrollLock } from '../../../shared/hooks/useScrollLock';
+import { FiChevronDown, FiChevronUp, FiSend } from 'react-icons/fi';
 
 const WalletPage = () => {
     const [wallet, setWallet] = useState(null);
@@ -23,18 +24,38 @@ const WalletPage = () => {
     const [rechargeModalOpen, setRechargeModalOpen] = useState(false);
     const [rechargeAmount, setRechargeAmount] = useState('');
     const [processing, setProcessing] = useState(false);
+    const [payouts, setPayouts] = useState([]);
+    const [expandedMonths, setExpandedMonths] = useState({});
+    const [subTab, setSubTab] = useState('all');
 
     // Lock scroll when recharge modal is open
     useScrollLock(rechargeModalOpen);
+
+    const toggleMonth = (m) => {
+        setExpandedMonths(prev => ({ ...prev, [m]: !prev[m] }));
+    };
 
     const fetchWallet = async () => {
         try {
             const data = await getMyWallet();
             setWallet(data);
+            const payoutData = await getPayoutSummary();
+            setPayouts(payoutData);
         } catch (error) {
             toast.error('Failed to load wallet');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRequestPayout = async (month, period, amount) => {
+        try {
+            toast.loading('Submitting payout request...', { id: 'payout-req' });
+            await requestPayout(month, period, amount);
+            toast.success('Payout request submitted successfully!', { id: 'payout-req' });
+            fetchWallet();
+        } catch (err) {
+            toast.error(err.message || 'Failed to submit payout request', { id: 'payout-req' });
         }
     };
 
@@ -361,85 +382,191 @@ const WalletPage = () => {
                             </div>
                         </>
                     ) : (
-                        <>
-                            {/* Order Earnings History */}
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left whitespace-nowrap">
-                                    <thead>
-                                        <tr className="bg-gray-50/50 text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                                            <th className="px-8 py-5">Order ID / Date</th>
-                                            <th className="px-8 py-5">Status</th>
-                                            <th className="px-8 py-5">Payment Method</th>
-                                            <th className="px-8 py-5 text-right">Vendor Revenue (INR)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {wallet?.orderHistory?.length > 0 ? (
-                                            wallet.orderHistory.map((order) => {
-                                                const vendorShare = order.remainingBalance || 0;
-                                                const isCompleted = order.status === 'Completed';
-                                                
-                                                let methodBadge = <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 font-bold text-[10px] uppercase">Online</span>;
-                                                if (order.paymentMethod === 'COD') {
-                                                    methodBadge = <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 font-bold text-[10px] uppercase">COD</span>;
-                                                }
-
-                                                let statusColor = 'text-amber-500 bg-amber-50';
-                                                if (isCompleted) statusColor = 'text-emerald-500 bg-emerald-50';
-                                                if (order.status === 'Cancelled') statusColor = 'text-red-500 bg-red-50';
-
-                                                return (
-                                                    <tr key={order._id} className="hover:bg-gray-50/30 transition-colors group">
-                                                        <td className="px-8 py-6">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-10 h-10 rounded-2xl bg-gray-50 group-hover:bg-white shadow-sm flex items-center justify-center text-gray-400">
-                                                                    <FiLayers />
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-sm font-black text-gray-900 tracking-tight">{order.orderNumber}</p>
-                                                                    <p className="text-[10px] text-gray-500 font-bold mt-1">
-                                                                        {new Date(order.createdAt).toLocaleDateString('en-IN', {
-                                                                            day: '2-digit', month: 'short', year: 'numeric'
-                                                                        })}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-6">
-                                                            <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-widest ${statusColor}`}>
-                                                                {order.status}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-8 py-6">
-                                                            {methodBadge}
-                                                        </td>
-                                                        <td className="px-8 py-6 text-right">
-                                                            <span className={`text-lg font-black tracking-tighter ${isCompleted ? 'text-gray-900' : 'text-gray-400'}`}>
-                                                                ₹{vendorShare?.toLocaleString('en-IN')}
-                                                            </span>
-                                                            {!isCompleted && order.status !== 'Cancelled' && (
-                                                                <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-1">Pending</p>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="4" className="px-8 py-20 text-center">
-                                                    <div className="flex flex-col items-center gap-4">
-                                                        <div className="w-16 h-16 bg-gray-50 rounded-3xl flex items-center justify-center text-gray-200">
-                                                            <FiClock size={32} />
-                                                        </div>
-                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">No order history found</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                        <div className="p-6 md:p-8 space-y-6">
+                            {/* Sub Tabs */}
+                            <div className="flex flex-wrap items-center gap-2 pb-4 border-b border-gray-50">
+                                {[
+                                    { id: 'all', label: 'All Cycles' },
+                                    { id: 'claimable', label: 'Claimable Amount' },
+                                    { id: 'pending', label: 'Requested (Pending)' },
+                                    { id: 'paid', label: 'Received (Paid)' }
+                                ].map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        onClick={() => setSubTab(tab.id)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                                            subTab === tab.id
+                                                ? 'bg-slate-900 text-white shadow-sm'
+                                                : 'bg-gray-50 text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
                             </div>
-                        </>
+
+                            {(() => {
+                                const filteredPayouts = payouts.filter(p => {
+                                    if (subTab === 'pending') return p.payoutStatus === 'Pending';
+                                    if (subTab === 'paid') return p.payoutStatus === 'Approved';
+                                    if (subTab === 'claimable') return p.claimableAmount > 0 && p.payoutStatus !== 'Approved' && p.payoutStatus !== 'Pending';
+                                    return true;
+                                });
+
+                                if (filteredPayouts.length === 0) {
+                                    return (
+                                        <div className="py-20 text-center">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="w-16 h-16 bg-gray-50 rounded-3xl flex items-center justify-center text-gray-200">
+                                                    <FiClock size={32} />
+                                                </div>
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">No matching cycles found</p>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                return Object.entries(
+                                    filteredPayouts.reduce((acc, p) => {
+                                        if (!acc[p.month]) acc[p.month] = [];
+                                        acc[p.month].push(p);
+                                        return acc;
+                                    }, {})
+                                ).map(([monthName, periodList]) => {
+                                    const isExpanded = !!expandedMonths[monthName];
+                                    const totalOrders = periodList.reduce((sum, p) => sum + p.totalOrders, 0);
+                                    const totalCod = periodList.reduce((sum, p) => sum + p.codCollected, 0);
+                                    const totalPending = periodList.reduce((sum, p) => sum + p.pendingAmount, 0);
+                                    const totalCleared = periodList.reduce((sum, p) => sum + p.clearedAmount, 0);
+                                    const totalClaimable = periodList.reduce((sum, p) => sum + p.claimableAmount, 0);
+
+                                    return (
+                                        <div key={monthName} className="border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
+                                            {/* Accordion Header */}
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleMonth(monthName)}
+                                                className="w-full px-6 py-5 bg-gray-50/50 hover:bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="text-left">
+                                                        <h4 className="text-base font-black text-gray-900 tracking-tight">{monthName}</h4>
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{totalOrders} Completed Orders</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap md:flex-nowrap items-center gap-6 text-left">
+                                                    <div>
+                                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block">COD Earnings</span>
+                                                        <span className="text-sm font-black text-emerald-600">₹{totalCod.toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block">Claimable</span>
+                                                        <span className="text-sm font-black text-blue-600">₹{totalClaimable.toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block">Requested</span>
+                                                        <span className="text-sm font-black text-amber-500">₹{totalPending.toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block">Received</span>
+                                                        <span className="text-sm font-black text-gray-800">₹{totalCleared.toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                    <div className="pl-4 border-l border-gray-200 text-gray-400">
+                                                        {isExpanded ? <FiChevronUp size={20} /> : <FiChevronDown size={20} />}
+                                                    </div>
+                                                </div>
+                                            </button>
+
+                                            {/* Accordion Content */}
+                                            {isExpanded && (
+                                                <div className="p-6 bg-white divide-y divide-gray-100 space-y-6">
+                                                    {periodList.map((p, idx) => (
+                                                        <div key={idx} className="pt-6 first:pt-0 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-6 text-left">
+                                                            <div className="col-span-2 md:col-span-4 lg:col-span-2">
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block mb-1">Period Cycle</span>
+                                                                <span className="text-sm font-black text-slate-800 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100 inline-block">
+                                                                    Week {p.period === '1-7' ? '1 (1-7)' : p.period === '8-15' ? '2 (8-15)' : p.period === '16-23' ? '3 (16-23)' : '4 (24-31)'}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block mb-1">Completed</span>
+                                                                <span className="text-sm font-bold text-gray-700">{p.totalOrders} orders</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block mb-1">COD In-Hand</span>
+                                                                <span className="text-sm font-bold text-gray-900">₹{p.codCollected.toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block mb-1">Total Advance</span>
+                                                                <span className="text-sm font-bold text-gray-900">₹{p.advanceHeld.toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block mb-1">Platform Fee</span>
+                                                                <span className="text-sm font-bold text-red-500">₹{p.platformFee.toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block mb-1">Claimable</span>
+                                                                <span className="text-sm font-bold text-blue-600">₹{p.claimableAmount.toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block mb-1">Locked (3d)</span>
+                                                                <span className="text-sm font-bold text-gray-400 flex items-center gap-1">
+                                                                    ₹{p.lockedAmount.toLocaleString('en-IN')}
+                                                                    {p.lockedAmount > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block mb-1">Received</span>
+                                                                <span className="text-sm font-bold text-green-600">₹{p.clearedAmount.toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                            <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-center justify-end">
+                                                                {p.payoutStatus === 'Approved' ? (
+                                                                    <div className="text-right">
+                                                                        <span className="inline-block px-2.5 py-1 rounded-lg bg-green-50 text-green-600 font-bold text-[10px] uppercase">Paid</span>
+                                                                        {p.referenceNumber && (
+                                                                            <p className="text-[8px] text-gray-400 font-mono mt-1">UTR: {p.referenceNumber}</p>
+                                                                        )}
+                                                                    </div>
+                                                                ) : p.payoutStatus === 'Pending' ? (
+                                                                    <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 font-bold text-[10px] uppercase">Requested</span>
+                                                                ) : p.payoutStatus === 'Rejected' ? (
+                                                                    <div className="flex flex-col gap-1 items-end">
+                                                                        <span className="px-2.5 py-1 rounded-lg bg-red-50 text-red-600 font-bold text-[10px] uppercase">Rejected</span>
+                                                                        {p.claimableAmount > 0 && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleRequestPayout(p.month, p.period, p.claimableAmount)}
+                                                                                className="px-2 py-1 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-[9px] font-bold uppercase"
+                                                                            >
+                                                                                Re-request
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                ) : p.claimableAmount > 0 ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRequestPayout(p.month, p.period, p.claimableAmount)}
+                                                                        className="flex items-center gap-1.5 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
+                                                                    >
+                                                                        <FiSend size={12} /> Request Payout
+                                                                    </button>
+                                                                ) : p.lockedAmount > 0 ? (
+                                                                    <span className="text-[9px] text-gray-450 italic font-bold">Matures in 3d</span>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-gray-400 italic">No balance</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
                     )}
                 </div>
             </div>

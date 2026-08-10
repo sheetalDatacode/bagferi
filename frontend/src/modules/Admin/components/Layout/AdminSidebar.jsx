@@ -42,6 +42,7 @@ const iconMap = {
   Transactions: FiDollarSign,
   Customers: FiUsers,
   Vendors: FiUsers,
+  Staff: FiTruck,
   Manage: FiGrid,
   Pending: FiRotateCcw,
   Products: FiPackage,

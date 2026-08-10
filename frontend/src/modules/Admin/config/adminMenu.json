@@ -25,6 +25,11 @@
     "children": []
   },
   {
+    "title": "Staff",
+    "route": "/admin/staff",
+    "children": []
+  },
+  {
     "title": "Products",
     "route": "/admin/b2b-vendors/products",
     "children": []

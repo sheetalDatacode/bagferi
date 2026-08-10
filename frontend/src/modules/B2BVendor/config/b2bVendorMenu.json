@@ -14,7 +14,8 @@
         "route": "/b2b-vendor/products",
         "children": [
             "Manage Products",
-            "Add Product"
+            "Add Product",
+            "Low Stock Products"
         ]
     },
     {

@@ -35,6 +35,7 @@ const EditGrocery = () => {
                         brand: productData.brandName || "",
                         description: productData.description || "",
                         image: productData.image || null,
+                        videoLink: productData.videoLink || "",
                         isVisible: productData.isVisible !== false,
                     });
                 } else {

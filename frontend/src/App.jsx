@@ -33,6 +33,9 @@ const Dashboard = lazyWithRetry(
 const AdminUserManagement = lazyWithRetry(
   () => import("./modules/Admin/pages/UserManagement"),
 );
+const AdminStaffManagement = lazyWithRetry(
+  () => import("./modules/Admin/pages/StaffManagement"),
+);
 const More = lazyWithRetry(() => import("./modules/Admin/pages/More"));
 const Notifications = lazyWithRetry(
   () => import("./modules/Admin/pages/notifications/Notifications"),
@@ -173,6 +176,9 @@ const B2BVendorProducts = lazyWithRetry(
 );
 const B2BVendorManageProducts = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/products/ManageProducts"),
+);
+const B2BVendorLowStockProducts = lazyWithRetry(
+  () => import("./modules/B2BVendor/pages/products/LowStockProducts"),
 );
 const B2BVendorAddProduct = lazyWithRetry(
   () => import("./modules/B2BVendor/pages/products/AddProduct"),
@@ -416,6 +422,7 @@ const AppRoutes = () => {
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="users" element={<AdminUserManagement />} />
+          <Route path="staff" element={<AdminStaffManagement />} />
           {/* Admin B2B Vendor Routes */}
           <Route path="b2b-vendors">
             <Route index element={<AdminB2BVendors />} />
@@ -641,6 +648,7 @@ const AppRoutes = () => {
               element={<B2BVendorManageProducts />}
             />
             <Route path="add-product" element={<B2BVendorAddProduct />} />
+            <Route path="low-stock" element={<B2BVendorLowStockProducts />} />
             <Route path="edit/:id" element={<B2BVendorEditProduct />} />
           </Route>
           <Route path="grocery-products">

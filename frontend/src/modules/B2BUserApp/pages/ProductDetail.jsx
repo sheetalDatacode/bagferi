@@ -356,7 +356,6 @@ const B2BProductDetail = () => {
                 : product.unitDetails?.images || [];
         }
     } else {
-        // Standard product logic
         if (product.coverImage) productImages.push(product.coverImage);
         if (product.image) productImages.push(product.image);
         if (Array.isArray(product.images) && product.images.length > 0) {
@@ -364,12 +363,32 @@ const B2BProductDetail = () => {
                 if (img && !productImages.includes(img)) productImages.push(img);
             });
         }
+        if (product.variants && Array.isArray(product.variants)) {
+            product.variants.forEach(v => {
+                if (v.imageUrl && !productImages.includes(v.imageUrl)) {
+                    productImages.push(v.imageUrl);
+                }
+            });
+        }
     }
     if (productImages.length === 0 && !product.videoLink) {
         productImages = ['https://via.placeholder.com/800x600?text=No+Image'];
     }
 
-    const safeSelectedImage = Math.min(selectedImage, Math.max(0, productImages.length - 1));
+    let cheapestImageIndex = 0;
+    if (product.variants && product.variants.length > 0) {
+        const cheapest = product.variants.reduce((prev, curr) => (prev.price < curr.price ? prev : curr), product.variants[0]);
+        if (cheapest && cheapest.imageUrl) {
+            const idx = productImages.indexOf(cheapest.imageUrl);
+            if (idx !== -1) {
+                cheapestImageIndex = idx;
+            }
+        }
+    }
+
+    const safeSelectedImage = selectedImage !== 0 
+        ? Math.min(selectedImage, Math.max(0, productImages.length - 1))
+        : cheapestImageIndex;
 
     const fixLegacyDynamicUrl = (url) => {
         if (!url || !url.includes('cloudinary.com')) return url;
@@ -479,9 +498,21 @@ const B2BProductDetail = () => {
           })
         : null;
 
-    const currentPrice = activeVariant ? activeVariant.price : (product.price || 0);
-    const currentMrp = activeVariant ? activeVariant.mrp : product.mrp;
-    const currentStockQty = activeVariant ? activeVariant.stockQuantity : product.stockQuantity;
+    const cheapestVariant = hasVariants 
+        ? product.variants.reduce((prev, curr) => (prev.price < curr.price ? prev : curr), product.variants[0])
+        : null;
+
+    const currentPrice = activeVariant 
+        ? activeVariant.price 
+        : (cheapestVariant ? cheapestVariant.price : (product.price || 0));
+
+    const currentMrp = activeVariant 
+        ? activeVariant.mrp 
+        : (cheapestVariant ? cheapestVariant.mrp : product.mrp);
+
+    const currentStockQty = activeVariant 
+        ? activeVariant.stockQuantity 
+        : (cheapestVariant ? cheapestVariant.stockQuantity : product.stockQuantity);
 
     return (
         <div className="min-h-screen bg-white pb-24 font-sans text-gray-800">
@@ -722,22 +753,32 @@ const B2BProductDetail = () => {
                                          <button
                                              key={idx}
                                              onClick={() => {
-                                                 setSelectedSizes(prev => {
-                                                     if (prev.includes(s)) {
-                                                         if (prev.length === 1) return prev; // Keep at least one selected
-                                                         return prev.filter(item => item !== s);
-                                                     } else {
-                                                         return [...prev, s];
-                                                     }
-                                                 });
-                                                 if (hasVariants) {
-                                                     // Auto select first color for the newly selected size
-                                                     const colorsForSize = Array.from(new Set(product.variants.filter(v => v.size === s).map(v => v.color).filter(Boolean)));
-                                                     if (colorsForSize.length > 0) {
-                                                         setSelectedColor(colorsForSize[0]);
-                                                     }
-                                                 }
-                                             }}
+                                                  setSelectedSizes(prev => {
+                                                      if (prev.includes(s)) {
+                                                          if (prev.length === 1) return prev; // Keep at least one selected
+                                                          return prev.filter(item => item !== s);
+                                                      } else {
+                                                          return [...prev, s];
+                                                      }
+                                                  });
+                                                  
+                                                  // Auto-select first color and update image if available
+                                                  const availableCols = product.variants?.filter(v => v.size === s).map(v => v.color).filter(Boolean) || [];
+                                                  if (availableCols.length > 0) {
+                                                      const defaultColor = availableCols[0];
+                                                      setSelectedColorsForSizes(prev => ({ ...prev, [s]: defaultColor }));
+                                                      setSelectedColor(defaultColor);
+                                                      
+                                                      const variant = product.variants?.find(v => v.size === s && v.color === defaultColor);
+                                                      if (variant && variant.imageUrl) {
+                                                          const imgIdx = productImages.indexOf(variant.imageUrl);
+                                                          if (imgIdx !== -1) {
+                                                              setSelectedImage(imgIdx);
+                                                              setSelectedMedia('image');
+                                                          }
+                                                      }
+                                                  }
+                                              }}
                                              className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
                                                  selectedSizes.includes(s)
                                                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
@@ -777,6 +818,16 @@ const B2BProductDetail = () => {
                                                           }));
                                                           // Also fallback select it globally
                                                           setSelectedColor(c);
+
+                                                          // Find variant image and auto-select
+                                                          const variant = product.variants?.find(v => v.size === size && v.color === c);
+                                                          if (variant && variant.imageUrl) {
+                                                              const imgIdx = productImages.indexOf(variant.imageUrl);
+                                                              if (imgIdx !== -1) {
+                                                                  setSelectedImage(imgIdx);
+                                                                  setSelectedMedia('image');
+                                                              }
+                                                          }
                                                       }}
                                                       className={`px-3 py-1.5 border text-xs font-bold rounded-lg transition-all ${
                                                           isSelected

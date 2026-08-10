@@ -83,6 +83,7 @@ import musicRoutes from "./routes/music.routes.js";
 import vendorFollowRoutes from "./routes/vendorFollow.routes.js";
 import adminTransactionsRoutes from "./routes/adminTransactions.routes.js";
 import vendorWalletRoutes from "./routes/vendorWallet.routes.js";
+import adminWalletRoutes from "./routes/adminWallet.routes.js";
 import zoneRoutes from "./routes/zone.routes.js";
 import staffAuthRoutes from "./routes/staffAuth.routes.js";
 import staffRoutes from "./routes/staff.routes.js";
@@ -269,6 +270,7 @@ app.get("/api/test-db", (req, res) => {
 
 import groceryRoutes from "./routes/grocery.routes.js";
 import adminOrderRoutes from './routes/adminOrder.routes.js';
+import adminStaffRoutes from './routes/adminStaff.routes.js';
 
 // Routes
 app.use("/api/auth/vendor", vendorAuthRoutes);
@@ -300,6 +302,7 @@ app.use("/api/admin/b2b-vendors", adminB2BVendorManagementRoutes);
 app.use("/api/admin/b2b-categories", adminB2BCategoryManagementRoutes);
 app.use("/api/admin/b2b-products", adminB2BProductManagementRoutes);
 app.use("/api/admin/orders", adminOrderRoutes);
+app.use("/api/admin/staff", adminStaffRoutes);
 app.use("/api/admin/cancellation-refunds", adminCancellationRoutes);
 app.use("/api/vendor/dashboard", vendorDashboardRoutes);
 
@@ -321,6 +324,7 @@ app.use("/api/reels", reelRoutes);
 app.use("/api/admin/reels", adminReelRoutes);
 app.use("/api/follow", vendorFollowRoutes);
 app.use("/api/vendor/wallet", vendorWalletRoutes);
+app.use("/api/admin/wallet", adminWalletRoutes);
 // Removed vendorSubscriptionRoutes mount
 
 app.use("/api/music", musicRoutes);

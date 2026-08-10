@@ -23,6 +23,7 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
         weight: "",
         brand: "",
         tags: "",
+        videoLink: "",
         status: "Active"
     });
 
@@ -216,6 +217,20 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                         <label className="text-xs font-bold text-gray-700 uppercase">Product Title *</label>
                         <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="e.g. Organic Tomatoes" />
                     </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-700 uppercase">Category *</label>
+                        <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subcategory: ''})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+                            <option value="">Select Category</option>
+                            {categories.map(c => <option key={c._id || c.name} value={c._id}>{c.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-700 uppercase">Subcategory</label>
+                        <select value={formData.subcategory} onChange={e => setFormData({...formData, subcategory: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+                            <option value="">Select Subcategory</option>
+                            {subcategories.map((s, i) => <option key={i} value={s._id}>{s.name || s}</option>)}
+                        </select>
+                    </div>
                     <div className="space-y-1 relative" ref={brandDropdownRef}>
                         <label className="text-xs font-bold text-gray-700 uppercase">Brand</label>
                         <button
@@ -334,27 +349,7 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                 </div>
             </div>
 
-            <div>
-                <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
-                    <FiTag className="text-primary-600" /> Categorization
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-700 uppercase">Category *</label>
-                        <select required value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subcategory: ''})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-                            <option value="">Select Category</option>
-                            {categories.map(c => <option key={c._id || c.name} value={c._id}>{c.name}</option>)}
-                        </select>
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-700 uppercase">Subcategory</label>
-                        <select value={formData.subcategory} onChange={e => setFormData({...formData, subcategory: e.target.value})} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-                            <option value="">Select Subcategory</option>
-                            {subcategories.map((s, i) => <option key={i} value={s._id}>{s.name || s}</option>)}
-                        </select>
-                    </div>
-                </div>
-            </div>
+
 
             {/* Dynamic Custom Fields */}
             {dynamicFields.length > 0 && (
@@ -426,29 +421,42 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                 <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
                     <FiImage className="text-primary-600" /> Media
                 </h2>
-                <div className="mt-4">
-                    <input type="file" multiple accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
-                        <FiUpload /> Upload Images
-                    </button>
-                    
-                    <div className="flex flex-wrap gap-4 mt-4">
-                        {existingImages.map((img, idx) => (
-                            <div key={`exist-${idx}`} className="relative w-24 h-24 rounded-xl border border-gray-200 overflow-hidden group">
-                                <img src={img.url || img} className="w-full h-full object-cover" alt="Existing" />
-                                <button type="button" onClick={() => removeExistingImage(idx)} className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white">
-                                    <FiTrash2 size={20} />
-                                </button>
-                            </div>
-                        ))}
-                        {images.map((img, idx) => (
-                            <div key={`new-${idx}`} className="relative w-24 h-24 rounded-xl border border-gray-200 overflow-hidden group">
-                                <img src={URL.createObjectURL(img)} className="w-full h-full object-cover" alt="New" />
-                                <button type="button" onClick={() => removeNewImage(idx)} className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white">
-                                    <FiTrash2 size={20} />
-                                </button>
-                            </div>
-                        ))}
+                <div className="mt-4 space-y-4">
+                    <div>
+                        <input type="file" multiple accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
+                            <FiUpload /> Upload Images
+                        </button>
+                        
+                        <div className="flex flex-wrap gap-4 mt-4">
+                            {existingImages.map((img, idx) => (
+                                <div key={`exist-${idx}`} className="relative w-24 h-24 rounded-xl border border-gray-200 overflow-hidden group">
+                                    <img src={img.url || img} className="w-full h-full object-cover" alt="Existing" />
+                                    <button type="button" onClick={() => removeExistingImage(idx)} className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white">
+                                        <FiTrash2 size={20} />
+                                    </button>
+                                </div>
+                            ))}
+                            {images.map((img, idx) => (
+                                <div key={`new-${idx}`} className="relative w-24 h-24 rounded-xl border border-gray-200 overflow-hidden group">
+                                    <img src={URL.createObjectURL(img)} className="w-full h-full object-cover" alt="New" />
+                                    <button type="button" onClick={() => removeNewImage(idx)} className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white">
+                                        <FiTrash2 size={20} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-700 uppercase">Video Link (YouTube URL / Google Drive URL / Direct MP4 URL)</label>
+                        <input 
+                            type="url" 
+                            value={formData.videoLink || ""} 
+                            onChange={e => setFormData({...formData, videoLink: e.target.value})} 
+                            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" 
+                            placeholder="https://..." 
+                        />
                     </div>
                 </div>
             </div>

@@ -25,6 +25,12 @@ const B2BVendorSettings = () => {
             state: "",
             pincode: "",
             country: "India"
+        },
+        bankDetails: {
+            bankName: "",
+            accountHolderName: "",
+            accountNumber: "",
+            ifscCode: ""
         }
     });
 
@@ -49,6 +55,12 @@ const B2BVendorSettings = () => {
                     state: address.state || "",
                     pincode: address.pincode || address.zipCode || "",
                     country: address.country || "India"
+                },
+                bankDetails: {
+                    bankName: vendor.bankDetails?.bankName || "",
+                    accountHolderName: vendor.bankDetails?.accountHolderName || "",
+                    accountNumber: vendor.bankDetails?.accountNumber || "",
+                    ifscCode: vendor.bankDetails?.ifscCode || ""
                 }
             });
         }
@@ -76,6 +88,15 @@ const B2BVendorSettings = () => {
                 address: {
                     ...prev.address,
                     [addressField]: finalValue
+                }
+            }));
+        } else if (name.startsWith('bankDetails.')) {
+            const bankField = name.split('.')[1];
+            setFormData(prev => ({
+                ...prev,
+                bankDetails: {
+                    ...prev.bankDetails,
+                    [bankField]: value
                 }
             }));
         } else if (name === 'gstNumber') {
@@ -205,7 +226,13 @@ const B2BVendorSettings = () => {
                 storeName: formData.storeName.trim(),
                 gstNumber: formData.gstNumber.trim(),
                 mfgOfWork: formData.mfgOfWork.trim(),
-                address: address
+                address: address,
+                bankDetails: {
+                    bankName: formData.bankDetails.bankName.trim(),
+                    accountHolderName: formData.bankDetails.accountHolderName.trim(),
+                    accountNumber: formData.bankDetails.accountNumber.trim(),
+                    ifscCode: formData.bankDetails.ifscCode.trim()
+                }
             };
 
             await updateProfile(updateData);
@@ -435,6 +462,60 @@ const B2BVendorSettings = () => {
                                             onChange={handleInputChange}
                                             className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 focus:outline-none transition-colors"
                                             placeholder="Country"
+                                        />
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Bank Details */}
+                            <section>
+                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <div className="w-1.5 h-6 bg-green-600 rounded-full"></div>
+                                    Bank Details (For Payments & Settlements)
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Bank Name</label>
+                                        <input
+                                            type="text"
+                                            name="bankDetails.bankName"
+                                            value={formData.bankDetails?.bankName || ""}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 focus:outline-none transition-colors font-semibold"
+                                            placeholder="Enter Bank Name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Account Holder Name</label>
+                                        <input
+                                            type="text"
+                                            name="bankDetails.accountHolderName"
+                                            value={formData.bankDetails?.accountHolderName || ""}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 focus:outline-none transition-colors font-semibold"
+                                            placeholder="Enter Account Holder Name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Account Number</label>
+                                        <input
+                                            type="text"
+                                            name="bankDetails.accountNumber"
+                                            value={formData.bankDetails?.accountNumber || ""}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 focus:outline-none transition-colors font-mono font-semibold"
+                                            placeholder="Enter Account Number"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">IFSC Code</label>
+                                        <input
+                                            type="text"
+                                            name="bankDetails.ifscCode"
+                                            value={formData.bankDetails?.ifscCode || ""}
+                                            onChange={handleInputChange}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 focus:outline-none transition-colors font-mono font-semibold"
+                                            placeholder="Enter IFSC Code"
                                         />
                                     </div>
                                 </div>

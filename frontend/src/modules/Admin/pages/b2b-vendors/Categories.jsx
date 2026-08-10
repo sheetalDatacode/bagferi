@@ -162,11 +162,18 @@ const B2BCategories = () => {
     const handleRootFile = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        setRootModal(p => ({ ...p, file, preview: URL.createObjectURL(file) }));
+        const sizeInMB = file.size / (1024 * 1024);
+        setRootModal(p => ({ 
+            ...p, 
+            file, 
+            preview: URL.createObjectURL(file),
+            fileSizeError: sizeInMB > 5 ? `File is too large (${sizeInMB.toFixed(2)} MB). Max limit is 5MB.` : null
+        }));
     };
 
     const saveRoot = async () => {
         if (!rootModal.name.trim()) return toast.error('Category name is required');
+        if (rootModal.fileSizeError) return toast.error(rootModal.fileSizeError);
         setRootModal(p => ({ ...p, saving: true }));
         try {
             const fd = new FormData();
@@ -1233,7 +1240,17 @@ const B2BCategories = () => {
                                         </label>
                                     </div>
                                     {rootModal.file && (
-                                        <p className="text-xs text-gray-400 mt-1.5 truncate">{rootModal.file.name}</p>
+                                        <div className="mt-2 bg-gray-50 border border-gray-150 p-2.5 rounded-xl">
+                                            <p className="text-xs text-gray-500 font-semibold truncate">Name: {rootModal.file.name}</p>
+                                            <p className="text-[10px] text-gray-400 font-bold mt-0.5">
+                                                Size: {(rootModal.file.size / (1024 * 1024)).toFixed(2)} MB
+                                            </p>
+                                            {rootModal.fileSizeError && (
+                                                <p className="text-xs text-red-500 font-bold mt-1.5 flex items-center gap-1">
+                                                    ⚠️ {rootModal.fileSizeError}
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>

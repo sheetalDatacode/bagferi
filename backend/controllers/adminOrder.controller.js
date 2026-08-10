@@ -11,9 +11,18 @@ export const getAllOrders = async (req, res, next) => {
         const module = req.query.module?.trim();
 
         const query = {};
+        const status = req.query.status?.trim();
 
         if (module && module !== 'all') {
             query.module = module;
+        }
+
+        if (status && status !== 'all') {
+            if (status === 'Exchange') {
+                query['exchangeRequest.status'] = { $exists: true, $ne: 'None' };
+            } else {
+                query.status = status;
+            }
         }
 
         if (search) {
@@ -34,7 +43,13 @@ export const getAllOrders = async (req, res, next) => {
             query.$or = [
                 { orderNumber: searchRegex },
                 { user: { $in: userIds } },
-                { vendor: { $in: vendorIds } }
+                { vendor: { $in: vendorIds } },
+                { "assignedStaff.name": searchRegex },
+                { "assignedStaff.mobile": searchRegex },
+                { "exchangeRequest.assignedStaff.name": searchRegex },
+                { "exchangeRequest.assignedStaff.mobile": searchRegex },
+                { "shippingAddress.fullName": searchRegex },
+                { "shippingAddress.phone": searchRegex }
             ];
         }
 

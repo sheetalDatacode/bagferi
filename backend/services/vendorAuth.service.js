@@ -466,8 +466,12 @@ export const getVendorById = async (vendorId, email = null) => {
  */
 export const updateVendorProfile = async (vendorId, updateData) => {
   try {
-    const { name, phone, storeName, storeDescription, address, gstNumber, businessType, businessTypeRef, selectedSubTypes, mfgOfWork } = updateData;
+    const { name, phone, storeName, storeDescription, address, gstNumber, businessType, businessTypeRef, selectedSubTypes, mfgOfWork, bankDetails } = updateData;
     const updateFields = {};
+
+    if (bankDetails !== undefined) {
+      updateFields.bankDetails = bankDetails;
+    }
 
     if (name) {
       updateFields.name = name.trim();

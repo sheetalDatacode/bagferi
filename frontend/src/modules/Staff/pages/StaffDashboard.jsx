@@ -117,8 +117,22 @@ export default function StaffDashboard() {
                                     </td>
                                     <td style={{ padding: '1rem', verticalAlign: 'middle' }}>
                                         <p style={{ margin: 0, fontWeight: '700', color: '#2d3748', fontSize: '0.875rem' }}>{order.shippingAddress?.fullName}</p>
-                                        <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096', lineHeight: '1.4' }}>
-                                            📍 {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city}
+                                        <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#718096', lineHeight: '1.4', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                            <span>📍 {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city}</span>
+                                            <a 
+                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${order.shippingAddress?.addressLine1 || ''}, ${order.shippingAddress?.city || ''}`)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                                style={{ display: 'inline-flex', alignItems: 'center', color: '#3182ce', textDecoration: 'none' }}
+                                                title="View on Google Maps"
+                                            >
+                                                <img 
+                                                    src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Google_Maps_icon_%282020%29.svg" 
+                                                    alt="Map" 
+                                                    style={{ width: '14px', height: '14px', verticalAlign: 'middle', marginLeft: '4px' }} 
+                                                />
+                                            </a>
                                         </p>
                                     </td>
                                     <td style={{ padding: '1rem', verticalAlign: 'middle', fontWeight: '800', color: '#667eea', fontSize: '1rem' }}>

@@ -90,10 +90,44 @@ export const purchaseSubscriptionViaWallet = async (planId) => {
     }
 };
 
+/**
+ * Get vendor payout periods and requests
+ */
+export const getPayoutSummary = async () => {
+    try {
+        const response = await api.get('/vendor/wallet/payout-summary');
+        if (response.success) {
+            return response.data;
+        }
+        throw new Error(response.message || 'Failed to fetch payout summary');
+    } catch (error) {
+        console.error('Error fetching payout summary:', error);
+        throw error;
+    }
+};
+
+/**
+ * Request payout for a specific month and cycle period
+ */
+export const requestPayout = async (month, period, amount) => {
+    try {
+        const response = await api.post('/vendor/wallet/payout-request', { month, period, amount });
+        if (response.success) {
+            return response.data;
+        }
+        throw new Error(response.message || 'Failed to request payout');
+    } catch (error) {
+        console.error('Error requesting payout:', error);
+        throw error;
+    }
+};
+
 export default {
     getMyWallet,
     initiateRecharge,
     verifyRecharge,
     purchaseAddonViaWallet,
-    purchaseSubscriptionViaWallet
+    purchaseSubscriptionViaWallet,
+    getPayoutSummary,
+    requestPayout
 };

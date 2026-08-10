@@ -576,7 +576,8 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
             });
         }
 
-        if (formData.images.length === 0 && !formData.videoLink?.trim()) {
+        const hasVariantImage = formData.variants?.some(v => v.imageUrl);
+        if (formData.images.length === 0 && !formData.videoLink?.trim() && !hasVariantImage) {
             newErrors.images = "At least one product image or a video link is required";
         }
 
@@ -663,7 +664,8 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                         price: parseFloat(v.price),
                         mrp: parseFloat(v.mrp),
                         stockQuantity: parseInt(v.stockQuantity) || 0,
-                        sku: v.sku?.trim() || null
+                        sku: v.sku?.trim() || null,
+                        imageUrl: v.imageUrl || null
                     });
                 });
             });
@@ -695,6 +697,15 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 ? Array.from(new Set(formattedVariants.map(v => v.color).filter(Boolean)))
                 : (typeof formData.colors === 'string' ? formData.colors.split(',') : (formData.colors || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean);
 
+            // Derive availability from stockQuantity if quantity is set
+            let derivedAvailability = formData.availability || "In Stock";
+            if (baseStock !== "" && baseStock !== undefined) {
+                const stockVal = parseInt(baseStock);
+                if (stockVal === 0) derivedAvailability = "Out of Stock";
+                else if (stockVal <= 10) derivedAvailability = "Low Stock";
+                else derivedAvailability = "In Stock";
+            }
+
             // Prepare data for API
             const productPayload = {
                 name: formData.name,
@@ -707,7 +718,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 images: formData.images,
                 specifications: finalSpecs,
                 brand: formData.brand || "",
-                availability: formData.availability || "In Stock",
+                availability: derivedAvailability,
                 unit: formData.unit || "Pcs",
                 videoLink: formData.videoLink || "",
                 sizes: derivedSizes,
@@ -1254,415 +1265,6 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 </select>
                             </div>
 
-                        </div>
-                    </motion.div>
-
-                    {/* Dynamic Variant Matrix Section */}
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-6"
-                    >
-                        <div className="flex items-center justify-between mb-5">
-                            <div className="flex items-center gap-2">
-                                <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm">
-                                    <FiTag />
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-800">Product Variants (Size & Color Matrix)</h3>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        variants: [...(prev.variants || []), { size: "", color: "", price: "", mrp: "", stockQuantity: "", sku: "" }]
-                                    }));
-                                }}
-                                className="flex items-center gap-1 text-xs font-black text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100/80 px-3 py-2 rounded-xl transition-all"
-                            >
-                                <FiPlus /> Add Variant Combination
-                            </button>
-                        </div>
-
-                        {(!formData.variants || formData.variants.length === 0) ? (
-                            <div className="text-center py-6 border border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">No variants configured yet</p>
-                                <p className="text-[11px] text-gray-400 mt-1">If this product has multiple sizes or colors, add them here to track rates & inventory per variant.</p>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse min-w-[700px]">
-                                    <thead>
-                                        <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                            <th className="pb-3 pr-2">Size *</th>
-                                            <th className="pb-3 px-2">Color</th>
-                                            <th className="pb-3 px-2">Rate/Price *</th>
-                                            <th className="pb-3 px-2">MRP *</th>
-                                            <th className="pb-3 px-2">Stock Qty</th>
-                                            <th className="pb-3 px-2">SKU</th>
-                                            <th className="pb-3 pl-2 text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {formData.variants.map((v, idx) => (
-                                            <tr key={idx} className="group">
-                                                <td className="py-3 pr-2">
-                                                    <input
-                                                        type="text"
-                                                        value={v.size}
-                                                        placeholder="e.g. L"
-                                                        onChange={(e) => {
-                                                            const newVariants = [...formData.variants];
-                                                            newVariants[idx].size = e.target.value;
-                                                            setFormData({ ...formData, variants: newVariants });
-                                                        }}
-                                                        className={`w-full px-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_size_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
-                                                    />
-                                                </td>
-                                                <td className="py-3 px-2">
-                                                    <input
-                                                        type="text"
-                                                        value={v.color || ""}
-                                                        placeholder="e.g. Red, Blue"
-                                                        onChange={(e) => {
-                                                            const newVariants = [...formData.variants];
-                                                            newVariants[idx].color = e.target.value;
-                                                            setFormData({ ...formData, variants: newVariants });
-                                                        }}
-                                                        className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-gray-200 rounded-lg focus:border-indigo-500 focus:bg-white outline-none"
-                                                    />
-                                                </td>
-                                                <td className="py-3 px-2">
-                                                    <div className="relative">
-                                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">₹</span>
-                                                        <input
-                                                            type="number"
-                                                            value={v.price}
-                                                            placeholder="0.00"
-                                                            onChange={(e) => {
-                                                                const newVariants = [...formData.variants];
-                                                                newVariants[idx].price = e.target.value;
-                                                                setFormData({ ...formData, variants: newVariants });
-                                                            }}
-                                                            className={`w-full pl-6 pr-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_price_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
-                                                        />
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-2">
-                                                    <div className="relative">
-                                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">₹</span>
-                                                        <input
-                                                            type="number"
-                                                            value={v.mrp}
-                                                            placeholder="0.00"
-                                                            onChange={(e) => {
-                                                                const newVariants = [...formData.variants];
-                                                                newVariants[idx].mrp = e.target.value;
-                                                                setFormData({ ...formData, variants: newVariants });
-                                                            }}
-                                                            className={`w-full pl-6 pr-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_mrp_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
-                                                        />
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-2">
-                                                    <input
-                                                        type="number"
-                                                        value={v.stockQuantity}
-                                                        placeholder="0"
-                                                        onChange={(e) => {
-                                                            const newVariants = [...formData.variants];
-                                                            newVariants[idx].stockQuantity = e.target.value;
-                                                            setFormData({ ...formData, variants: newVariants });
-                                                        }}
-                                                        className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-gray-200 rounded-lg focus:border-indigo-500 focus:bg-white outline-none"
-                                                    />
-                                                </td>
-                                                <td className="py-3 px-2">
-                                                    <input
-                                                        type="text"
-                                                        value={v.sku || ""}
-                                                        placeholder="SKU"
-                                                        onChange={(e) => {
-                                                            const newVariants = [...formData.variants];
-                                                            newVariants[idx].sku = e.target.value;
-                                                            setFormData({ ...formData, variants: newVariants });
-                                                        }}
-                                                        className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-gray-200 rounded-lg focus:border-indigo-500 focus:bg-white outline-none"
-                                                    />
-                                                </td>
-                                                <td className="py-3 pl-2 text-right">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                variants: prev.variants.filter((_, i) => i !== idx)
-                                                            }));
-                                                        }}
-                                                        className="text-gray-400 hover:text-red-500 p-1.5 transition-colors rounded-lg hover:bg-red-50"
-                                                    >
-                                                        <FiTrash2 size={14} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </motion.div>
-
-                    {/* Description */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-2 mb-5">
-                            <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm">
-                                <FiList />
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-800">Product Description</h3>
-                        </div>
-                        <textarea
-                            name="description"
-                            value={formData.description || ""}
-                            onChange={handleChange}
-                            rows={4}
-                            className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all resize-none outline-none"
-                            placeholder="Provide a detailed description of the product, its usage, and benefits for B2B buyers..."
-                        />
-                    </div>
-
-                    {/* Specifications */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-2">
-                                <div className="p-1.5 bg-orange-50 text-orange-600 rounded-lg text-sm">
-                                    <FiInfo />
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-800">Technical Specifications</h3>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={addSpec}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg font-bold text-xs hover:bg-orange-100 transition-all uppercase tracking-wide"
-                            >
-                                <FiPlus /> Add Field
-                            </button>
-                        </div>
-
-                        <div className="space-y-3">
-                            <AnimatePresence>
-                                {formData.specifications.map((spec, index) => {
-                                    // Hide specs that are already shown as dynamic fields
-                                    if (dynamicFields.some(df => df.label?.toLowerCase() === spec.name?.toLowerCase())) {
-                                        return null;
-                                    }
-
-                                    return (
-                                        <motion.div
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            key={index}
-                                            className="flex gap-3 group"
-                                        >
-                                            <div className="flex-1 grid grid-cols-2 gap-3">
-                                                <div className={`bg-slate-50 px-4 py-2 rounded-xl border ${errors[`spec_name_${index}`] ? 'border-red-500 bg-red-50' : 'border-gray-100'} focus-within:border-orange-200 focus-within:bg-white transition-all`}>
-                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Attribute</label>
-                                                    <input
-                                                        type="text"
-                                                        value={spec.name || ""}
-                                                        onChange={(e) => {
-                                                            updateSpec(index, 'name', e.target.value);
-                                                            if (errors[`spec_name_${index}`]) setErrors(prev => ({ ...prev, [`spec_name_${index}`]: null }));
-                                                        }}
-                                                        className="w-full bg-transparent border-none focus:ring-0 text-xs font-bold text-gray-700 outline-none p-0"
-                                                        placeholder="Material"
-                                                    />
-                                                </div>
-                                                <div className="bg-slate-50 px-4 py-2 rounded-xl border border-gray-100 focus-within:border-orange-200 focus-within:bg-white transition-all">
-                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Value (Numbers only)</label>
-                                                    <input
-                                                        type="text"
-                                                        value={spec.value || ""}
-                                                        onChange={(e) => updateSpec(index, 'value', e.target.value)}
-                                                        className="w-full bg-transparent border-none focus:ring-0 text-xs text-gray-600 outline-none p-0"
-                                                        placeholder="100"
-                                                    />
-                                                </div>
-                                                {errors[`spec_name_${index}`] && (
-                                                    <div className="col-span-2 text-[10px] text-red-500 font-bold ml-1">
-                                                        {errors[`spec_name_${index}`]}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeSpec(index)}
-                                                className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-all"
-                                            >
-                                                <FiTrash2 size={16} />
-                                            </button>
-                                        </motion.div>
-                                    );
-                                })}
-                            </AnimatePresence>
-                            {formData.specifications.length === 0 && (
-                                <div className="text-center py-6 text-gray-400 border border-dashed border-gray-200 rounded-xl text-sm">
-                                    No specifications added yet.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Section: Pricing & Images (4 cols) */}
-                <div className="lg:col-span-4 space-y-6">
-                    {/* Media Gallery */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                        <div className="flex items-center justify-between mb-5">
-                            <div className="flex items-center gap-2">
-                                <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg text-sm">
-                                    <FiImage />
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-800">Media Gallery</h3>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3 mb-4">
-                            <div className="grid grid-cols-2 flex-1 gap-3">
-                                {formData.images.map((img, index) => (
-                                    <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 group">
-                                        <img src={img} alt="" className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <button
-                                                type="button"
-                                                onClick={() => removeImage(index)}
-                                                className="p-1.5 bg-red-500 text-white rounded-full hover:scale-110 transition-transform"
-                                            >
-                                                <FiTrash2 size={14} />
-                                            </button>
-                                        </div>
-                                        {index === 0 && (
-                                            <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-primary-600 text-[7px] text-white font-bold uppercase rounded">
-                                                Cover
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-
-                                {/* Action Buttons */}
-                                <div className="col-span-2 flex gap-3">
-                                     <div className="flex-1 relative">
-                                         <input
-                                             id="gallery-upload"
-                                             type="file"
-                                             onChange={(e) => handleMultipleImageUpload(e, false)}
-                                             className="hidden"
-                                             multiple
-                                             accept="image/png, image/jpeg, image/webp"
-                                             disabled={isUploading}
-                                         />
-                                         <button
-                                             type="button"
-                                             onClick={handleGalleryClick}
-                                             disabled={isUploading}
-                                             className="w-full flex flex-col items-center justify-center py-10 px-5 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-primary-50 hover:border-primary-200 cursor-pointer transition-all group relative overflow-hidden"
-                                         >
-                                             <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-primary-600 transition-all shadow-sm mb-1">
-                                                 {isUploading ? <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div> : <FiPlus size={24} />}
-                                             </div>
-                                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-primary-600">Gallery</span>
-                                         </button>
-                                     </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={handleCameraClick}
-                                        disabled={isUploading}
-                                        className="flex-1 flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-all group relative overflow-hidden"
-                                    >
-                                        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-600 transition-all shadow-sm mb-1">
-                                            <FiCamera size={22} />
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-blue-600">Camera</span>
-                                        <input
-                                            ref={cameraInputRef}
-                                            type="file"
-                                            capture="environment"
-                                            accept="image/*"
-                                            onChange={(e) => handleMultipleImageUpload(e, true)}
-                                            className="hidden"
-                                            disabled={isUploading}
-                                        />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        {errors.images && <p className="text-[10px] text-red-500 font-bold mt-2 ml-1">{errors.images}</p>}
-                        
-                        <div className="mt-4 pt-4 border-t border-gray-100">
-                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">YouTube Video Link (Optional)</label>
-                            <input
-                                type="url"
-                                name="videoLink"
-                                value={formData.videoLink || ""}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
-                                placeholder="https://www.youtube.com/watch?v=..."
-                            />
-                            <p className="text-[10px] text-gray-400 font-medium mt-1 ml-1">If no image is added, this video will be shown instead. A Reel will also be automatically created.</p>
-                        </div>
-
-                        <p className="text-[10px] text-gray-400 leading-relaxed font-medium mt-4">
-                            {MAX_PHOTOS === 0 ? "No photos allowed on this plan." : `First image is cover. Max ${MAX_PHOTOS < 0 ? 'unlimited' : MAX_PHOTOS} photos.`} Max 300KB each.
-                        </p>
-                        <p className="text-[10px] text-primary-600 font-black uppercase tracking-wider mt-1">
-                            Note: Please upload square images (1:1 ratio) for better display.
-                        </p>
-                    </div>
-
-                    {/* Pricing */}
-                    <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="p-1.5 bg-green-50 text-green-600 rounded-lg text-sm">
-                                <FiDollarSign />
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-800">Pricing</h3>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">MRP (₹)</label>
-                                <div className="relative">
-                                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</div>
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        name="mrp"
-                                        value={formData.mrp || ""}
-                                        onChange={handleChange}
-                                        className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
-                                        placeholder="5000.00"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Selling Price (₹) <span className="text-red-500">*</span></label>
-                                <div className="relative">
-                                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</div>
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        name="price"
-                                        value={formData.price || ""}
-                                        onChange={handleChange}
-                                        className={`w-full pl-8 pr-4 py-2.5 bg-slate-50 border ${errors.price ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none`}
-                                        placeholder="4500.50"
-                                    />
-                                </div>
-                                {errors.price && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{errors.price}</p>}
-                            </div>
-
                             <div>
                                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Unit of Measurement</label>
                                 <select
@@ -1677,10 +1279,520 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 </select>
                                 {errors.unit && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{errors.unit}</p>}
                             </div>
+
+                        </div>
+                    </motion.div>
+
+                            {/* Dynamic Variant Matrix Section */}
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-6"
+                            >
+                                <div className="flex items-center justify-between mb-5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm">
+                                            <FiTag />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-800">Product Variants (Size & Color Matrix)</h3>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                variants: [...(prev.variants || []), { size: "", color: "", price: "", mrp: "", stockQuantity: "", sku: "", imageUrl: "" }]
+                                            }));
+                                        }}
+                                        className="flex items-center gap-1 text-xs font-black text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100/80 px-3 py-2 rounded-xl transition-all"
+                                    >
+                                        <FiPlus /> Add Variant Combination
+                                    </button>
+                                </div>
+
+                                {(!formData.variants || formData.variants.length === 0) ? (
+                                    <div className="text-center py-6 border border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
+                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">No variants configured yet</p>
+                                        <p className="text-[11px] text-gray-400 mt-1">If this product has multiple sizes or colors, add them here to track rates & inventory per variant.</p>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse min-w-[700px]">
+                                            <thead>
+                                                <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                    <th className="pb-3 pr-2 w-12">Image</th>
+                                                    <th className="pb-3 pr-2">Size *</th>
+                                                    <th className="pb-3 px-2">Color</th>
+                                                    <th className="pb-3 px-2">Rate/Price *</th>
+                                                    <th className="pb-3 px-2">MRP *</th>
+                                                    <th className="pb-3 px-2">Stock Qty</th>
+                                                    <th className="pb-3 px-2">SKU</th>
+                                                    <th className="pb-3 pl-2 text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50">
+                                                {formData.variants.map((v, idx) => (
+                                                    <tr key={idx} className="group">
+                                                        <td className="py-3 pr-2">
+                                                            <div className="flex items-center gap-2">
+                                                                {v.imageUrl ? (
+                                                                    <div className="relative w-8 h-8 rounded-lg border border-gray-200 overflow-hidden shrink-0 group/img">
+                                                                        <img src={v.imageUrl} className="w-full h-full object-cover" alt="" />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                const newVariants = [...formData.variants];
+                                                                                newVariants[idx].imageUrl = "";
+                                                                                setFormData({ ...formData, variants: newVariants });
+                                                                            }}
+                                                                            className="absolute inset-0 bg-red-600/70 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
+                                                                        >
+                                                                            <FiX size={10} />
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <label className="w-8 h-8 rounded-lg border border-dashed border-gray-300 hover:border-indigo-500 bg-slate-50 flex items-center justify-center cursor-pointer transition-colors shrink-0">
+                                                                        <FiImage className="text-gray-400 text-xs" />
+                                                                        <input
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            className="hidden"
+                                                                            onChange={(e) => {
+                                                                                const file = e.target.files[0];
+                                                                                if (file) {
+                                                                                    const reader = new FileReader();
+                                                                                    reader.onload = (uploadEvent) => {
+                                                                                        const newVariants = [...formData.variants];
+                                                                                        newVariants[idx].imageUrl = uploadEvent.target.result;
+                                                                                        setFormData({ ...formData, variants: newVariants });
+                                                                                    };
+                                                                                    reader.readAsDataURL(file);
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                    </label>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-3 pr-2">
+                                                            <input
+                                                                type="text"
+                                                                value={v.size}
+                                                                placeholder="e.g. L"
+                                                                onChange={(e) => {
+                                                                    const newVariants = [...formData.variants];
+                                                                    newVariants[idx].size = e.target.value;
+                                                                    setFormData({ ...formData, variants: newVariants });
+                                                                }}
+                                                                className={`w-full px-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_size_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
+                                                            />
+                                                        </td>
+                                                        <td className="py-3 px-2 min-w-[200px]">
+                                                            <div className="flex flex-wrap gap-1 mb-1.5 max-w-xs">
+                                                                {(v.color || "").split(",").map(c => c.trim()).filter(Boolean).map((colorTag, tagIdx) => (
+                                                                    <span 
+                                                                        key={tagIdx} 
+                                                                        className="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-150 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                                                                    >
+                                                                        {colorTag}
+                                                                        <button 
+                                                                            type="button" 
+                                                                            onClick={() => {
+                                                                                const colorsList = (v.color || "").split(",").map(c => c.trim()).filter(Boolean);
+                                                                                const updatedColors = colorsList.filter((_, i) => i !== tagIdx).join(", ");
+                                                                                const newVariants = [...formData.variants];
+                                                                                newVariants[idx].color = updatedColors;
+                                                                                setFormData({ ...formData, variants: newVariants });
+                                                                            }}
+                                                                            className="hover:bg-indigo-100 rounded-full p-0.5"
+                                                                        >
+                                                                            <FiX size={10} />
+                                                                        </button>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Add Color"
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.preventDefault();
+                                                                            const val = e.target.value.trim();
+                                                                            if (val) {
+                                                                                const colorsList = (v.color || "").split(",").map(c => c.trim()).filter(Boolean);
+                                                                                if (!colorsList.includes(val)) {
+                                                                                    colorsList.push(val);
+                                                                                    const newVariants = [...formData.variants];
+                                                                                    newVariants[idx].color = colorsList.join(", ");
+                                                                                    setFormData({ ...formData, variants: newVariants });
+                                                                                }
+                                                                                e.target.value = "";
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-gray-200 rounded-lg focus:border-indigo-500 focus:bg-white outline-none"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        const inputEl = e.currentTarget.previousSibling;
+                                                                        const val = inputEl.value.trim();
+                                                                        if (val) {
+                                                                            const colorsList = (v.color || "").split(",").map(c => c.trim()).filter(Boolean);
+                                                                            if (!colorsList.includes(val)) {
+                                                                                colorsList.push(val);
+                                                                                const newVariants = [...formData.variants];
+                                                                                newVariants[idx].color = colorsList.join(", ");
+                                                                                setFormData({ ...formData, variants: newVariants });
+                                                                            }
+                                                                            inputEl.value = "";
+                                                                        }
+                                                                    }}
+                                                                    className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors shrink-0"
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-3 px-2">
+                                                            <div className="relative">
+                                                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">₹</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={v.price}
+                                                                    placeholder="0.00"
+                                                                    onChange={(e) => {
+                                                                        const newVariants = [...formData.variants];
+                                                                        newVariants[idx].price = e.target.value;
+                                                                        setFormData({ ...formData, variants: newVariants });
+                                                                    }}
+                                                                    className={`w-full pl-6 pr-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_price_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-3 px-2">
+                                                            <div className="relative">
+                                                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">₹</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={v.mrp}
+                                                                    placeholder="0.00"
+                                                                    onChange={(e) => {
+                                                                        const newVariants = [...formData.variants];
+                                                                        newVariants[idx].mrp = e.target.value;
+                                                                        setFormData({ ...formData, variants: newVariants });
+                                                                    }}
+                                                                    className={`w-full pl-6 pr-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_mrp_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-3 px-2">
+                                                            <input
+                                                                type="number"
+                                                                value={v.stockQuantity}
+                                                                placeholder="0"
+                                                                onChange={(e) => {
+                                                                    const newVariants = [...formData.variants];
+                                                                    newVariants[idx].stockQuantity = e.target.value;
+                                                                    setFormData({ ...formData, variants: newVariants });
+                                                                }}
+                                                                className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-gray-200 rounded-lg focus:border-indigo-500 focus:bg-white outline-none"
+                                                            />
+                                                        </td>
+                                                        <td className="py-3 px-2">
+                                                            <input
+                                                                type="text"
+                                                                value={v.sku || ""}
+                                                                placeholder="SKU"
+                                                                onChange={(e) => {
+                                                                    const newVariants = [...formData.variants];
+                                                                    newVariants[idx].sku = e.target.value;
+                                                                    setFormData({ ...formData, variants: newVariants });
+                                                                }}
+                                                                className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-gray-200 rounded-lg focus:border-indigo-500 focus:bg-white outline-none"
+                                                            />
+                                                        </td>
+                                                        <td className="py-3 pl-2 text-right">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setFormData(prev => ({
+                                                                        ...prev,
+                                                                        variants: prev.variants.filter((_, i) => i !== idx)
+                                                                    }));
+                                                                }}
+                                                                className="text-gray-400 hover:text-red-500 p-1.5 transition-colors rounded-lg hover:bg-red-50"
+                                                            >
+                                                                <FiTrash2 size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </motion.div>
+
+                            {/* Description */}
+                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                                <div className="flex items-center gap-2 mb-5">
+                                    <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm">
+                                        <FiList />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-800">Product Description</h3>
+                                </div>
+                                <textarea
+                                    name="description"
+                                    value={formData.description || ""}
+                                    onChange={handleChange}
+                                    rows={4}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all resize-none outline-none"
+                                    placeholder="Provide a detailed description of the product, its usage, and benefits for B2B buyers..."
+                                />
+                            </div>
+
+                            {/* Specifications */}
+                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-orange-50 text-orange-600 rounded-lg text-sm">
+                                            <FiInfo />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-800">Technical Specifications</h3>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={addSpec}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg font-bold text-xs hover:bg-orange-100 transition-all uppercase tracking-wide"
+                                    >
+                                        <FiPlus /> Add Field
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <AnimatePresence>
+                                        {formData.specifications.map((spec, index) => {
+                                            // Hide specs that are already shown as dynamic fields
+                                            if (dynamicFields.some(df => df.label?.toLowerCase() === spec.name?.toLowerCase())) {
+                                                return null;
+                                            }
+
+                                            return (
+                                                <motion.div
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    key={index}
+                                                    className="flex gap-3 group"
+                                                >
+                                                    <div className="flex-1 grid grid-cols-2 gap-3">
+                                                        <div className={`bg-slate-50 px-4 py-2 rounded-xl border ${errors[`spec_name_${index}`] ? 'border-red-500 bg-red-50' : 'border-gray-100'} focus-within:border-orange-200 focus-within:bg-white transition-all`}>
+                                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Attribute</label>
+                                                            <input
+                                                                type="text"
+                                                                value={spec.name || ""}
+                                                                onChange={(e) => {
+                                                                    updateSpec(index, 'name', e.target.value);
+                                                                    if (errors[`spec_name_${index}`]) setErrors(prev => ({ ...prev, [`spec_name_${index}`]: null }));
+                                                                }}
+                                                                className="w-full bg-transparent border-none focus:ring-0 text-xs font-bold text-gray-700 outline-none p-0"
+                                                                placeholder="Material"
+                                                            />
+                                                        </div>
+                                                        <div className="bg-slate-50 px-4 py-2 rounded-xl border border-gray-100 focus-within:border-orange-200 focus-within:bg-white transition-all">
+                                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Value (Numbers only)</label>
+                                                            <input
+                                                                type="text"
+                                                                value={spec.value || ""}
+                                                                onChange={(e) => updateSpec(index, 'value', e.target.value)}
+                                                                className="w-full bg-transparent border-none focus:ring-0 text-xs text-gray-600 outline-none p-0"
+                                                                placeholder="100"
+                                                            />
+                                                        </div>
+                                                        {errors[`spec_name_${index}`] && (
+                                                            <div className="col-span-2 text-[10px] text-red-500 font-bold ml-1">
+                                                                {errors[`spec_name_${index}`]}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeSpec(index)}
+                                                        className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-all"
+                                                    >
+                                                        <FiTrash2 size={16} />
+                                                    </button>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </AnimatePresence>
+                                    {formData.specifications.length === 0 && (
+                                        <div className="text-center py-6 text-gray-400 border border-dashed border-gray-200 rounded-xl text-sm">
+                                            No specifications added yet.
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
+
+                        {/* Right Section: Pricing & Images (4 cols) */}
+                        <div className="lg:col-span-4 space-y-6">
+                            {/* Media Gallery */}
+                            {(!formData.variants || formData.variants.length === 0) && (
+                                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                                    <div className="flex items-center justify-between mb-5">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg text-sm">
+                                                <FiImage />
+                                            </div>
+                                            <h3 className="text-lg font-bold text-gray-800">Media Gallery</h3>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-3 mb-4">
+                                        <div className="grid grid-cols-2 flex-1 gap-3">
+                                            {formData.images.map((img, index) => (
+                                                <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 group">
+                                                    <img src={img} alt="" className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeImage(index)}
+                                                            className="p-1.5 bg-red-500 text-white rounded-full hover:scale-110 transition-transform"
+                                                        >
+                                                            <FiTrash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                    {index === 0 && (
+                                                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-primary-600 text-[7px] text-white font-bold uppercase rounded">
+                                                            Cover
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+
+                                            {/* Action Buttons */}
+                                            <div className="col-span-2 flex gap-3">
+                                                 <div className="flex-1 relative">
+                                                     <input
+                                                         id="gallery-upload"
+                                                         type="file"
+                                                         onChange={(e) => handleMultipleImageUpload(e, false)}
+                                                         className="hidden"
+                                                         multiple
+                                                         accept="image/png, image/jpeg, image/webp"
+                                                         disabled={isUploading}
+                                                     />
+                                                     <button
+                                                         type="button"
+                                                         onClick={handleGalleryClick}
+                                                         disabled={isUploading}
+                                                         className="w-full flex flex-col items-center justify-center py-10 px-5 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-primary-50 hover:border-primary-200 cursor-pointer transition-all group relative overflow-hidden"
+                                                     >
+                                                         <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-primary-600 transition-all shadow-sm mb-1">
+                                                             {isUploading ? <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div> : <FiPlus size={24} />}
+                                                         </div>
+                                                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-primary-600">Gallery</span>
+                                                     </button>
+                                                 </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCameraClick}
+                                                    disabled={isUploading}
+                                                    className="flex-1 flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-all group relative overflow-hidden"
+                                                >
+                                                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-600 transition-all shadow-sm mb-1">
+                                                        <FiCamera size={22} />
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-blue-600">Camera</span>
+                                                    <input
+                                                        ref={cameraInputRef}
+                                                        type="file"
+                                                        capture="environment"
+                                                        accept="image/*"
+                                                        onChange={(e) => handleMultipleImageUpload(e, true)}
+                                                        className="hidden"
+                                                        disabled={isUploading}
+                                                    />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {errors.images && <p className="text-[10px] text-red-500 font-bold mt-2 ml-1">{errors.images}</p>}
+                                    
+                                    <div className="mt-4 pt-4 border-t border-gray-100">
+                                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">YouTube Video Link (Optional)</label>
+                                        <input
+                                            type="url"
+                                            name="videoLink"
+                                            value={formData.videoLink || ""}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                            placeholder="https://www.youtube.com/watch?v=..."
+                                        />
+                                        <p className="text-[10px] text-gray-400 font-medium mt-1 ml-1">If no image is added, this video will be shown instead. A Reel will also be automatically created.</p>
+                                    </div>
+
+                                    <p className="text-[10px] text-gray-400 leading-relaxed font-medium mt-4">
+                                        {MAX_PHOTOS === 0 ? "No photos allowed on this plan." : `First image is cover. Max ${MAX_PHOTOS < 0 ? 'unlimited' : MAX_PHOTOS} photos.`} Max 300KB each.
+                                    </p>
+                                    <p className="text-[10px] text-primary-600 font-black uppercase tracking-wider mt-1">
+                                        Note: Please upload square images (1:1 ratio) for better display.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Pricing */}
+                            {(!formData.variants || formData.variants.length === 0) && (
+                                <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
+                                    <div className="flex items-center gap-2 mb-6">
+                                        <div className="p-1.5 bg-green-50 text-green-600 rounded-lg text-sm">
+                                            <FiDollarSign />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-800">Pricing</h3>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">MRP (₹)</label>
+                                            <div className="relative">
+                                                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</div>
+                                                <input
+                                                    type="number"
+                                                    step="any"
+                                                    name="mrp"
+                                                    value={formData.mrp || ""}
+                                                    onChange={handleChange}
+                                                    className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                                    placeholder="5000.00"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Selling Price (₹) <span className="text-red-500">*</span></label>
+                                            <div className="relative">
+                                                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">₹</div>
+                                                <input
+                                                    type="number"
+                                                    step="any"
+                                                    name="price"
+                                                    value={formData.price || ""}
+                                                    onChange={handleChange}
+                                                    className={`w-full pl-8 pr-4 py-2.5 bg-slate-50 border ${errors.price ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none`}
+                                                    placeholder="4500.00"
+                                                />
+                                            </div>
+                                            {errors.price && <p className="text-[10px] text-red-500 font-bold mt-1 ml-1">{errors.price}</p>}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
 
             {/* Sticky Footer */}
             <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-white/80 backdrop-blur-md border-t border-gray-200 p-4 z-40 flex justify-end gap-3 shadow-lg">

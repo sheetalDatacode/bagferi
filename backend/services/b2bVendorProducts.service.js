@@ -27,6 +27,29 @@ const verifyB2BVendor = async (vendorId) => {
   return vendor;
 };
 
+// Helper for safe uploads
+const safeUpload = async (base64Data, folder) => {
+  try {
+    if (!base64Data) return null;
+
+    // Ensure it is a valid base64 data URI
+    if (!base64Data.startsWith('data:image')) {
+      if (base64Data.startsWith('http')) return { secure_url: base64Data, public_id: null };
+      console.warn('[B2B Product Upload] Skipping invalid image data format');
+      return null;
+    }
+
+    const result = await uploadBase64ToCloudinary(base64Data, folder);
+    if (!result || !result.secure_url) {
+      throw new Error('Cloudinary upload returned invalid result');
+    }
+    return result;
+  } catch (err) {
+    console.error('[B2B Product Upload] Individual image upload failed:', err.message);
+    throw err;
+  }
+};
+
 /**
  * Generate SKU for B2B product
  */
@@ -256,29 +279,6 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
     const imageUrls = [];
     const imagePublicIds = [];
 
-    // Helper for safe uploads
-    const safeUpload = async (base64Data, folder) => {
-      try {
-        if (!base64Data) return null;
-
-        // Ensure it is a valid base64 data URI
-        if (!base64Data.startsWith('data:image')) {
-          if (base64Data.startsWith('http')) return { secure_url: base64Data, public_id: null };
-          console.warn('[B2B Product Upload] Skipping invalid image data format');
-          return null;
-        }
-
-        const result = await uploadBase64ToCloudinary(base64Data, folder);
-        if (!result || !result.secure_url) {
-          throw new Error('Cloudinary upload returned invalid result');
-        }
-        return result;
-      } catch (err) {
-        console.error('[B2B Product Upload] Individual image upload failed:', err.message);
-        throw err;
-      }
-    };
-
     const finalImages = (images && images.length > 0) ? images : [];
 
     // Process images in parallel
@@ -312,6 +312,19 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
     };
 
     await uploadShopImages();
+
+    // Process variant images
+    if (variants && Array.isArray(variants)) {
+      const uploadVariantImages = variants.map(async (v) => {
+        if (v.imageUrl && v.imageUrl.startsWith('data:image')) {
+          const result = await safeUpload(v.imageUrl, 'products/b2b/variants');
+          if (result && result.secure_url) {
+            v.imageUrl = result.secure_url;
+          }
+        }
+      });
+      await Promise.all(uploadVariantImages);
+    }
 
     if (!videoLink && images && images.length === 0) {
        // If no videoLink and no images, then error
@@ -477,7 +490,20 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
     if (productData.unit !== undefined) updateData.unit = productData.unit;
     if (sizes !== undefined) updateData.sizes = sizes;
     if (colors !== undefined) updateData.colors = colors;
-    if (variants !== undefined) updateData.variants = variants;
+    if (variants !== undefined) {
+      if (variants && Array.isArray(variants)) {
+        const uploadVariantImages = variants.map(async (v) => {
+          if (v.imageUrl && v.imageUrl.startsWith('data:image')) {
+            const result = await safeUpload(v.imageUrl, 'products/b2b/variants');
+            if (result && result.secure_url) {
+              v.imageUrl = result.secure_url;
+            }
+          }
+        });
+        await Promise.all(uploadVariantImages);
+      }
+      updateData.variants = variants;
+    }
 
 
     // Process images if provided

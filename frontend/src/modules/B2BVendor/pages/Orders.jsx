@@ -84,6 +84,18 @@ const VendorOrders = () => {
 
     const getStaffStatistics = () => {
         const stats = {};
+        if (shopDetails?.details && Array.isArray(shopDetails.details)) {
+            shopDetails.details.forEach(staff => {
+                const staffKey = `${staff.name}_${staff.mobile || ''}`;
+                stats[staffKey] = {
+                    name: staff.name,
+                    mobile: staff.mobile || 'N/A',
+                    totalDeliveries: 0,
+                    totalCollected: 0,
+                    deliveries: []
+                };
+            });
+        }
         orders.forEach(order => {
             if (order.status === 'Completed' && order.assignedStaff?.name) {
                 const staffKey = `${order.assignedStaff.name}_${order.assignedStaff.mobile || ''}`;
@@ -240,6 +252,52 @@ const VendorOrders = () => {
     const totalDeliveriesCount = staffStats.reduce((sum, s) => sum + s.totalDeliveries, 0);
     const totalCashCollected = staffStats.reduce((sum, s) => sum + s.totalCollected, 0);
 
+    const getMonthlyCollectionStats = () => {
+        const monthlyTotal = {};
+        const staffMonthly = {};
+
+        if (shopDetails?.details && Array.isArray(shopDetails.details)) {
+            shopDetails.details.forEach(staff => {
+                staffMonthly[staff.name] = {};
+            });
+        }
+
+        orders.forEach(order => {
+            if (order.status === 'Completed') {
+                const collected = order.remainingBalance !== undefined ? order.remainingBalance : (order.totalAmount - (order.advancePayment || 0));
+                const date = new Date(order.updatedAt || order.createdAt);
+                const monthName = date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+                
+                monthlyTotal[monthName] = (monthlyTotal[monthName] || 0) + collected;
+
+                if (order.assignedStaff?.name) {
+                    const staffName = order.assignedStaff.name;
+                    if (!staffMonthly[staffName]) {
+                        staffMonthly[staffName] = {};
+                    }
+                    staffMonthly[staffName][monthName] = (staffMonthly[staffName][monthName] || 0) + collected;
+                }
+            }
+        });
+
+        const monthlyTotalArray = Object.entries(monthlyTotal).map(([month, total]) => ({
+            month,
+            total
+        })).sort((a, b) => new Date(b.month) - new Date(a.month));
+
+        const staffMonthlyArray = Object.entries(staffMonthly).map(([staffName, months]) => ({
+            staffName,
+            months: Object.entries(months).map(([month, total]) => ({
+                month,
+                total
+            })).sort((a, b) => new Date(b.month) - new Date(a.month))
+        })).sort((a, b) => a.staffName.localeCompare(b.staffName));
+
+        return { monthlyTotalArray, staffMonthlyArray };
+    };
+
+    const { monthlyTotalArray, staffMonthlyArray } = getMonthlyCollectionStats();
+
     // Get all completed deliveries across all staff for the detailed history table
     const allCompletedDeliveries = [];
     orders.forEach(order => {
@@ -303,8 +361,8 @@ const VendorOrders = () => {
                         </div>
                         
                         {/* Filters */}
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
-                            <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap w-full sm:w-auto overflow-x-auto hide-scrollbar">
+                        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                            <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap overflow-x-auto max-w-full">
                                 {['All', 'Fashion', 'Grocery'].map(m => (
                                     <button
                                         key={m}
@@ -315,7 +373,7 @@ const VendorOrders = () => {
                                     </button>
                                 ))}
                             </div>
-                            <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap w-full sm:w-auto overflow-x-auto hide-scrollbar">
+                            <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100 whitespace-nowrap overflow-x-auto max-w-full">
                                 {['All', 'Pending', 'Accepted', 'Dispatched', 'Completed', 'Cancelled'].map(f => (
                                     <button
                                         key={f}
@@ -358,7 +416,14 @@ const VendorOrders = () => {
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {filteredOrders.map(order => (
-                                            <tr key={order._id} className="hover:bg-gray-50/50 transition-colors">
+                                            <tr 
+                                                key={order._id} 
+                                                className={`transition-colors hover:bg-gray-50/50 ${
+                                                    order.exchangeRequest && order.exchangeRequest.status !== 'None'
+                                                        ? 'bg-indigo-50/30 border-l-4 border-l-indigo-600'
+                                                        : ''
+                                                }`}
+                                            >
                                                 <td className="p-4">
                                                     <p className="text-sm font-bold text-gray-900">{order.orderNumber}</p>
                                                     <p className="text-xs text-gray-500 font-medium mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
@@ -579,6 +644,58 @@ const VendorOrders = () => {
                         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
                             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Cash/COD Collected</span>
                             <span className="text-3xl font-black text-primary-600 mt-2">₹{totalCashCollected.toLocaleString('en-IN')}</span>
+                        </div>
+                    </div>
+
+                    {/* Monthly Collection Summary */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Month-Wise Total Collection */}
+                        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                            <h3 className="font-black text-gray-900 text-xs uppercase tracking-widest mb-4 pb-2 border-b border-gray-100 flex items-center gap-1.5">
+                                <span>📅</span> Month-Wise Total Collection
+                            </h3>
+                            {monthlyTotalArray.length === 0 ? (
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider text-center py-6">No collection records</p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {monthlyTotalArray.map(({ month, total }) => (
+                                        <div key={month} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                                            <span className="text-sm font-bold text-gray-700">{month}</span>
+                                            <span className="text-sm font-black text-primary-600">₹{total.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Staff-Wise Monthly Collection */}
+                        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                            <h3 className="font-black text-gray-900 text-xs uppercase tracking-widest mb-4 pb-2 border-b border-gray-100 flex items-center gap-1.5">
+                                <span>👤</span> Staff Monthly Breakdown
+                            </h3>
+                            {staffMonthlyArray.length === 0 ? (
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider text-center py-6">No staff collection records</p>
+                            ) : (
+                                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+                                    {staffMonthlyArray.map(({ staffName, months }) => (
+                                        <div key={staffName} className="space-y-2">
+                                            <h4 className="text-xs font-black text-gray-450 uppercase tracking-widest ml-1">{staffName}</h4>
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {months.length === 0 ? (
+                                                    <p className="text-[10px] text-gray-400 font-medium italic ml-1 mb-1">
+                                                        No completed deliveries yet
+                                                    </p>
+                                                ) : months.map(({ month, total }) => (
+                                                    <div key={month} className="flex justify-between items-center px-3 py-2 bg-slate-50/50 border border-slate-100 rounded-xl">
+                                                        <span className="text-xs font-semibold text-gray-600">{month}</span>
+                                                        <span className="text-xs font-black text-emerald-600">₹{total.toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 

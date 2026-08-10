@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiShoppingBag, FiSearch, FiChevronDown, FiMapPin, FiTruck, FiBox, FiClock, FiCheckCircle, FiFileText } from 'react-icons/fi';
+import { FiShoppingBag, FiSearch, FiChevronDown, FiMapPin, FiTruck, FiBox, FiClock, FiCheckCircle, FiFileText, FiEye, FiX, FiUser } from 'react-icons/fi';
 import api from '../../../shared/utils/api';
 import toast from 'react-hot-toast';
 import OrderBillModal from '../components/OrderBillModal';
@@ -16,6 +16,8 @@ const AdminOrders = () => {
 
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+    const [selectedOrderInfo, setSelectedOrderInfo] = useState(null);
+    const [statusFilter, setStatusFilter] = useState('all');
 
     // Debounce effect
     useEffect(() => {
@@ -29,10 +31,10 @@ const AdminOrders = () => {
         };
     }, [searchTerm]);
 
-    const fetchOrders = async (pageNum, search = '', module = 'all') => {
+    const fetchOrders = async (pageNum, search = '', module = 'all', status = 'all') => {
         try {
             setLoading(true);
-            const res = await api.get(`/admin/orders?page=${pageNum}&limit=10&search=${encodeURIComponent(search)}&module=${module}`);
+            const res = await api.get(`/admin/orders?page=${pageNum}&limit=10&search=${encodeURIComponent(search)}&module=${module}&status=${status}`);
             if (res.success) {
                 setOrders(res.data.orders);
                 setTotalPages(res.data.totalPages);
@@ -46,8 +48,8 @@ const AdminOrders = () => {
     };
 
     useEffect(() => {
-        fetchOrders(page, debouncedSearchTerm, moduleFilter);
-    }, [page, debouncedSearchTerm, moduleFilter]);
+        fetchOrders(page, debouncedSearchTerm, moduleFilter, statusFilter);
+    }, [page, debouncedSearchTerm, moduleFilter, statusFilter]);
 
     const handleFilterChange = (e) => {
         setModuleFilter(e.target.value);
@@ -107,6 +109,26 @@ const AdminOrders = () => {
                 </div>
             </div>
 
+            {/* Status Filter Tabs */}
+            <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-150 whitespace-nowrap overflow-x-auto max-w-full hide-scrollbar">
+                {['all', 'Pending', 'Accepted', 'Dispatched', 'Completed', 'Cancelled', 'Exchange'].map(status => (
+                    <button
+                        key={status}
+                        onClick={() => {
+                            setStatusFilter(status);
+                            setPage(1);
+                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all shrink-0 ${
+                            statusFilter === status
+                                ? 'bg-white shadow-sm text-primary-600 border border-gray-200/50'
+                                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100/50'
+                        }`}
+                    >
+                        {status === 'all' ? 'All Status' : status}
+                    </button>
+                ))}
+            </div>
+
             {loading ? (
                 <div className="flex items-center justify-center h-64">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -140,16 +162,13 @@ const AdminOrders = () => {
                                                 {order.module}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 align-top space-y-3">
-                                            <div>
-                                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Customer</div>
-                                                <div className="font-bold text-gray-900">{order.user?.name || 'Unknown User'}</div>
-                                                <div className="text-xs text-gray-500">{order.user?.phone}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Vendor</div>
-                                                <div className="font-bold text-primary-600">{order.vendor?.storeName || 'Unknown Vendor'}</div>
-                                            </div>
+                                        <td className="px-6 py-4 align-middle">
+                                            <button 
+                                                onClick={() => setSelectedOrderInfo(order)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all shadow-sm active:scale-95"
+                                            >
+                                                <FiEye size={12} className="text-slate-500" /> View Info
+                                            </button>
                                         </td>
                                         <td className="px-6 py-4 align-top">
                                             <div className="space-y-2">
@@ -230,6 +249,81 @@ const AdminOrders = () => {
                 onClose={() => setIsBillModalOpen(false)} 
                 order={selectedOrder} 
             />
+
+            {/* View Info Modal */}
+            {selectedOrderInfo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative border border-slate-100 transform scale-100 transition-transform">
+                        <button
+                            onClick={() => setSelectedOrderInfo(null)}
+                            className="absolute top-5 right-5 p-1.5 hover:bg-slate-50 text-slate-400 hover:text-slate-600 rounded-full transition-colors"
+                        >
+                            <FiX size={18} />
+                        </button>
+                        
+                        <h3 className="text-base font-black text-gray-900 mb-6 uppercase tracking-tight flex items-center gap-2">
+                            <FiUser className="text-primary-600" /> Order Entity Details
+                        </h3>
+
+                        <div className="space-y-4">
+                            {/* Customer Section */}
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-left">
+                                <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Customer Details</h4>
+                                <div className="space-y-1">
+                                    <p className="text-sm font-bold text-slate-950">{selectedOrderInfo.user?.name || 'Unknown User'}</p>
+                                    <p className="text-xs text-slate-500 font-mono">Mobile: {selectedOrderInfo.user?.phone || 'N/A'}</p>
+                                    <p className="text-xs text-slate-650 mt-2 bg-white p-2 rounded-lg border border-slate-100 leading-relaxed">
+                                        <span className="font-bold text-[10px] text-slate-400 uppercase block mb-0.5">Shipping Address</span>
+                                        {selectedOrderInfo.shippingAddress?.addressLine1 || selectedOrderInfo.shippingAddress?.streetAddress || ''}, {selectedOrderInfo.shippingAddress?.city || ''} {selectedOrderInfo.shippingAddress?.state || ''} {selectedOrderInfo.shippingAddress?.pincode ? `(${selectedOrderInfo.shippingAddress.pincode})` : ''}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Vendor Section */}
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-left">
+                                <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Vendor Details</h4>
+                                <div className="space-y-1">
+                                    <p className="text-sm font-bold text-primary-600">{selectedOrderInfo.vendor?.storeName || 'Unknown Vendor'}</p>
+                                    <p className="text-xs text-slate-500">Contact: {selectedOrderInfo.vendor?.name || '--'}</p>
+                                    {selectedOrderInfo.vendor?.phone && (
+                                        <p className="text-xs text-slate-500 font-mono">Mobile: {selectedOrderInfo.vendor.phone}</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Delivery Section */}
+                            <div className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100/50 text-left">
+                                <h4 className="text-[9px] font-black uppercase tracking-widest text-indigo-500 mb-2">Delivery Staff Details</h4>
+                                {selectedOrderInfo.assignedStaff?.name ? (
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-bold text-indigo-950">{selectedOrderInfo.assignedStaff.name}</p>
+                                        <p className="text-xs text-slate-500 font-mono">Mobile: {selectedOrderInfo.assignedStaff.mobile}</p>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-slate-400 italic">No delivery staff assigned yet.</p>
+                                )}
+
+                                {selectedOrderInfo.exchangeRequest && selectedOrderInfo.exchangeRequest.status !== 'None' && selectedOrderInfo.exchangeRequest.assignedStaff?.name && (
+                                    <div className="pt-3 mt-3 border-t border-indigo-100/50 space-y-1">
+                                        <h5 className="text-[9px] font-black uppercase tracking-wider text-purple-650">Exchange Delivery Staff</h5>
+                                        <p className="text-sm font-bold text-purple-950">{selectedOrderInfo.exchangeRequest.assignedStaff.name}</p>
+                                        <p className="text-xs text-slate-500 font-mono">Mobile: {selectedOrderInfo.exchangeRequest.assignedStaff.mobile}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+                            <button
+                                onClick={() => setSelectedOrderInfo(null)}
+                                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
