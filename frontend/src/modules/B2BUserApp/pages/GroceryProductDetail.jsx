@@ -219,6 +219,7 @@ const GroceryProductDetail = () => {
 
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="flex flex-col lg:flex-row">
+                        <div className="w-full lg:w-1/2 p-6 lg:p-10 flex flex-col justify-between">
                             <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 mb-4 flex items-center justify-center">
                                 {selectedMedia === 'video' && videoLink ? (
                                     ytId ? (
