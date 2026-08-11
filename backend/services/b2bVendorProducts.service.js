@@ -316,10 +316,22 @@ export const createB2BVendorProduct = async (productData, vendorId) => {
     // Process variant images
     if (variants && Array.isArray(variants)) {
       const uploadVariantImages = variants.map(async (v) => {
-        if (v.imageUrl && v.imageUrl.startsWith('data:image')) {
+        if (v.images && Array.isArray(v.images)) {
+          v.images = await Promise.all(v.images.map(async (img) => {
+            if (img && img.startsWith('data:image')) {
+              const result = await safeUpload(img, 'products/b2b/variants');
+              return result?.secure_url || img;
+            }
+            return img;
+          }));
+          if (v.images.length > 0) {
+            v.imageUrl = v.images[0];
+          }
+        } else if (v.imageUrl && v.imageUrl.startsWith('data:image')) {
           const result = await safeUpload(v.imageUrl, 'products/b2b/variants');
           if (result && result.secure_url) {
             v.imageUrl = result.secure_url;
+            v.images = [result.secure_url];
           }
         }
       });
@@ -493,10 +505,22 @@ export const updateB2BVendorProduct = async (productId, productData, vendorId) =
     if (variants !== undefined) {
       if (variants && Array.isArray(variants)) {
         const uploadVariantImages = variants.map(async (v) => {
-          if (v.imageUrl && v.imageUrl.startsWith('data:image')) {
+          if (v.images && Array.isArray(v.images)) {
+            v.images = await Promise.all(v.images.map(async (img) => {
+              if (img && img.startsWith('data:image')) {
+                const result = await safeUpload(img, 'products/b2b/variants');
+                return result?.secure_url || img;
+              }
+              return img;
+            }));
+            if (v.images.length > 0) {
+              v.imageUrl = v.images[0];
+            }
+          } else if (v.imageUrl && v.imageUrl.startsWith('data:image')) {
             const result = await safeUpload(v.imageUrl, 'products/b2b/variants');
             if (result && result.secure_url) {
               v.imageUrl = result.secure_url;
+              v.images = [result.secure_url];
             }
           }
         });

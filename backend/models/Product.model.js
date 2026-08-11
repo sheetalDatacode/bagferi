@@ -70,7 +70,8 @@ const productSchema = new mongoose.Schema(
           mrp: { type: Number, required: true, min: 0 },
           stockQuantity: { type: Number, required: true, min: 0, default: 0 },
           sku: { type: String, default: null },
-          imageUrl: { type: String, default: null }
+          imageUrl: { type: String, default: null },
+          images: { type: [String], default: [] }
         }
       ],
       default: []

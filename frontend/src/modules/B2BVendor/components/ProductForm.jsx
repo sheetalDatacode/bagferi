@@ -18,6 +18,44 @@ let categoriesPromise = null;
 
 const DRAFT_KEY = "b2b_product_add_draft";
 
+const groupVariantsForUI = (flatVariants) => {
+    if (!flatVariants || !Array.isArray(flatVariants)) return [];
+    const grouped = [];
+    flatVariants.forEach(v => {
+        const existing = grouped.find(g => 
+            String(g.color || "").toLowerCase() === String(v.color || "").toLowerCase()
+        );
+        if (existing) {
+            const sizesList = (existing.size || "").split(",").map(s => s.trim()).filter(Boolean);
+            if (v.size && !sizesList.includes(v.size)) {
+                sizesList.push(v.size);
+                existing.size = sizesList.join(", ");
+            }
+            if (v.images && Array.isArray(v.images)) {
+                v.images.forEach(img => {
+                    if (img && !existing.images.includes(img)) {
+                        existing.images.push(img);
+                    }
+                });
+            } else if (v.imageUrl && !existing.images.includes(v.imageUrl)) {
+                existing.images.push(v.imageUrl);
+            }
+        } else {
+            grouped.push({
+                color: v.color || "",
+                size: v.size || "",
+                price: v.price || "",
+                mrp: v.mrp || "",
+                stockQuantity: v.stockQuantity || "",
+                sku: v.sku || "",
+                imageUrl: v.imageUrl || "",
+                images: Array.isArray(v.images) ? [...v.images] : (v.imageUrl ? [v.imageUrl] : [])
+            });
+        }
+    });
+    return grouped;
+};
+
 const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
@@ -74,7 +112,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
             return {
                 ...initialData,
                 specifications: specs.length > 0 ? specs : [{ name: "", value: "" }],
-                variants: initialData.variants || [],
+                variants: groupVariantsForUI(initialData.variants),
             };
         }
         return {
@@ -564,8 +602,11 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
 
         if (formData.variants && formData.variants.length > 0) {
             formData.variants.forEach((v, idx) => {
+                if (!v.color?.trim()) {
+                    newErrors[`variant_color_${idx}`] = "Color is required";
+                }
                 if (!v.size?.trim()) {
-                    newErrors[`variant_size_${idx}`] = "Size is required";
+                    newErrors[`variant_size_${idx}`] = "At least one size is required";
                 }
                 if (!v.price || isNaN(v.price) || parseFloat(v.price) <= 0) {
                     newErrors[`variant_price_${idx}`] = "Valid price is required";
@@ -650,27 +691,28 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 value: Array.isArray(spec.value) ? spec.value.join(', ') : String(spec.value || '')
             }));
 
-            // Clean up and validate variants payload, expanding comma-separated color options
+            // Clean up and validate variants payload, expanding comma-separated size options
             const rawVariants = [];
             (formData.variants || []).forEach(v => {
-                const colors = v.color && String(v.color).includes(',')
-                    ? String(v.color).split(',').map(c => c.trim()).filter(Boolean)
-                    : [v.color?.trim() || null];
+                const sizes = v.size && String(v.size).includes(',')
+                    ? String(v.size).split(',').map(s => s.trim()).filter(Boolean)
+                    : [v.size?.trim() || null];
 
-                colors.forEach(col => {
+                sizes.forEach(sz => {
                     rawVariants.push({
-                        size: v.size?.trim(),
-                        color: col,
+                        color: v.color?.trim() || null,
+                        size: sz,
                         price: parseFloat(v.price),
                         mrp: parseFloat(v.mrp),
                         stockQuantity: parseInt(v.stockQuantity) || 0,
                         sku: v.sku?.trim() || null,
-                        imageUrl: v.imageUrl || null
+                        imageUrl: v.imageUrl || null,
+                        images: v.images || (v.imageUrl ? [v.imageUrl] : [])
                     });
                 });
             });
 
-            const formattedVariants = rawVariants.filter(v => v.size && !isNaN(v.price) && !isNaN(v.mrp));
+            const formattedVariants = rawVariants.filter(v => v.color && !isNaN(v.price) && !isNaN(v.mrp));
 
             let basePrice = parseFloat(formData.price);
             let baseMrp = formData.mrp ? parseFloat(formData.mrp) : undefined;
@@ -1301,7 +1343,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                         onClick={() => {
                                             setFormData(prev => ({
                                                 ...prev,
-                                                variants: [...(prev.variants || []), { size: "", color: "", price: "", mrp: "", stockQuantity: "", sku: "", imageUrl: "" }]
+                                                variants: [...(prev.variants || []), { color: "", size: "", price: "", mrp: "", stockQuantity: "", sku: "", imageUrl: "", images: [] }]
                                             }));
                                         }}
                                         className="flex items-center gap-1 text-xs font-black text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100/80 px-3 py-2 rounded-xl transition-all"
@@ -1320,9 +1362,9 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                         <table className="w-full text-left border-collapse min-w-[700px]">
                                             <thead>
                                                 <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                    <th className="pb-3 pr-2 w-12">Image</th>
-                                                    <th className="pb-3 pr-2">Size *</th>
-                                                    <th className="pb-3 px-2">Color</th>
+                                                    <th className="pb-3 pr-2 w-12">Images</th>
+                                                    <th className="pb-3 pr-2">Color *</th>
+                                                    <th className="pb-3 px-2">Sizes</th>
                                                     <th className="pb-3 px-2">Rate/Price *</th>
                                                     <th className="pb-3 px-2">MRP *</th>
                                                     <th className="pb-3 px-2">Stock Qty</th>
@@ -1333,16 +1375,19 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                             <tbody className="divide-y divide-gray-50">
                                                 {formData.variants.map((v, idx) => (
                                                     <tr key={idx} className="group">
-                                                        <td className="py-3 pr-2">
-                                                            <div className="flex items-center gap-2">
-                                                                {v.imageUrl ? (
-                                                                    <div className="relative w-8 h-8 rounded-lg border border-gray-200 overflow-hidden shrink-0 group/img">
-                                                                        <img src={v.imageUrl} className="w-full h-full object-cover" alt="" />
+                                                        <td className="py-3 pr-2 max-w-[200px]">
+                                                            <div className="flex flex-wrap gap-1.5 items-center">
+                                                                {(v.images || (v.imageUrl ? [v.imageUrl] : [])).map((imgUrl, imgIdx) => (
+                                                                    <div key={imgIdx} className="relative w-8 h-8 rounded-lg border border-gray-200 overflow-hidden shrink-0 group/img">
+                                                                        <img src={imgUrl} className="w-full h-full object-cover" alt="" />
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => {
                                                                                 const newVariants = [...formData.variants];
-                                                                                newVariants[idx].imageUrl = "";
+                                                                                const currentImages = newVariants[idx].images || (newVariants[idx].imageUrl ? [newVariants[idx].imageUrl] : []);
+                                                                                const nextImages = currentImages.filter((_, i) => i !== imgIdx);
+                                                                                newVariants[idx].images = nextImages;
+                                                                                newVariants[idx].imageUrl = nextImages[0] || "";
                                                                                 setFormData({ ...formData, variants: newVariants });
                                                                             }}
                                                                             className="absolute inset-0 bg-red-600/70 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
@@ -1350,58 +1395,61 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                                             <FiX size={10} />
                                                                         </button>
                                                                     </div>
-                                                                ) : (
-                                                                    <label className="w-8 h-8 rounded-lg border border-dashed border-gray-300 hover:border-indigo-500 bg-slate-50 flex items-center justify-center cursor-pointer transition-colors shrink-0">
-                                                                        <FiImage className="text-gray-400 text-xs" />
-                                                                        <input
-                                                                            type="file"
-                                                                            accept="image/*"
-                                                                            className="hidden"
-                                                                            onChange={(e) => {
-                                                                                const file = e.target.files[0];
-                                                                                if (file) {
-                                                                                    const reader = new FileReader();
-                                                                                    reader.onload = (uploadEvent) => {
-                                                                                        const newVariants = [...formData.variants];
-                                                                                        newVariants[idx].imageUrl = uploadEvent.target.result;
-                                                                                        setFormData({ ...formData, variants: newVariants });
-                                                                                    };
-                                                                                    reader.readAsDataURL(file);
-                                                                                }
-                                                                            }}
-                                                                        />
-                                                                    </label>
-                                                                )}
+                                                                ))}
+                                                                <label className="w-8 h-8 rounded-lg border border-dashed border-gray-300 hover:border-indigo-500 bg-slate-50 flex items-center justify-center cursor-pointer transition-colors shrink-0">
+                                                                    <FiPlus className="text-gray-400 text-xs" />
+                                                                    <input
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        multiple
+                                                                        className="hidden"
+                                                                        onChange={(e) => {
+                                                                            const files = Array.from(e.target.files);
+                                                                            files.forEach(file => {
+                                                                                const reader = new FileReader();
+                                                                                reader.onload = (uploadEvent) => {
+                                                                                    const newVariants = [...formData.variants];
+                                                                                    const currentImages = newVariants[idx].images || (newVariants[idx].imageUrl ? [newVariants[idx].imageUrl] : []);
+                                                                                    newVariants[idx].images = [...currentImages, uploadEvent.target.result];
+                                                                                    newVariants[idx].imageUrl = newVariants[idx].images[0];
+                                                                                    setFormData({ ...formData, variants: newVariants });
+                                                                                };
+                                                                                reader.readAsDataURL(file);
+                                                                            });
+                                                                        }}
+                                                                    />
+                                                                </label>
                                                             </div>
                                                         </td>
                                                         <td className="py-3 pr-2">
                                                             <input
                                                                 type="text"
-                                                                value={v.size}
-                                                                placeholder="e.g. L"
+                                                                value={v.color || ""}
+                                                                placeholder="e.g. Red"
                                                                 onChange={(e) => {
                                                                     const newVariants = [...formData.variants];
-                                                                    newVariants[idx].size = e.target.value;
+                                                                    newVariants[idx].color = e.target.value;
                                                                     setFormData({ ...formData, variants: newVariants });
                                                                 }}
-                                                                className={`w-full px-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_size_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
+                                                                className={`w-full px-2.5 py-2 text-xs bg-slate-50 border rounded-lg outline-none ${errors[`variant_color_${idx}`] ? 'border-red-500 bg-red-50/10' : 'border-gray-200 focus:border-indigo-500 focus:bg-white'}`}
                                                             />
+                                                            {errors[`variant_color_${idx}`] && <p className="text-[9px] text-red-500 font-bold mt-1 ml-1">{errors[`variant_color_${idx}`]}</p>}
                                                         </td>
                                                         <td className="py-3 px-2 min-w-[200px]">
                                                             <div className="flex flex-wrap gap-1 mb-1.5 max-w-xs">
-                                                                {(v.color || "").split(",").map(c => c.trim()).filter(Boolean).map((colorTag, tagIdx) => (
+                                                                {(v.size || "").split(",").map(s => s.trim()).filter(Boolean).map((sizeTag, tagIdx) => (
                                                                     <span 
                                                                         key={tagIdx} 
                                                                         className="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-150 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
                                                                     >
-                                                                        {colorTag}
+                                                                        {sizeTag}
                                                                         <button 
                                                                             type="button" 
                                                                             onClick={() => {
-                                                                                const colorsList = (v.color || "").split(",").map(c => c.trim()).filter(Boolean);
-                                                                                const updatedColors = colorsList.filter((_, i) => i !== tagIdx).join(", ");
+                                                                                const sizesList = (v.size || "").split(",").map(s => s.trim()).filter(Boolean);
+                                                                                const updatedSizes = sizesList.filter((_, i) => i !== tagIdx).join(", ");
                                                                                 const newVariants = [...formData.variants];
-                                                                                newVariants[idx].color = updatedColors;
+                                                                                newVariants[idx].size = updatedSizes;
                                                                                 setFormData({ ...formData, variants: newVariants });
                                                                             }}
                                                                             className="hover:bg-indigo-100 rounded-full p-0.5"
@@ -1414,17 +1462,17 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                             <div className="flex items-center gap-1">
                                                                 <input
                                                                     type="text"
-                                                                    placeholder="Add Color"
+                                                                    placeholder="Add Size"
                                                                     onKeyDown={(e) => {
                                                                         if (e.key === 'Enter') {
                                                                             e.preventDefault();
                                                                             const val = e.target.value.trim();
                                                                             if (val) {
-                                                                                const colorsList = (v.color || "").split(",").map(c => c.trim()).filter(Boolean);
-                                                                                if (!colorsList.includes(val)) {
-                                                                                    colorsList.push(val);
+                                                                                const sizesList = (v.size || "").split(",").map(s => s.trim()).filter(Boolean);
+                                                                                if (!sizesList.includes(val)) {
+                                                                                    sizesList.push(val);
                                                                                     const newVariants = [...formData.variants];
-                                                                                    newVariants[idx].color = colorsList.join(", ");
+                                                                                    newVariants[idx].size = sizesList.join(", ");
                                                                                     setFormData({ ...formData, variants: newVariants });
                                                                                 }
                                                                                 e.target.value = "";
@@ -1439,11 +1487,11 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                                         const inputEl = e.currentTarget.previousSibling;
                                                                         const val = inputEl.value.trim();
                                                                         if (val) {
-                                                                            const colorsList = (v.color || "").split(",").map(c => c.trim()).filter(Boolean);
-                                                                            if (!colorsList.includes(val)) {
-                                                                                colorsList.push(val);
+                                                                            const sizesList = (v.size || "").split(",").map(s => s.trim()).filter(Boolean);
+                                                                            if (!sizesList.includes(val)) {
+                                                                                sizesList.push(val);
                                                                                 const newVariants = [...formData.variants];
-                                                                                newVariants[idx].color = colorsList.join(", ");
+                                                                                newVariants[idx].size = sizesList.join(", ");
                                                                                 setFormData({ ...formData, variants: newVariants });
                                                                             }
                                                                             inputEl.value = "";
@@ -1454,6 +1502,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                                     +
                                                                 </button>
                                                             </div>
+                                                            {errors[`variant_size_${idx}`] && <p className="text-[9px] text-red-500 font-bold mt-1 ml-1">{errors[`variant_size_${idx}`]}</p>}
                                                         </td>
                                                         <td className="py-3 px-2">
                                                             <div className="relative">
