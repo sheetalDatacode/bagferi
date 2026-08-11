@@ -32,24 +32,22 @@ const VendorOrders = () => {
     const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'staffHistory'
     const [selectedStaffFilter, setSelectedStaffFilter] = useState('All');
 
+    // Self Delivery states
+    const [deliveryType, setDeliveryType] = useState('staff'); // 'staff' or 'self'
+    const [deliveryOtpInputs, setDeliveryOtpInputs] = useState({});
+    const [verifyingDeliveryOrder, setVerifyingDeliveryOrder] = useState({});
+
     // Exchange states
     const [exchangeOtpInputs, setExchangeOtpInputs] = useState({});
     const [verifyingExchangeOrder, setVerifyingExchangeOrder] = useState({});
     const [isExchangeStaffModalOpen, setIsExchangeStaffModalOpen] = useState(false);
     const [orderToAcceptExchange, setOrderToAcceptExchange] = useState(null);
 
-    const handleAcceptExchange = async (orderId, staff = null) => {
+    const handleAcceptExchange = async (orderId) => {
         try {
-            const payload = {};
-            if (staff) {
-                payload.assignedStaff = { name: staff.name, mobile: staff.mobile };
-            }
-            const res = await api.post(`/order/vendor/orders/${orderId}/accept-exchange`, payload);
+            const res = await api.post(`/order/vendor/orders/${orderId}/accept-exchange`, {});
             if (res.success) {
-                toast.success("Exchange request accepted and OTP generated");
-                setIsExchangeStaffModalOpen(false);
-                setOrderToAcceptExchange(null);
-                setSelectedStaffIndex('');
+                toast.success("Exchange request accepted successfully");
                 fetchOrders();
             } else {
                 toast.error(res.message || "Failed to accept exchange");
@@ -57,6 +55,28 @@ const VendorOrders = () => {
         } catch (error) {
             console.error(error);
             toast.error("Failed to accept exchange");
+        }
+    };
+
+    const handleDispatchExchange = async (orderId, staff = null) => {
+        try {
+            const payload = {};
+            if (staff) {
+                payload.assignedStaff = { name: staff.name, mobile: staff.mobile };
+            }
+            const res = await api.post(`/order/vendor/orders/${orderId}/dispatch-exchange`, payload);
+            if (res.success) {
+                toast.success("Exchange dispatched and OTP generated");
+                setIsExchangeStaffModalOpen(false);
+                setOrderToAcceptExchange(null);
+                setSelectedStaffIndex('');
+                fetchOrders();
+            } else {
+                toast.error(res.message || "Failed to dispatch exchange");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to dispatch exchange");
         }
     };
 
@@ -223,11 +243,17 @@ const VendorOrders = () => {
     };
 
     const confirmDispatch = () => {
-        if (selectedStaffIndex === '') {
-            return toast.error("Please assign a staff member to dispatch");
+        if (deliveryType === 'self') {
+            updateOrderStatus(orderToDispatch._id, 'Dispatched', { 
+                assignedStaff: { name: 'Self Delivery', mobile: vendor?.mobile || vendor?.phone || '' } 
+            });
+        } else {
+            if (selectedStaffIndex === '' || selectedStaffIndex === 'self') {
+                return toast.error("Please assign a staff member to dispatch");
+            }
+            const staff = shopDetails.details[parseInt(selectedStaffIndex)];
+            updateOrderStatus(orderToDispatch._id, 'Dispatched', { assignedStaff: { name: staff.name, mobile: staff.mobile } });
         }
-        const staff = shopDetails.details[parseInt(selectedStaffIndex)];
-        updateOrderStatus(orderToDispatch._id, 'Dispatched', { assignedStaff: { name: staff.name, mobile: staff.mobile } });
     };
 
     const filteredOrders = orders.filter(o => {
@@ -524,40 +550,49 @@ const VendorOrders = () => {
                                                             <>
                                                                 {order.exchangeRequest.status === 'Requested' && (
                                                                     <button 
-                                                                        onClick={() => {
-                                                                            setOrderToAcceptExchange(order);
-                                                                            setIsExchangeStaffModalOpen(true);
-                                                                            setSelectedStaffIndex('');
-                                                                        }}
-                                                                        className="text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl transition-all shadow-md shadow-indigo-200 flex items-center gap-1.5 uppercase tracking-wider"
+                                                                        onClick={() => handleAcceptExchange(order._id)}
+                                                                        className="text-xs font-black text-white bg-indigo-655 bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl transition-all shadow-md shadow-indigo-200 flex items-center gap-1.5 uppercase tracking-wider"
                                                                     >
                                                                         Accept Exchange
                                                                     </button>
                                                                 )}
                                                                 {order.exchangeRequest.status === 'Accepted' && (
-                                                                    <div className="flex flex-col gap-1 items-center bg-indigo-50 border border-indigo-200 rounded-xl p-2 shadow-sm shrink-0">
-                                                                        <span className="text-[9px] font-black uppercase text-indigo-700 tracking-wider">Awaiting OTP</span>
-                                                                        <div className="flex gap-1 items-center">
-                                                                            <input
-                                                                                type="text"
-                                                                                maxLength={4}
-                                                                                placeholder="OTP"
-                                                                                value={exchangeOtpInputs[order._id] || ''}
-                                                                                onChange={(e) => setExchangeOtpInputs({
-                                                                                    ...exchangeOtpInputs,
-                                                                                    [order._id]: e.target.value.replace(/\D/g, '')
-                                                                                })}
-                                                                                className="w-14 px-1 py-1 bg-white border border-gray-300 rounded text-center text-xs font-bold focus:border-indigo-500 outline-none"
-                                                                            />
-                                                                            <button
-                                                                                disabled={verifyingExchangeOrder[order._id]}
-                                                                                onClick={() => handleVerifyExchange(order._id)}
-                                                                                className="text-[10px] font-black text-white bg-green-600 hover:bg-green-700 px-2 py-1 rounded-lg uppercase tracking-wider shadow-sm"
-                                                                            >
-                                                                                {verifyingExchangeOrder[order._id] ? '...' : 'Verify'}
-                                                                            </button>
+                                                                    !order.exchangeRequest.assignedStaff?.name ? (
+                                                                        <button 
+                                                                            onClick={() => {
+                                                                                setOrderToAcceptExchange(order);
+                                                                                setIsExchangeStaffModalOpen(true);
+                                                                                setSelectedStaffIndex('');
+                                                                            }}
+                                                                            className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors border border-indigo-200 flex items-center gap-1"
+                                                                        >
+                                                                            <FiTruck /> Dispatch Exchange
+                                                                        </button>
+                                                                    ) : (
+                                                                        <div className="flex flex-col gap-1 items-center bg-indigo-55 bg-indigo-50 border border-indigo-200 rounded-xl p-2 shadow-sm shrink-0">
+                                                                            <span className="text-[9px] font-black uppercase text-indigo-700 tracking-wider">Awaiting OTP</span>
+                                                                            <div className="flex gap-1 items-center">
+                                                                                <input
+                                                                                    type="text"
+                                                                                    maxLength={4}
+                                                                                    placeholder="OTP"
+                                                                                    value={exchangeOtpInputs[order._id] || ''}
+                                                                                    onChange={(e) => setExchangeOtpInputs({
+                                                                                        ...exchangeOtpInputs,
+                                                                                        [order._id]: e.target.value.replace(/\D/g, '')
+                                                                                    })}
+                                                                                    className="w-14 px-1 py-1 bg-white border border-gray-300 rounded text-center text-xs font-bold focus:border-indigo-500 outline-none"
+                                                                                />
+                                                                                <button
+                                                                                    disabled={verifyingExchangeOrder[order._id]}
+                                                                                    onClick={() => handleVerifyExchange(order._id)}
+                                                                                    className="text-[10px] font-black text-white bg-green-600 hover:bg-green-700 px-2 py-1 rounded-lg uppercase tracking-wider shadow-sm"
+                                                                                >
+                                                                                    {verifyingExchangeOrder[order._id] ? '...' : 'Verify'}
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
+                                                                    )
                                                                 )}
                                                                 {order.exchangeRequest.status === 'Completed' && (
                                                                     <span className="text-[10px] font-black uppercase tracking-wider text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
@@ -599,12 +634,54 @@ const VendorOrders = () => {
                                                                     </button>
                                                                 )}
                                                                 {order.status === 'Dispatched' && (
-                                                                    <button 
-                                                                        onClick={() => updateOrderStatus(order._id, 'Completed')}
-                                                                        className="text-xs font-bold text-green-600 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors border border-green-200 flex items-center gap-1"
-                                                                    >
-                                                                        <FiCheckCircle /> Complete
-                                                                    </button>
+                                                                    order.assignedStaff?.name === 'Self Delivery' ? (
+                                                                        <div className="flex flex-col gap-1 items-center bg-green-50 border border-green-200 rounded-xl p-2 shadow-sm shrink-0 text-left">
+                                                                            <span className="text-[9px] font-black uppercase text-green-700 tracking-wider">Delivery OTP</span>
+                                                                            <div className="flex gap-1 items-center">
+                                                                                <input
+                                                                                    type="text"
+                                                                                    maxLength={4}
+                                                                                    placeholder="OTP"
+                                                                                    value={deliveryOtpInputs[order._id] || ''}
+                                                                                    onChange={(e) => setDeliveryOtpInputs({
+                                                                                        ...deliveryOtpInputs,
+                                                                                        [order._id]: e.target.value.replace(/\D/g, '')
+                                                                                    })}
+                                                                                    className="w-14 px-1.5 py-1 bg-white border border-gray-300 rounded text-center text-xs font-bold focus:border-green-500 outline-none"
+                                                                                />
+                                                                                <button
+                                                                                    disabled={verifyingDeliveryOrder[order._id]}
+                                                                                    onClick={async () => {
+                                                                                        const otp = deliveryOtpInputs[order._id];
+                                                                                        if (!otp) return toast.error("Please enter the 4-digit Delivery OTP");
+                                                                                        try {
+                                                                                            setVerifyingDeliveryOrder(prev => ({ ...prev, [order._id]: true }));
+                                                                                            await updateOrderStatus(order._id, 'Completed', { otp });
+                                                                                            setDeliveryOtpInputs(prev => {
+                                                                                                const copy = { ...prev };
+                                                                                                delete copy[order._id];
+                                                                                                return copy;
+                                                                                            });
+                                                                                        } catch (err) {
+                                                                                            console.error(err);
+                                                                                        } finally {
+                                                                                            setVerifyingDeliveryOrder(prev => ({ ...prev, [order._id]: false }));
+                                                                                        }
+                                                                                    }}
+                                                                                    className="text-[10px] font-black text-white bg-green-650 hover:bg-green-700 px-2 py-1 rounded-lg uppercase tracking-wider shadow-sm"
+                                                                                >
+                                                                                    {verifyingDeliveryOrder[order._id] ? '...' : 'Verify'}
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <button 
+                                                                            onClick={() => updateOrderStatus(order._id, 'Completed')}
+                                                                            className="text-xs font-bold text-green-600 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors border border-green-200 flex items-center gap-1"
+                                                                        >
+                                                                            <FiCheckCircle /> Complete
+                                                                        </button>
+                                                                    )
                                                                 )}
                                                             </>
                                                         )}
@@ -787,31 +864,60 @@ const VendorOrders = () => {
                             </button>
                         </div>
                         <div className="p-6 space-y-4">
-                            <p className="text-sm text-gray-600">Please assign a staff member to handle the dispatch for Order <span className="font-bold text-gray-900">{orderToDispatch?.orderNumber}</span>.</p>
+                            <p className="text-sm text-gray-600">Choose a dispatch delivery method for Order <span className="font-bold text-gray-900">{orderToDispatch?.orderNumber}</span>.</p>
+                            
+                            <div className="flex gap-4 p-2 bg-gray-50 rounded-xl border border-gray-100 justify-around">
+                                <label className="flex items-center gap-2 cursor-pointer text-xs font-black uppercase tracking-wider text-gray-700">
+                                    <input 
+                                        type="radio" 
+                                        name="deliveryType" 
+                                        value="staff" 
+                                        checked={deliveryType === 'staff'} 
+                                        onChange={() => { setDeliveryType('staff'); setSelectedStaffIndex(''); }}
+                                        className="text-primary-600 focus:ring-primary-500" 
+                                    />
+                                    Assign Staff
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer text-xs font-black uppercase tracking-wider text-gray-700">
+                                    <input 
+                                        type="radio" 
+                                        name="deliveryType" 
+                                        value="self" 
+                                        checked={deliveryType === 'self'} 
+                                        onChange={() => { setDeliveryType('self'); setSelectedStaffIndex('self'); }}
+                                        className="text-primary-600 focus:ring-primary-500" 
+                                    />
+                                    Self Delivery
+                                </label>
+                            </div>
                             
                             {!isAddingStaff ? (
                                 <>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Select Staff Member</label>
-                                        <select 
-                                            value={selectedStaffIndex}
-                                            onChange={(e) => setSelectedStaffIndex(e.target.value)}
-                                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-primary-500 outline-none"
-                                        >
-                                            <option value="">-- Choose a staff --</option>
-                                            {shopDetails?.details?.map((staff, idx) => (
-                                                <option key={idx} value={idx}>{staff.name} ({staff.mobile})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="flex justify-end">
-                                        <button 
-                                            onClick={() => setIsAddingStaff(true)}
-                                            className="text-xs font-bold text-primary-600 flex items-center gap-1 hover:underline"
-                                        >
-                                            <FiPlus /> Add New Staff
-                                        </button>
-                                    </div>
+                                    {deliveryType === 'staff' && (
+                                        <>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Select Staff Member</label>
+                                                <select 
+                                                    value={selectedStaffIndex}
+                                                    onChange={(e) => setSelectedStaffIndex(e.target.value)}
+                                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-primary-500 outline-none"
+                                                >
+                                                    <option value="">-- Choose a staff --</option>
+                                                    {shopDetails?.details?.map((staff, idx) => (
+                                                        <option key={idx} value={idx}>{staff.name} ({staff.mobile})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <button 
+                                                    onClick={() => setIsAddingStaff(true)}
+                                                    className="text-xs font-bold text-primary-600 flex items-center gap-1 hover:underline"
+                                                >
+                                                    <FiPlus /> Add New Staff
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
                                 </>
                             ) : (
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
@@ -897,31 +1003,60 @@ const VendorOrders = () => {
                             </button>
                         </div>
                         <div className="p-6 space-y-4 text-left">
-                            <p className="text-sm text-gray-600">Please assign a staff member to handle the product exchange for Order <span className="font-bold text-gray-900">{orderToAcceptExchange?.orderNumber}</span>.</p>
+                            <p className="text-sm text-gray-600">Choose a delivery method to dispatch the product exchange for Order <span className="font-bold text-gray-900">{orderToAcceptExchange?.orderNumber}</span>.</p>
+                            
+                            <div className="flex gap-4 p-2 bg-gray-50 rounded-xl border border-gray-100 justify-around">
+                                <label className="flex items-center gap-2 cursor-pointer text-xs font-black uppercase tracking-wider text-gray-700">
+                                    <input 
+                                        type="radio" 
+                                        name="exchangeDeliveryType" 
+                                        value="staff" 
+                                        checked={deliveryType === 'staff'} 
+                                        onChange={() => { setDeliveryType('staff'); setSelectedStaffIndex(''); }}
+                                        className="text-indigo-600 focus:ring-indigo-500" 
+                                    />
+                                    Assign Staff
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer text-xs font-black uppercase tracking-wider text-gray-700">
+                                    <input 
+                                        type="radio" 
+                                        name="exchangeDeliveryType" 
+                                        value="self" 
+                                        checked={deliveryType === 'self'} 
+                                        onChange={() => { setDeliveryType('self'); setSelectedStaffIndex('self'); }}
+                                        className="text-indigo-600 focus:ring-indigo-500" 
+                                    />
+                                    Self Delivery
+                                </label>
+                            </div>
                             
                             {!isAddingStaff ? (
                                 <>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Select Staff Member</label>
-                                        <select 
-                                            value={selectedStaffIndex}
-                                            onChange={(e) => setSelectedStaffIndex(e.target.value)}
-                                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-indigo-500 outline-none"
-                                        >
-                                            <option value="">-- Choose a staff --</option>
-                                            {shopDetails?.details?.map((staff, idx) => (
-                                                <option key={idx} value={idx}>{staff.name} ({staff.mobile})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="flex justify-end">
-                                        <button 
-                                            onClick={() => setIsAddingStaff(true)}
-                                            className="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:underline"
-                                        >
-                                            <FiPlus /> Add New Staff
-                                        </button>
-                                    </div>
+                                    {deliveryType === 'staff' && (
+                                        <>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Select Staff Member</label>
+                                                <select 
+                                                    value={selectedStaffIndex}
+                                                    onChange={(e) => setSelectedStaffIndex(e.target.value)}
+                                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:border-indigo-500 outline-none"
+                                                >
+                                                    <option value="">-- Choose a staff --</option>
+                                                    {shopDetails?.details?.map((staff, idx) => (
+                                                        <option key={idx} value={idx}>{staff.name} ({staff.mobile})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <button 
+                                                    onClick={() => setIsAddingStaff(true)}
+                                                    className="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:underline"
+                                                >
+                                                    <FiPlus /> Add New Staff
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
                                 </>
                             ) : (
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
@@ -959,16 +1094,20 @@ const VendorOrders = () => {
                             <button onClick={() => { setIsExchangeStaffModalOpen(false); setOrderToAcceptExchange(null); }} className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-gray-900">Cancel</button>
                             <button 
                                 onClick={() => {
-                                    if (selectedStaffIndex === '') {
-                                        return toast.error("Please assign a staff member");
+                                    if (deliveryType === 'self') {
+                                        handleDispatchExchange(orderToAcceptExchange._id, { name: 'Self Delivery', mobile: vendor?.mobile || vendor?.phone || '' });
+                                    } else {
+                                        if (selectedStaffIndex === '' || selectedStaffIndex === 'self') {
+                                            return toast.error("Please assign a staff member");
+                                        }
+                                        const staff = shopDetails.details[parseInt(selectedStaffIndex)];
+                                        handleDispatchExchange(orderToAcceptExchange._id, staff);
                                     }
-                                    const staff = shopDetails.details[parseInt(selectedStaffIndex)];
-                                    handleAcceptExchange(orderToAcceptExchange._id, staff);
                                 }}
                                 disabled={isAddingStaff}
                                 className="px-5 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2"
                             >
-                                <FiTruck /> Assign & Accept
+                                <FiTruck /> Assign & Dispatch
                             </button>
                         </div>
                     </div>

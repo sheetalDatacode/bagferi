@@ -78,6 +78,19 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    convenienceFee: {
+      type: Number,
+      default: 0,
+    },
+    paymentFlow: {
+      type: String,
+      enum: ['advance_cod', 'full_cod'],
+      default: 'advance_cod',
+    },
+    platformCharge: {
+      type: Number,
+      default: 0,
+    },
     shippingAddress: {
       fullName: String,
       phone: String,

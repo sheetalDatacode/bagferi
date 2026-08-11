@@ -145,6 +145,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
     const [dynamicValues, setDynamicValues] = useState({});
     const [customMultiInputs, setCustomMultiInputs] = useState({});
     const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+    const dynamicValuesInitialized = useRef(false);
 
     // Initial draft loading with authentication awareness
     useEffect(() => {
@@ -155,7 +156,10 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
             try {
                 const parsed = JSON.parse(saved);
                 if (parsed.formData) setFormData(prev => ({ ...prev, ...parsed.formData }));
-                if (parsed.dynamicValues) setDynamicValues(parsed.dynamicValues);
+                if (parsed.dynamicValues) {
+                    setDynamicValues(parsed.dynamicValues);
+                    dynamicValuesInitialized.current = true;
+                }
                 if (parsed.customMultiInputs) setCustomMultiInputs(parsed.customMultiInputs);
                 console.log("[ProductForm] Draft hydrated for user:", vendorId);
             } catch (e) {
@@ -173,7 +177,10 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
             try {
                 const parsed = JSON.parse(saved);
                 if (parsed.formData) setFormData(prev => ({ ...prev, ...parsed.formData }));
-                if (parsed.dynamicValues) setDynamicValues(parsed.dynamicValues);
+                if (parsed.dynamicValues) {
+                    setDynamicValues(parsed.dynamicValues);
+                    dynamicValuesInitialized.current = true;
+                }
                 if (parsed.customMultiInputs) setCustomMultiInputs(parsed.customMultiInputs);
             } catch (e) {}
         }
@@ -346,56 +353,57 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
             setDynamicFields(fields);
 
             // Populate dynamicValues from formData.specifications (including custom values for select/multi-select)
-            setDynamicValues(prev => {
-                const newValues = { ...prev };
-                const opts = (o) => (Array.isArray(o) ? o : (o ? [o] : [])).map(String);
+            if (formData.specifications && formData.specifications.length > 0 && !dynamicValuesInitialized.current) {
+                setDynamicValues(prev => {
+                    const newValues = { ...prev };
+                    const opts = (o) => (Array.isArray(o) ? o : (o ? [o] : [])).map(String);
 
-                fields.forEach(field => {
-                    const existingSpec = formData.specifications.find(
-                        s => s.name?.toLowerCase() === field.label?.toLowerCase()
-                    );
-                    if (!existingSpec || (existingSpec.value !== 0 && !existingSpec.value)) return;
+                    fields.forEach(field => {
+                        const existingSpec = formData.specifications.find(
+                            s => s.name?.toLowerCase() === field.label?.toLowerCase()
+                        );
+                        if (!existingSpec || (existingSpec.value !== 0 && !existingSpec.value)) return;
 
-                    const fieldOpts = opts(field.options);
-                    const val = existingSpec.value;
+                        const fieldOpts = opts(field.options);
+                        const val = existingSpec.value;
 
-                    if (field.type === 'select') {
-                        const strVal = typeof val === 'string' ? val : (Array.isArray(val) ? val[0] : String(val));
-                        const matchedOpt = fieldOpts.find(opt => String(opt).toLowerCase() === String(strVal).toLowerCase());
-                        if (matchedOpt) {
-                            if (!newValues[field.label]) newValues[field.label] = matchedOpt;
-                        } else {
-                            newValues[field.label] = '__OTHER__';
-                            newValues[`${field.label}_custom`] = strVal || '';
-                        }
-                    } else if (field.type === 'multi-select') {
-                        let arrVal = [];
-                        if (Array.isArray(val)) {
-                            arrVal = val;
-                        } else if (typeof val === 'string') {
-                            arrVal = val.split(',').map(v => v.trim()).filter(Boolean);
-                        } else {
-                            arrVal = [val];
-                        }
-                        
-                        if (!newValues[field.label]) {
+                        if (field.type === 'select') {
+                            const strVal = typeof val === 'string' ? val : (Array.isArray(val) ? val[0] : String(val));
+                            const matchedOpt = fieldOpts.find(opt => String(opt).toLowerCase() === String(strVal).toLowerCase());
+                            if (matchedOpt) {
+                                newValues[field.label] = matchedOpt;
+                            } else {
+                                newValues[field.label] = '__OTHER__';
+                                newValues[`${field.label}_custom`] = strVal || '';
+                            }
+                        } else if (field.type === 'multi-select') {
+                            let arrVal = [];
+                            if (Array.isArray(val)) {
+                                arrVal = val;
+                            } else if (typeof val === 'string') {
+                                arrVal = val.split(',').map(v => v.trim()).filter(Boolean);
+                            } else {
+                                arrVal = [val];
+                            }
+                            
                             newValues[field.label] = arrVal.map(v => {
                                 const matchedOpt = fieldOpts.find(opt => String(opt).toLowerCase() === String(v).toLowerCase());
                                 return matchedOpt ? matchedOpt : (v != null ? String(v) : '');
                             });
+                        } else {
+                            newValues[field.label] = val;
                         }
-                    } else if (!newValues[field.label]) {
-                        newValues[field.label] = val;
-                    }
+                    });
+                    dynamicValuesInitialized.current = true;
+                    return newValues;
                 });
-                return newValues;
-            });
+            }
         } else {
             setDynamicFields([]);
             setDynamicValues({});
             setCustomMultiInputs({});
         }
-    }, [formData.category, formData.subcategory, formData.subSubcategory, categories]);
+    }, [formData.category, formData.subcategory, formData.subSubcategory, categories, formData.specifications]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -730,14 +738,36 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 }
             }
 
-            // Derive sizes and colors from variants
-            const derivedSizes = formattedVariants.length > 0 
-                ? Array.from(new Set(formattedVariants.map(v => v.size).filter(Boolean)))
-                : (typeof formData.sizes === 'string' ? formData.sizes.split(',') : (formData.sizes || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean);
+            // Look for any dynamic values for Size or Color
+            const dynamicSizeKeys = Object.keys(dynamicValues).filter(k => /size/i.test(k) && !k.endsWith('_custom'));
+            const dynamicColorKeys = Object.keys(dynamicValues).filter(k => /color/i.test(k) && !k.endsWith('_custom'));
+            
+            let extraSizes = [];
+            dynamicSizeKeys.forEach(k => {
+                const val = dynamicValues[k];
+                if (Array.isArray(val)) extraSizes = [...extraSizes, ...val];
+                else if (typeof val === 'string') extraSizes = [...extraSizes, ...val.split(',').map(s => s.trim()).filter(Boolean)];
+            });
 
-            const derivedColors = formattedVariants.length > 0
-                ? Array.from(new Set(formattedVariants.map(v => v.color).filter(Boolean)))
-                : (typeof formData.colors === 'string' ? formData.colors.split(',') : (formData.colors || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean);
+            let extraColors = [];
+            dynamicColorKeys.forEach(k => {
+                const val = dynamicValues[k];
+                if (Array.isArray(val)) extraColors = [...extraColors, ...val];
+                else if (typeof val === 'string') extraColors = [...extraColors, ...val.split(',').map(s => s.trim()).filter(Boolean)];
+            });
+
+            // Derive sizes and colors from variants AND dynamic fields
+            const derivedSizes = Array.from(new Set([
+                ...(formattedVariants.length > 0 ? formattedVariants.map(v => v.size).filter(Boolean) : []),
+                ...(typeof formData.sizes === 'string' ? formData.sizes.split(',') : (formData.sizes || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean),
+                ...extraSizes
+            ]));
+
+            const derivedColors = Array.from(new Set([
+                ...(formattedVariants.length > 0 ? formattedVariants.map(v => v.color).filter(Boolean) : []),
+                ...(typeof formData.colors === 'string' ? formData.colors.split(',') : (formData.colors || [])).map(s => typeof s === 'string' ? s.trim() : s).filter(Boolean),
+                ...extraColors
+            ]));
 
             // Derive availability from stockQuantity if quantity is set
             let derivedAvailability = formData.availability || "In Stock";
@@ -808,7 +838,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                         className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
                     >
                         <div className="flex items-center gap-2 mb-5">
-                            <div className="p-1.5 bg-primary-50 text-primary-600 rounded-lg text-sm">
+                            <div className="p-1.5 bg-[#f5f3ff] text-[#4f46e5] rounded-lg text-sm">
                                 <FiTag />
                             </div>
                             <h3 className="text-lg font-bold text-gray-800">General Information</h3>
@@ -1104,11 +1134,11 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                                 setDynamicValues(p => ({ ...p, [f.label]: newVals }));
                                                             }}
                                                             className={`flex items-center gap-2 p-2.5 rounded-xl cursor-pointer transition-all border ${isSelected
-                                                                ? 'bg-primary-50 border-primary-200 text-primary-700 shadow-sm'
+                                                                ? 'bg-[#f5f3ff] border-[#ddd6fe] text-[#4338ca] shadow-sm'
                                                                 : 'bg-white border-transparent hover:border-gray-300 text-gray-600'
                                                                 }`}
                                                         >
-                                                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isSelected ? 'bg-primary-600 border-primary-600' : 'bg-white border-gray-300'
+                                                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all flex-shrink-0 ${isSelected ? 'bg-[#4f46e5] border-[#4f46e5]' : 'bg-white border-gray-300'
                                                                 }`}>
                                                                 {isSelected && <div className="w-2.5 h-1.5 border-l-2 border-b-2 border-white -rotate-45 mb-0.5"></div>}
                                                             </div>
@@ -1126,7 +1156,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                 <input
                                                     type="text"
                                                     value={customMultiInputs[f.label] ?? ''}
-                                                    className="flex-1 min-w-[120px] px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:border-primary-500 outline-none"
+                                                    className="flex-1 min-w-[120px] px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:border-[#4f46e5] outline-none"
                                                     placeholder="Add custom value (not in list)"
                                                     onChange={(e) => setCustomMultiInputs(p => ({ ...p, [f.label]: e.target.value }))}
                                                     onKeyDown={(e) => {
@@ -1151,7 +1181,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                         setDynamicValues(p => ({ ...p, [f.label]: [...currentVals, v] }));
                                                         setCustomMultiInputs(p => ({ ...p, [f.label]: '' }));
                                                     }}
-                                                    className="px-3 py-2 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-primary-700"
+                                                    className="px-3 py-2 bg-[#4f46e5] text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-[#4338ca]"
                                                 >
                                                     Add
                                                 </button>
@@ -1180,7 +1210,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Brand / Manufacturer</label>
                                 <div 
                                     onClick={() => setIsBrandDropdownOpen(!isBrandDropdownOpen)}
-                                    className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.brand ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus-within:border-primary-500 focus-within:bg-white rounded-xl transition-all cursor-pointer flex justify-between items-center`}
+                                    className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.brand ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus-within:border-[#4f46e5] focus-within:bg-white rounded-xl transition-all cursor-pointer flex justify-between items-center`}
                                 >
                                     <span className={`truncate ${!formData.brand ? 'text-gray-400' : 'text-gray-800'}`}>
                                         {formData.brand || "Select or search brand"}
@@ -1205,7 +1235,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                         placeholder="Search brand..."
                                                         value={brandSearchQuery}
                                                         onChange={(e) => setBrandSearchQuery(e.target.value)}
-                                                        className="w-full pl-9 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 outline-none"
+                                                        className="w-full pl-9 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#4f46e5]/20 outline-none"
                                                         onClick={(e) => e.stopPropagation()}
                                                     />
                                                 </div>
@@ -1225,12 +1255,12 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                             }}
                                                             className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-colors flex items-center justify-between ${
                                                                 formData.brand === b.name 
-                                                                ? 'bg-primary-50 text-primary-700 font-bold' 
+                                                                ? 'bg-[#f5f3ff] text-[#4338ca] font-bold' 
                                                                 : 'text-gray-600 hover:bg-gray-50'
                                                             }`}
                                                         >
                                                             <span>{b.name}</span>
-                                                            {formData.brand === b.name && <FiCheck className="text-primary-600" />}
+                                                            {formData.brand === b.name && <FiCheck className="text-[#4f46e5]" />}
                                                         </button>
                                                     ))}
                                                 {brands.filter(b => b.name.toLowerCase().includes(brandSearchQuery.toLowerCase())).length === 0 && (
@@ -1260,7 +1290,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                     }
                                     disabled={formData.stockQuantity !== "" && formData.stockQuantity !== undefined}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none disabled:opacity-75 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-[#4f46e5] focus:bg-white rounded-xl transition-all outline-none disabled:opacity-75 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                 >
                                     <option value="In Stock">In Stock</option>
                                     <option value="Low Stock">Low Stock</option>
@@ -1286,7 +1316,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                     name="stockQuantity"
                                     value={formData.stockQuantity || ""}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-[#4f46e5] focus:bg-white rounded-xl transition-all outline-none"
                                     placeholder="e.g. 100"
                                 />
                             </div>
@@ -1297,7 +1327,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                     name="gender"
                                     value={formData.gender || "All"}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-[#4f46e5] focus:bg-white rounded-xl transition-all outline-none"
                                 >
                                     <option value="All">All Genders</option>
                                     <option value="Men">Men</option>
@@ -1313,7 +1343,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                     name="unit"
                                     value={formData.unit || "pieces"}
                                     onChange={handleChange}
-                                    className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.unit ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none`}
+                                    className={`w-full px-4 py-2.5 bg-slate-50 border ${errors.unit ? 'border-red-500 bg-red-50' : 'border-gray-200'} focus:border-[#4f46e5] focus:bg-white rounded-xl transition-all outline-none`}
                                 >
                                     {["pieces", "pcs", "nos", "kg", "gram", "ton", "meter", "cm", "feet", "yard", "litre", "ml", "gallon", "box", "pack", "set", "pair", "dozen", "carton", "bundle", "roll", "sheet", "sqft", "sqm", "Night"].map((u) => (
                                         <option key={u} value={u}>{u}</option>
@@ -1597,7 +1627,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                     value={formData.description || ""}
                                     onChange={handleChange}
                                     rows={4}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all resize-none outline-none"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-[#4f46e5] focus:bg-white rounded-xl transition-all resize-none outline-none"
                                     placeholder="Provide a detailed description of the product, its usage, and benefits for B2B buyers..."
                                 />
                             </div>
@@ -1715,7 +1745,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                         </button>
                                                     </div>
                                                     {index === 0 && (
-                                                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-primary-600 text-[7px] text-white font-bold uppercase rounded">
+                                                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-[#4f46e5] text-[7px] text-white font-bold uppercase rounded">
                                                             Cover
                                                         </div>
                                                     )}
@@ -1740,10 +1770,10 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                          disabled={isUploading}
                                                          className="w-full flex flex-col items-center justify-center py-10 px-5 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-primary-50 hover:border-primary-200 cursor-pointer transition-all group relative overflow-hidden"
                                                      >
-                                                         <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-primary-600 transition-all shadow-sm mb-1">
-                                                             {isUploading ? <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div> : <FiPlus size={24} />}
+                                                         <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-[#4f46e5] transition-all shadow-sm mb-1">
+                                                             {isUploading ? <div className="w-5 h-5 border-2 border-[#4f46e5] border-t-transparent rounded-full animate-spin"></div> : <FiPlus size={24} />}
                                                          </div>
-                                                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-primary-600">Gallery</span>
+                                                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-[#4f46e5]">Gallery</span>
                                                      </button>
                                                  </div>
 
@@ -1788,7 +1818,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                     <p className="text-[10px] text-gray-400 leading-relaxed font-medium mt-4">
                                         {MAX_PHOTOS === 0 ? "No photos allowed on this plan." : `First image is cover. Max ${MAX_PHOTOS < 0 ? 'unlimited' : MAX_PHOTOS} photos.`} Max 300KB each.
                                     </p>
-                                    <p className="text-[10px] text-primary-600 font-black uppercase tracking-wider mt-1">
+                                    <p className="text-[10px] text-[#4f46e5] font-black uppercase tracking-wider mt-1">
                                         Note: Please upload square images (1:1 ratio) for better display.
                                     </p>
                                 </div>
@@ -1855,7 +1885,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="px-8 py-2.5 bg-primary-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-primary-700 transition-all shadow-md shadow-primary-200 disabled:opacity-50 flex items-center gap-2 active:scale-95"
+                    className="px-8 py-2.5 bg-[#4f46e5] text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-[#4338ca] transition-all shadow-md shadow-indigo-200 disabled:opacity-50 flex items-center gap-2 active:scale-95"
                 >
                     {loading ? (
                         <>

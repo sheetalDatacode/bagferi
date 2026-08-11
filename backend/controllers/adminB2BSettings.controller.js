@@ -16,6 +16,10 @@ class AdminB2BSettingsController {
                     defaultEnquiryPrice: 1,
                     advancePaymentAmount: 200,
                     advancePaymentCommissionPercentage: 0,
+                    fashionAdvancePaymentAmount: 200,
+                    fashionPlatformCharge: 0,
+                    groceryAdvancePaymentAmount: 20,
+                    groceryPlatformCharge: 0,
                     homeFeatures: [
                         { title: 'Advance payment 200 fix', subtitle: '', iconName: 'FiCreditCard', isActive: true },
                         { title: 'Only exchange', subtitle: 'Exchange Shop pr hoga Platform pr nhi', iconName: 'FiRefreshCw', isActive: true },
@@ -51,12 +55,30 @@ class AdminB2BSettingsController {
     async updateSettings(req, res) {
         try {
             const adminId = req.userDoc?._id || req.user?.adminId || req.user?.id;
-            const { defaultEnquiryPrice, enableVideoFileUpload, homeFeatures, advancePaymentAmount, advancePaymentCommissionPercentage } = req.body;
+            const { 
+                defaultEnquiryPrice, 
+                enableVideoFileUpload, 
+                homeFeatures, 
+                advancePaymentAmount, 
+                advancePaymentCommissionPercentage,
+                fashionAdvancePaymentAmount,
+                fashionPlatformCharge,
+                groceryAdvancePaymentAmount,
+                groceryPlatformCharge,
+                allowFullCod,
+                codConvenienceFee
+            } = req.body;
 
             const update = {};
             if (defaultEnquiryPrice !== undefined) update.defaultEnquiryPrice = defaultEnquiryPrice;
             if (advancePaymentAmount !== undefined) update.advancePaymentAmount = advancePaymentAmount;
             if (advancePaymentCommissionPercentage !== undefined) update.advancePaymentCommissionPercentage = advancePaymentCommissionPercentage;
+            if (fashionAdvancePaymentAmount !== undefined) update.fashionAdvancePaymentAmount = fashionAdvancePaymentAmount;
+            if (fashionPlatformCharge !== undefined) update.fashionPlatformCharge = fashionPlatformCharge;
+            if (groceryAdvancePaymentAmount !== undefined) update.groceryAdvancePaymentAmount = groceryAdvancePaymentAmount;
+            if (groceryPlatformCharge !== undefined) update.groceryPlatformCharge = groceryPlatformCharge;
+            if (allowFullCod !== undefined) update.allowFullCod = allowFullCod;
+            if (codConvenienceFee !== undefined) update.codConvenienceFee = codConvenienceFee;
             if (enableVideoFileUpload !== undefined) update.enableVideoFileUpload = enableVideoFileUpload;
             if (homeFeatures !== undefined) update.homeFeatures = homeFeatures;
             update.updatedBy = adminId;

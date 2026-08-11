@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiSearch, FiEdit, FiTrash2, FiPackage } from "react-icons/fi";
+import { FiSearch, FiEdit, FiTrash2, FiPackage, FiCheck } from "react-icons/fi";
 import { motion } from "framer-motion";
 import ConfirmModal from "../../../Admin/components/ConfirmModal";
 import toast from "../../../../shared/utils/toast";
@@ -16,6 +16,45 @@ const LowStockProducts = () => {
     const [fashionProducts, setFashionProducts] = useState([]);
     const [groceryProducts, setGroceryProducts] = useState([]);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null });
+    const [editingStock, setEditingStock] = useState({});
+    const [updatingStockId, setUpdatingStockId] = useState(null);
+
+    const handleUpdateStock = async (productId, newQty) => {
+        if (newQty === '') return;
+        setUpdatingStockId(productId);
+        try {
+            if (activeTab === "grocery") {
+                await api.put(`/grocery/vendor/products/${productId}`, {
+                    stockQuantity: Number(newQty)
+                });
+            } else {
+                await api.put(`/b2b-vendor/products/${productId}`, {
+                    stockQuantity: Number(newQty),
+                    availability: Number(newQty) > 0 ? "In Stock" : "Out of Stock"
+                });
+            }
+            toast.success("Stock quantity updated");
+            
+            // Clear editing state for this product
+            setEditingStock(prev => {
+                const copy = { ...prev };
+                delete copy[productId];
+                return copy;
+            });
+
+            // Refresh product lists
+            if (activeTab === "grocery") {
+                fetchGroceryProducts();
+            } else {
+                fetchFashionProducts();
+            }
+        } catch (error) {
+            console.error('Error updating stock:', error);
+            toast.error('Failed to update stock');
+        } finally {
+            setUpdatingStockId(null);
+        }
+    };
 
     // Fetch products from API after checking if a shop exists
     const checkShopAndFetch = async () => {
@@ -258,9 +297,33 @@ const LowStockProducts = () => {
                                                 <td className="p-4 text-sm font-semibold text-slate-600">
                                                     {product.moq} {product.unit}
                                                 </td>
-                                                <td className="p-4 text-sm font-extrabold text-slate-700">
-                                                    {product.stockQuantity ?? 0}
-                                                </td>
+                                                 <td className="p-4">
+                                                     <div className="flex items-center gap-1.5">
+                                                         <input
+                                                             type="number"
+                                                             value={editingStock[product._id] !== undefined ? editingStock[product._id] : (product.stockQuantity ?? 0)}
+                                                             onChange={(e) => {
+                                                                 const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
+                                                                 setEditingStock(prev => ({ ...prev, [product._id]: val }));
+                                                             }}
+                                                             className="w-20 px-2 py-1 text-center font-extrabold text-slate-800 border border-gray-200 rounded-lg outline-none focus:border-primary-500 transition-all bg-gray-50 focus:bg-white"
+                                                         />
+                                                         {editingStock[product._id] !== undefined && editingStock[product._id] !== product.stockQuantity && (
+                                                             <button
+                                                                 onClick={() => handleUpdateStock(product._id, editingStock[product._id])}
+                                                                 disabled={updatingStockId === product._id || editingStock[product._id] === ''}
+                                                                 className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors shrink-0"
+                                                                 title="Save Stock"
+                                                             >
+                                                                 {updatingStockId === product._id ? (
+                                                                     <div className="w-3.5 h-3.5 border-2 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+                                                                 ) : (
+                                                                     <FiCheck size={14} className="stroke-[3]" />
+                                                                 )}
+                                                             </button>
+                                                         )}
+                                                     </div>
+                                                 </td>
                                                 <td className="p-4">
                                                     <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${
                                                         (product.stockQuantity ?? 0) === 0 

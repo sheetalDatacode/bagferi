@@ -3,6 +3,7 @@ import { FiUser, FiBell, FiLock, FiShield, FiSave } from "react-icons/fi";
 import { motion } from "framer-motion";
 import toast from "../../../shared/utils/toast";
 import { useB2BVendorAuthStore } from "../store/b2bVendorAuthStore";
+import api from "../../../shared/utils/api";
 
 const B2BVendorSettings = () => {
     const { vendor, updateProfile } = useB2BVendorAuthStore();
@@ -68,7 +69,24 @@ const B2BVendorSettings = () => {
 
     const tabs = [
         { id: "profile", label: "Business Profile", icon: FiUser },
+        { id: "platformCharges", label: "Platform Rates & Payments", icon: FiShield }
     ];
+
+    const [b2bSettings, setB2bSettings] = useState(null);
+
+    useEffect(() => {
+        const fetchB2bSettings = async () => {
+            try {
+                const res = await api.get('/public/b2b-settings');
+                if (res.success) {
+                    setB2bSettings(res.data);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchB2bSettings();
+    }, []);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -522,6 +540,88 @@ const B2BVendorSettings = () => {
                             </section>
                         </div>
                     )}
+
+                    {activeTab === "platformCharges" && (
+                        <div className="space-y-8 text-left">
+                            <section>
+                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <div className="w-1.5 h-6 bg-indigo-600 rounded-full"></div>
+                                    B2B Platform Rates & Payment Policies
+                                </h3>
+                                <p className="text-xs text-gray-500 mb-6">
+                                    These are the current platform charges and advance payment settings configured by the administration.
+                                </p>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Fashion Card */}
+                                    <div className="bg-indigo-50/40 border border-indigo-100 rounded-2xl p-6 space-y-4">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className="text-2xl">👔</span>
+                                            <div>
+                                                <h4 className="font-black text-gray-950 uppercase tracking-tight text-sm">Fashion Category</h4>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Apparel, Footwear, etc.</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-500 font-medium">Advance Payment Required:</span>
+                                                <span className="font-bold text-gray-900">₹{b2bSettings?.fashionAdvancePaymentAmount ?? 200}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-500 font-medium">Platform Charge (Flat Fee):</span>
+                                                <span className="font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 text-xs">
+                                                    ₹{b2bSettings?.fashionPlatformCharge ?? 0}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Grocery Card */}
+                                    <div className="bg-green-50/40 border border-green-100 rounded-2xl p-6 space-y-4">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className="text-2xl">🍎</span>
+                                            <div>
+                                                <h4 className="font-black text-gray-950 uppercase tracking-tight text-sm">Grocery Category</h4>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Fresh produce, Packaged Goods, etc.</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-500 font-medium">Advance Payment Required:</span>
+                                                <span className="font-bold text-gray-900">₹{b2bSettings?.groceryAdvancePaymentAmount ?? 20}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-500 font-medium">Platform Charge (Flat Fee):</span>
+                                                <span className="font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-lg border border-green-100 text-xs">
+                                                    ₹{b2bSettings?.groceryPlatformCharge ?? 0}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Full COD Policy Info */}
+                                <div className="mt-6 bg-orange-50/40 border border-orange-100 rounded-2xl p-6 space-y-2">
+                                    <h4 className="font-black text-gray-950 uppercase tracking-tight text-sm mb-1">Cash on Delivery (Full COD) Policies</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mt-3">
+                                        <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                            <span className="text-gray-500 font-medium">Full COD Mode:</span>
+                                            <span className={`font-bold px-2 py-0.5 rounded-lg text-xs ${b2bSettings?.allowFullCod ? 'text-green-600 bg-green-50 border border-green-100' : 'text-gray-500 bg-gray-50 border border-gray-200'}`}>
+                                                {b2bSettings?.allowFullCod ? 'ENABLED' : 'DISABLED'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                            <span className="text-gray-500 font-medium">COD Convenience Fee (Paid by Buyer):</span>
+                                            <span className="font-bold text-gray-900">₹{b2bSettings?.codConvenienceFee ?? 20}</span>
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 font-bold mt-4 uppercase tracking-wide">
+                                        💡 Note: For Full COD orders, the flat platform charge is debited directly from your vendor wallet balance at checkout.
+                                    </p>
+                                </div>
+                            </section>
+                        </div>
+                    )}        )}
 
                     {activeTab === "profile" && (
                         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">

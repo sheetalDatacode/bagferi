@@ -123,6 +123,16 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
             return;
         }
 
+        // Product suggestions: navigate directly to product detail page
+        if (suggestion.type === 'product' && suggestion.id) {
+            if (suggestion.formType === 'grocery') {
+                navigate(`/b2b/grocery/product/${suggestion.id}`);
+            } else {
+                navigate(`/b2b/product/${suggestion.id}`);
+            }
+            return;
+        }
+
         // Store suggestions
         if (suggestion.type === 'store' && suggestion.vendorId) {
             // If it's a real estate office, go to real estate page

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiMapPin, FiPlus, FiCheckCircle, FiShield, FiShoppingBag, FiMinus, FiTrash } from 'react-icons/fi';
+import { FiMapPin, FiPlus, FiCheckCircle, FiShield, FiShoppingBag, FiMinus, FiTrash, FiCreditCard } from 'react-icons/fi';
 import { useCartStore } from '../../../shared/store/cartStore';
 import { useAuthStore } from '../../../shared/store/authStore';
 import B2BHeader from '../components/Layout/B2BHeader';
@@ -26,7 +26,12 @@ const B2BCheckout = () => {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [isAddingAddress, setIsAddingAddress] = useState(false);
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-    const [advancePerOrder, setAdvancePerOrder] = useState(200);
+    const [cartTab, setCartTab] = useState('fashion'); // 'fashion' or 'grocery'
+    const [fashionAdvancePerOrder, setFashionAdvancePerOrder] = useState(200);
+    const [groceryAdvancePerOrder, setGroceryAdvancePerOrder] = useState(20);
+    const [selectedFlow, setSelectedFlow] = useState('advance_cod'); // 'advance_cod' or 'full_cod'
+    const [allowFullCod, setAllowFullCod] = useState(true);
+    const [codConvenienceFee, setCodConvenienceFee] = useState(20);
 
     // Form State
     const [newAddress, setNewAddress] = useState({
@@ -67,8 +72,17 @@ const B2BCheckout = () => {
         try {
             const res = await api.get('/public/b2b-settings');
             if (res.success && res.data) {
-                if (res.data.advancePaymentAmount !== undefined) {
-                    setAdvancePerOrder(res.data.advancePaymentAmount);
+                if (res.data.fashionAdvancePaymentAmount !== undefined) {
+                    setFashionAdvancePerOrder(res.data.fashionAdvancePaymentAmount);
+                }
+                if (res.data.groceryAdvancePaymentAmount !== undefined) {
+                    setGroceryAdvancePerOrder(res.data.groceryAdvancePaymentAmount);
+                }
+                if (res.data.allowFullCod !== undefined) {
+                    setAllowFullCod(res.data.allowFullCod);
+                }
+                if (res.data.codConvenienceFee !== undefined) {
+                    setCodConvenienceFee(res.data.codConvenienceFee);
                 }
             }
         } catch (err) {
@@ -106,8 +120,12 @@ const B2BCheckout = () => {
         }
     };
 
-    const allCartItems = cart?.items || [];
-    const hasItems = allCartItems.length > 0;
+    const allCartItemsRaw = cart?.items || [];
+    const allCartItems = allCartItemsRaw.filter(item => {
+        const isGrocery = item.productModel === 'GroceryProduct';
+        return cartTab === 'grocery' ? isGrocery : !isGrocery;
+    });
+    const hasItems = allCartItemsRaw.length > 0;
     const cartItems = allCartItems.filter(item => item.selected !== false);
 
     // Group ALL cart items by vendor to calculate orders
@@ -151,12 +169,13 @@ const B2BCheckout = () => {
     const isMinOrderAmountNotMet = isActiveGroceryMinNotMet || isActiveFashionMinNotMet;
 
     // Calculate total advance capped by the active vendor group subtotal split by module (matching backend)
-    const groceryAdvance = activeGrocerySubtotal > 0 ? Math.min(advancePerOrder, activeGrocerySubtotal) : 0;
-    const fashionAdvance = activeFashionSubtotal > 0 ? Math.min(advancePerOrder, activeFashionSubtotal) : 0;
-    const totalAdvance = activeGroup && selectedActiveItems.length > 0 ? (groceryAdvance + fashionAdvance) : 0;
+    const groceryAdvance = activeGrocerySubtotal > 0 ? Math.min(groceryAdvancePerOrder, activeGrocerySubtotal) : 0;
+    const fashionAdvance = activeFashionSubtotal > 0 ? Math.min(fashionAdvancePerOrder, activeFashionSubtotal) : 0;
+    const totalAdvance = selectedFlow === 'full_cod' ? 0 : (activeGroup && selectedActiveItems.length > 0 ? (groceryAdvance + fashionAdvance) : 0);
+    const convenienceFee = selectedFlow === 'full_cod' ? codConvenienceFee : 0;
 
     const numberOfOrders = (activeGrocerySubtotal > 0 ? 1 : 0) + (activeFashionSubtotal > 0 ? 1 : 0);
-    const remainingBalance = subtotal - totalAdvance > 0 ? subtotal - totalAdvance : 0;
+    const remainingBalance = subtotal - totalAdvance + convenienceFee > 0 ? subtotal - totalAdvance + convenienceFee : 0;
 
     const handleQuantityChange = async (productId, currentQty, change, size = null, color = null, selectedVariants = {}) => {
         const newQty = currentQty + change;
@@ -182,6 +201,33 @@ const B2BCheckout = () => {
         };
 
         setIsPlacingOrder(true);
+
+        if (selectedFlow === 'full_cod') {
+            try {
+                const initRes = await api.post('/order/checkout', {
+                    shippingAddress,
+                    paymentMethod: 'COD',
+                    paymentFlow: 'full_cod',
+                    vendorId: activeVendorId,
+                    module: cartTab
+                }, { silent: true });
+
+                if (initRes.success && initRes.orderCreated) {
+                    toast.success('Orders placed successfully via Cash on Delivery!');
+                    await fetchCart();
+                    navigate('/b2b/orders');
+                } else {
+                    toast.error(initRes.message || 'Checkout failed');
+                }
+            } catch (err) {
+                const errorMsg = err.response?.data?.message || err.message || 'Checkout failed. Please try again.';
+                toast.error(errorMsg);
+            } finally {
+                setIsPlacingOrder(false);
+            }
+            return;
+        }
+
         const res = await loadRazorpay();
         if (!res) {
             toast.error('Razorpay SDK failed to load. Are you online?');
@@ -194,7 +240,9 @@ const B2BCheckout = () => {
             const initRes = await api.post('/order/checkout', {
                 shippingAddress,
                 paymentMethod: 'Online',
-                vendorId: activeVendorId
+                paymentFlow: 'advance_cod',
+                vendorId: activeVendorId,
+                module: cartTab
             }, { silent: true });
 
             if (!initRes.success) {
@@ -284,7 +332,60 @@ const B2BCheckout = () => {
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans pb-32 lg:pb-0 relative">
             <B2BHeader title="Secure Checkout" showBack={true} hideSearch={true} />
 
-            <main className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-6 py-6 flex flex-col lg:flex-row gap-6">
+            {/* Tab Selector */}
+            <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-6">
+                <div className="flex bg-white rounded-2xl p-1 shadow-sm border border-gray-100 max-w-sm">
+                    <button
+                        onClick={() => setCartTab('fashion')}
+                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                            cartTab === 'fashion' 
+                                ? 'bg-indigo-650 bg-indigo-600 text-white shadow-sm' 
+                                : 'text-gray-500 hover:text-gray-900'
+                        }`}
+                    >
+                        Fashion Cart ({allCartItemsRaw.filter(item => item.productModel !== 'GroceryProduct').length})
+                    </button>
+                    <button
+                        onClick={() => setCartTab('grocery')}
+                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                            cartTab === 'grocery' 
+                                ? 'bg-green-650 bg-green-600 text-white shadow-sm' 
+                                : 'text-gray-500 hover:text-gray-900'
+                        }`}
+                    >
+                        Grocery Cart ({allCartItemsRaw.filter(item => item.productModel === 'GroceryProduct').length})
+                    </button>
+                </div>
+            </div>
+
+            {allCartItems.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <FiShoppingBag className="text-gray-400 text-2xl" />
+                    </div>
+                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-1">
+                        No {cartTab} items found
+                    </h3>
+                    <p className="text-xs text-gray-500 mb-6">
+                        You don't have any B2B {cartTab} products in your cart. Check out the other tab or visit the catalog!
+                    </p>
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => setCartTab(cartTab === 'fashion' ? 'grocery' : 'fashion')}
+                            className="px-4 py-2 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50"
+                        >
+                            Switch Tab
+                        </button>
+                        <button 
+                            onClick={() => navigate('/b2b/catalog')}
+                            className="px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-bold hover:bg-gray-800"
+                        >
+                            Start Shopping
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <main className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-6 py-6 flex flex-col lg:flex-row gap-6">
                 
                 {/* Left Column: Address Selection */}
                 <div className="flex-1 flex flex-col gap-6">
@@ -342,6 +443,50 @@ const B2BCheckout = () => {
                                 </div>
                             </form>
                         )}
+                    </div>
+
+                    {/* Payment Option Selection */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 space-y-4">
+                        <h2 className="text-lg font-black uppercase text-gray-900 mb-1 flex items-center gap-2">
+                            <FiCreditCard className="text-primary-600" /> Payment Option
+                        </h2>
+                        <p className="text-xs text-gray-500 font-medium">Select how you want to pay for your B2B order.</p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Option 1: Advance + COD */}
+                            <div 
+                                onClick={() => setSelectedFlow('advance_cod')}
+                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3 text-left ${selectedFlow === 'advance_cod' ? 'border-primary-600 bg-orange-50/30' : 'border-gray-100 bg-gray-50 hover:border-primary-300'}`}
+                            >
+                                <div className={`mt-1 w-5 h-5 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${selectedFlow === 'advance_cod' ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'}`}>
+                                    {selectedFlow === 'advance_cod' && <FiCheckCircle size={14} />}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-900 mb-0.5">Pay Advance + COD</p>
+                                    <p className="text-xs text-gray-500 leading-normal">
+                                        Pay ₹{cartTab === 'grocery' ? groceryAdvancePerOrder : fashionAdvancePerOrder} online now to confirm order. Pay remaining balance on delivery.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Option 2: Pure COD */}
+                            {allowFullCod && (
+                                <div 
+                                    onClick={() => setSelectedFlow('full_cod')}
+                                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3 text-left ${selectedFlow === 'full_cod' ? 'border-primary-600 bg-orange-50/30' : 'border-gray-100 bg-gray-50 hover:border-primary-300'}`}
+                                >
+                                    <div className={`mt-1 w-5 h-5 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${selectedFlow === 'full_cod' ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'}`}>
+                                        {selectedFlow === 'full_cod' && <FiCheckCircle size={14} />}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-gray-900 mb-0.5">Cash on Delivery (COD)</p>
+                                        <p className="text-xs text-gray-500 leading-normal">
+                                            Pay ₹0 online now. Pay all on delivery.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Order Items */}
@@ -441,8 +586,9 @@ const B2BCheckout = () => {
                                             {group.items.map((item) => {
                                                 const prod = item.product || {};
                                                 const images = prod.images || [];
-                                                const hasImage = images.length > 0 || prod.image || prod.media?.length > 0;
-                                                const imgUrl = images.length > 0 ? images[0] : (prod.image || prod.media?.[0]?.url);
+                                                const variantImage = prod.variants?.find(v => v.imageUrl || v.image)?.imageUrl || prod.variants?.find(v => v.imageUrl || v.image)?.image;
+                                                const hasImage = images.length > 0 || prod.image || prod.media?.length > 0 || !!variantImage;
+                                                const imgUrl = images.length > 0 ? images[0] : (prod.image || prod.media?.[0]?.url || variantImage);
                                                 const itemKey = `${prod._id || item._id}_${item.size || ''}_${item.color || ''}_${JSON.stringify(item.selectedVariants || {})}`;
                                                 
                                                 return (
@@ -533,21 +679,26 @@ const B2BCheckout = () => {
                                 <span>Delivery</span>
                                 <span>Free</span>
                             </div>
-                            
-                            <div className="border-t border-gray-100 pt-4 mt-2">
-                                <div className="flex justify-between items-end mb-2">
-                                    <span className="text-xs font-black text-gray-900 uppercase tracking-widest">Total Amount</span>
-                                    <span className="text-lg font-black text-gray-900 tracking-tight">₹{subtotal.toLocaleString('en-IN')}</span>
-                                </div>
-                                
-                                <div className="flex justify-between items-end bg-orange-50 p-3 rounded-lg border border-orange-100">
-                                    <div>
-                                        <span className="text-[11px] font-black text-primary-600 uppercase tracking-widest block">Advance Payable Now</span>
-                                        <span className="text-[10px] text-gray-500 font-bold">₹{advancePerOrder} × {numberOfOrders} Vendor(s)</span>
+                                 {/* COD Convenience Fee is hidden from UI but added in Total Amount below */}
+
+                                <div className="border-t border-gray-100 pt-4 mt-2">
+                                    <div className="flex justify-between items-end mb-2">
+                                        <span className="text-xs font-black text-gray-900 uppercase tracking-widest">Total Amount</span>
+                                        <span className="text-lg font-black text-gray-900 tracking-tight">₹{(subtotal + convenienceFee).toLocaleString('en-IN')}</span>
                                     </div>
-                                    <span className="text-xl font-black text-primary-600 tracking-tight">₹{totalAdvance.toLocaleString('en-IN')}</span>
-                                </div>
-                                <p className="text-[10px] text-gray-400 font-bold text-right mt-2">Remaining COD: ₹{remainingBalance.toLocaleString('en-IN')}</p>
+                                    
+                                    <div className="flex justify-between items-end bg-orange-50 p-3 rounded-lg border border-orange-100">
+                                        <div>
+                                            <span className="text-[11px] font-black text-primary-600 uppercase tracking-widest block">Advance Payable Now</span>
+                                            {selectedFlow === 'full_cod' ? (
+                                                <span className="text-[10px] text-gray-500 font-bold">COD mode active</span>
+                                            ) : (
+                                                <span className="text-[10px] text-gray-500 font-bold">₹{cartTab === 'grocery' ? groceryAdvancePerOrder : fashionAdvancePerOrder} × {numberOfOrders} Order(s)</span>
+                                            )}
+                                        </div>
+                                        <span className="text-xl font-black text-primary-600 tracking-tight">₹{totalAdvance.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 font-bold text-right mt-2">Remaining COD: ₹{remainingBalance.toLocaleString('en-IN')}</p>
                             </div>
                         </div>
 
@@ -581,7 +732,8 @@ const B2BCheckout = () => {
                     </div>
                 </div>
 
-            </main>
+                </main>
+            )}
         </div>
     );
 };

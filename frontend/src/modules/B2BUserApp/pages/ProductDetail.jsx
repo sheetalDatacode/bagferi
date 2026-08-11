@@ -20,6 +20,40 @@ import { getRatingSummary, getUserRating, submitRating } from '../../../shared/s
 import StarRating from '../../../shared/components/StarRating';
 import { useWishlistStore } from '../../../shared/store/wishlistStore';
 
+const getProductImages = (product) => {
+    if (!product) return [];
+    let images = [];
+    if (product.formType === 'shop-listing') {
+        const itemImages = product.items?.[0]?.images || [];
+        if (Array.isArray(itemImages) && itemImages.length > 0) {
+            images = itemImages;
+        } else {
+            images = Array.isArray(product.images) && product.images.length > 0
+                ? product.images
+                : product.unitDetails?.images || [];
+        }
+    } else {
+        if (product.coverImage) images.push(product.coverImage);
+        if (product.image) images.push(product.image);
+        if (Array.isArray(product.images) && product.images.length > 0) {
+            product.images.forEach(img => {
+                if (img && !images.includes(img)) images.push(img);
+            });
+        }
+        if (product.variants && Array.isArray(product.variants)) {
+            product.variants.forEach(v => {
+                if (v.imageUrl && !images.includes(v.imageUrl)) {
+                    images.push(v.imageUrl);
+                }
+            });
+        }
+    }
+    if (images.length === 0 && !product.videoLink) {
+        images = ['https://via.placeholder.com/800x600?text=No+Image'];
+    }
+    return images;
+};
+
 const B2BProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -33,6 +67,19 @@ const B2BProductDetail = () => {
     const [selectedColorsForSizes, setSelectedColorsForSizes] = useState({});
     const [selectedVariants, setSelectedVariants] = useState({});
     const videoRef = useRef(null);
+
+    useEffect(() => {
+        if (selectedMedia !== 'image' || !product) return;
+        const images = getProductImages(product);
+        if (images.length <= 1) return;
+        const interval = setInterval(() => {
+            setSelectedImage(prev => {
+                const currentIdx = typeof prev === 'number' ? prev : 0;
+                return (currentIdx + 1) % images.length;
+            });
+        }, 3000);
+        return () => clearInterval(interval);
+    }, [selectedMedia, product, selectedImage]);
 
     useEffect(() => {
         if (selectedMedia === 'video' && videoRef.current) {
@@ -343,37 +390,7 @@ const B2BProductDetail = () => {
 
     if (!product) return null;
 
-    let productImages = [];
-    if (product.formType === 'shop-listing') {
-        // For shop-listing detail page, show item images (Section B) since user clicked on the item
-        const itemImages = product.items?.[0]?.images || [];
-        if (Array.isArray(itemImages) && itemImages.length > 0) {
-            productImages = itemImages;
-        } else {
-            // Fallback to shop images if item has no images
-            productImages = Array.isArray(product.images) && product.images.length > 0
-                ? product.images
-                : product.unitDetails?.images || [];
-        }
-    } else {
-        if (product.coverImage) productImages.push(product.coverImage);
-        if (product.image) productImages.push(product.image);
-        if (Array.isArray(product.images) && product.images.length > 0) {
-            product.images.forEach(img => {
-                if (img && !productImages.includes(img)) productImages.push(img);
-            });
-        }
-        if (product.variants && Array.isArray(product.variants)) {
-            product.variants.forEach(v => {
-                if (v.imageUrl && !productImages.includes(v.imageUrl)) {
-                    productImages.push(v.imageUrl);
-                }
-            });
-        }
-    }
-    if (productImages.length === 0 && !product.videoLink) {
-        productImages = ['https://via.placeholder.com/800x600?text=No+Image'];
-    }
+    const productImages = getProductImages(product);
 
     let cheapestImageIndex = 0;
     if (product.variants && product.variants.length > 0) {
@@ -389,6 +406,8 @@ const B2BProductDetail = () => {
     const safeSelectedImage = selectedImage !== 0 
         ? Math.min(selectedImage, Math.max(0, productImages.length - 1))
         : cheapestImageIndex;
+
+
 
     const fixLegacyDynamicUrl = (url) => {
         if (!url || !url.includes('cloudinary.com')) return url;
@@ -582,11 +601,26 @@ const B2BProductDetail = () => {
                                     />
                                 )
                             ) : (
-                                <img
-                                    src={productImages[safeSelectedImage]}
-                                    alt={product.name}
-                                    className="w-full h-full object-cover"
-                                />
+                                <div className="relative w-full h-full">
+                                    <img
+                                        src={productImages[safeSelectedImage]}
+                                        alt={product.name}
+                                        className="w-full h-full object-cover"
+                                    />
+                                    {safeSelectedImage === productImages.length - 1 && specifications.length > 0 && (
+                                        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent flex flex-col justify-center p-6 md:p-8 text-white select-none">
+                                            <h3 className="text-xl md:text-2xl font-black mb-6 tracking-wide border-b border-white/20 pb-2 max-w-[240px]">Key Highlights</h3>
+                                            <div className="space-y-3.5 max-w-[240px]">
+                                                {specifications.slice(0, 5).map((spec, sIdx) => (
+                                                    <div key={sIdx} className="border-b border-white/10 pb-1.5 last:border-none">
+                                                        <span className="text-[9px] uppercase font-bold tracking-widest text-gray-300 block mb-0.5">{spec.name}</span>
+                                                        <span className="text-sm md:text-base font-extrabold tracking-wide">{spec.value}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                             {/* Overlay Icons */}
                             <div className="absolute top-4 right-4 flex gap-2">

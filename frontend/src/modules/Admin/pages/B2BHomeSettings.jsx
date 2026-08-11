@@ -26,6 +26,12 @@ const B2BHomeSettings = () => {
     const [homeFeatures, setHomeFeatures] = useState([]);
     const [advancePaymentAmount, setAdvancePaymentAmount] = useState(200);
     const [advancePaymentCommissionPercentage, setAdvancePaymentCommissionPercentage] = useState(0);
+    const [fashionAdvancePaymentAmount, setFashionAdvancePaymentAmount] = useState(200);
+    const [fashionPlatformCharge, setFashionPlatformCharge] = useState(0);
+    const [groceryAdvancePaymentAmount, setGroceryAdvancePaymentAmount] = useState(20);
+    const [groceryPlatformCharge, setGroceryPlatformCharge] = useState(0);
+    const [allowFullCod, setAllowFullCod] = useState(true);
+    const [codConvenienceFee, setCodConvenienceFee] = useState(20);
 
     useEffect(() => {
         fetchSettings();
@@ -39,6 +45,12 @@ const B2BHomeSettings = () => {
                 setHomeFeatures(res.data.homeFeatures || []);
                 setAdvancePaymentAmount(res.data.advancePaymentAmount ?? 200);
                 setAdvancePaymentCommissionPercentage(res.data.advancePaymentCommissionPercentage ?? 0);
+                setFashionAdvancePaymentAmount(res.data.fashionAdvancePaymentAmount ?? 200);
+                setFashionPlatformCharge(res.data.fashionPlatformCharge ?? 0);
+                setGroceryAdvancePaymentAmount(res.data.groceryAdvancePaymentAmount ?? 20);
+                setGroceryPlatformCharge(res.data.groceryPlatformCharge ?? 0);
+                setAllowFullCod(res.data.allowFullCod ?? true);
+                setCodConvenienceFee(res.data.codConvenienceFee ?? 20);
             }
         } catch (error) {
             console.error('Failed to fetch settings:', error);
@@ -59,13 +71,25 @@ const B2BHomeSettings = () => {
             const res = await api.post('/admin/b2b-settings', { 
                 homeFeatures,
                 advancePaymentAmount,
-                advancePaymentCommissionPercentage
+                advancePaymentCommissionPercentage,
+                fashionAdvancePaymentAmount,
+                fashionPlatformCharge,
+                groceryAdvancePaymentAmount,
+                groceryPlatformCharge,
+                allowFullCod,
+                codConvenienceFee
             });
             if (res.success) {
                 toast.success('Settings updated successfully!');
                 setHomeFeatures(res.data.homeFeatures || []);
                 setAdvancePaymentAmount(res.data.advancePaymentAmount ?? 200);
                 setAdvancePaymentCommissionPercentage(res.data.advancePaymentCommissionPercentage ?? 0);
+                setFashionAdvancePaymentAmount(res.data.fashionAdvancePaymentAmount ?? 200);
+                setFashionPlatformCharge(res.data.fashionPlatformCharge ?? 0);
+                setGroceryAdvancePaymentAmount(res.data.groceryAdvancePaymentAmount ?? 20);
+                setGroceryPlatformCharge(res.data.groceryPlatformCharge ?? 0);
+                setAllowFullCod(res.data.allowFullCod ?? true);
+                setCodConvenienceFee(res.data.codConvenienceFee ?? 20);
             }
         } catch (error) {
             console.error('Failed to save settings:', error);
@@ -131,33 +155,104 @@ const B2BHomeSettings = () => {
             {/* Global Settings Section */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-6">
                 <div className="p-4 border-b border-gray-100 bg-gray-50">
-                    <h2 className="font-bold text-gray-900">Advance Payment & Commission Settings</h2>
+                    <h2 className="font-bold text-gray-950 uppercase tracking-tight text-sm">Advance Payment & Commission Settings</h2>
                 </div>
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-gray-500">Advance Payment Amount (₹)</label>
-                        <input 
-                            type="number" 
-                            min="0"
-                            value={advancePaymentAmount}
-                            onChange={(e) => setAdvancePaymentAmount(Number(e.target.value))}
-                            className="w-full text-sm font-bold text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                            placeholder="e.g. 200"
-                        />
-                        <p className="text-[10px] text-gray-400 font-medium">This amount is requested from the user before placing a B2B order.</p>
+                
+                <div className="p-6 space-y-6">
+                    {/* Fashion Section */}
+                    <div>
+                        <h3 className="text-xs font-black text-indigo-600 uppercase tracking-wider mb-4 pb-1.5 border-b border-gray-100">Fashion Module Settings</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase font-bold text-gray-500">Fashion Advance Payment Amount (₹)</label>
+                                <input 
+                                    type="number" 
+                                    min="0"
+                                    value={fashionAdvancePaymentAmount}
+                                    onChange={(e) => setFashionAdvancePaymentAmount(Number(e.target.value))}
+                                    className="w-full text-sm font-bold text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                    placeholder="e.g. 200"
+                                />
+                                <p className="text-[10px] text-gray-400 font-medium">Requested from the user before placing a B2B Fashion order.</p>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase font-bold text-gray-500">Fashion Platform Charge / Admin Fee (₹ Flat Amount)</label>
+                                <input 
+                                    type="number"
+                                    min="0"
+                                    value={fashionPlatformCharge}
+                                    onChange={(e) => setFashionPlatformCharge(Number(e.target.value))}
+                                    className="w-full text-sm font-bold text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                    placeholder="e.g. 50"
+                                />
+                                <p className="text-[10px] text-gray-400 font-medium">Flat amount deducted from the vendor's wallet balance for each Fashion order.</p>
+                            </div>
+                        </div>
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-gray-500">Admin Commission (%)</label>
-                        <input 
-                            type="number"
-                            min="0"
-                            max="100" 
-                            value={advancePaymentCommissionPercentage}
-                            onChange={(e) => setAdvancePaymentCommissionPercentage(Number(e.target.value))}
-                            className="w-full text-sm font-bold text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                            placeholder="e.g. 10"
-                        />
-                        <p className="text-[10px] text-gray-400 font-medium">This percentage is deducted from the advance payment before crediting the vendor's wallet.</p>
+
+                    {/* Grocery Section */}
+                    <div>
+                        <h3 className="text-xs font-black text-green-600 uppercase tracking-wider mb-4 pb-1.5 border-b border-gray-100">Grocery Module Settings</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase font-bold text-gray-500">Grocery Advance Payment Amount (₹)</label>
+                                <input 
+                                    type="number" 
+                                    min="0"
+                                    value={groceryAdvancePaymentAmount}
+                                    onChange={(e) => setGroceryAdvancePaymentAmount(Number(e.target.value))}
+                                    className="w-full text-sm font-bold text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                    placeholder="e.g. 20"
+                                />
+                                <p className="text-[10px] text-gray-400 font-medium">Requested from the user before placing a B2B Grocery order.</p>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase font-bold text-gray-500">Grocery Platform Charge / Admin Fee (₹ Flat Amount)</label>
+                                <input 
+                                    type="number"
+                                    min="0"
+                                    value={groceryPlatformCharge}
+                                    onChange={(e) => setGroceryPlatformCharge(Number(e.target.value))}
+                                    className="w-full text-sm font-bold text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                    placeholder="e.g. 5"
+                                />
+                                <p className="text-[10px] text-gray-400 font-medium">Flat amount deducted from the vendor's wallet balance for each Grocery order.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Pure COD Configuration Section */}
+                    <div>
+                        <h3 className="text-xs font-black text-orange-600 uppercase tracking-wider mb-4 pb-1.5 border-b border-gray-100">Cash on Delivery (Full COD) Settings</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                <input 
+                                    type="checkbox"
+                                    id="allowFullCod"
+                                    checked={allowFullCod}
+                                    onChange={(e) => setAllowFullCod(e.target.checked)}
+                                    className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer"
+                                />
+                                <label htmlFor="allowFullCod" className="cursor-pointer">
+                                    <span className="text-xs font-black uppercase text-gray-700 tracking-wider block">Allow Full COD Option</span>
+                                    <span className="text-[10px] text-gray-400 font-bold block">If checked, B2B buyers can choose Full Cash on Delivery at checkout.</span>
+                                </label>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase font-bold text-gray-500">COD Convenience Fee (₹)</label>
+                                <input 
+                                    type="number"
+                                    min="0"
+                                    value={codConvenienceFee}
+                                    disabled={!allowFullCod}
+                                    onChange={(e) => setCodConvenienceFee(Number(e.target.value))}
+                                    className="w-full text-sm font-bold text-gray-900 border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none disabled:opacity-50"
+                                    placeholder="e.g. 20"
+                                />
+                                <p className="text-[10px] text-gray-400 font-medium">Convenience fee added to the order total when a user chooses Full COD payment.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

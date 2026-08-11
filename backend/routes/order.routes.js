@@ -1,5 +1,5 @@
 import express from 'express';
-import { initiateCheckout, verifyCheckoutPayment, getMyOrders, getVendorOrders, updateVendorOrderStatus, cancelOrder, getUserWalletBalance, requestExchange, acceptExchange, verifyExchangeOtpByVendor } from '../controllers/order.controller.js';
+import { initiateCheckout, verifyCheckoutPayment, getMyOrders, getVendorOrders, updateVendorOrderStatus, cancelOrder, getUserWalletBalance, requestExchange, acceptExchange, dispatchExchange, verifyExchangeOtpByVendor } from '../controllers/order.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
@@ -18,6 +18,7 @@ router.get('/wallet/balance', getUserWalletBalance);
 router.get('/vendor/orders', getVendorOrders);
 router.put('/vendor/orders/:orderId/status', updateVendorOrderStatus);
 router.post('/vendor/orders/:orderId/accept-exchange', acceptExchange);
+router.post('/vendor/orders/:orderId/dispatch-exchange', dispatchExchange);
 router.post('/vendor/orders/:orderId/verify-exchange', verifyExchangeOtpByVendor);
 
 export default router;

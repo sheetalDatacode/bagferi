@@ -16,7 +16,8 @@ import {
     FiCreditCard,
     FiVideo,
     FiBriefcase,
-    FiTrendingUp
+    FiTrendingUp,
+    FiShield
 } from "react-icons/fi";
 import { useB2BVendorAuthStore } from "../store/b2bVendorAuthStore";
 import { useVendorSettings } from "../hooks/useVendorSettings";
@@ -24,6 +25,7 @@ import { useDashboardStore } from "../store/dashboardStore";
 import { useEffect, useState } from "react";
 import { getRatingSummary } from "../../../shared/services/ratingService";
 import StarRating from "../../../shared/components/StarRating";
+import api from "../../../shared/utils/api";
 
 const B2BVendorDashboard = () => {
     const navigate = useNavigate();
@@ -32,9 +34,25 @@ const B2BVendorDashboard = () => {
     const { data: dashboardData, loading: dashboardLoading, fetchDashboardData } = useDashboardStore();
     const [shopRating, setShopRating] = useState({ averageRating: 0, ratingCount: 0 });
 
+    const [b2bSettings, setB2bSettings] = useState(null);
+
     useEffect(() => {
         fetchDashboardData();
     }, [fetchDashboardData]);
+
+    useEffect(() => {
+        const fetchB2bSettings = async () => {
+            try {
+                const res = await api.get('/public/b2b-settings');
+                if (res.success) {
+                    setB2bSettings(res.data);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchB2bSettings();
+    }, []);
 
     useEffect(() => {
         const fetchRating = async () => {
@@ -245,6 +263,51 @@ const B2BVendorDashboard = () => {
                     ))}
                 </div>
             )}
+
+            {/* B2B Platform Rates & Payment Policies */}
+            <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-sm border border-slate-100 space-y-6 text-left">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center">
+                        <FiShield className="text-indigo-650 text-indigo-600 text-xl" />
+                    </div>
+                    <div>
+                        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Platform Policy</h2>
+                        <p className="text-xl font-black text-slate-800 mt-0.5">B2B Platform Rates & Payments</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Fashion Card */}
+                    <div className="bg-indigo-50/30 border border-indigo-100 rounded-3xl p-6 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <span className="text-3xl bg-white p-3 rounded-2xl shadow-sm">👔</span>
+                            <div>
+                                <h4 className="font-black text-gray-950 uppercase tracking-tight text-sm">Fashion Category</h4>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Apparel, Footwear & Accessories</p>
+                            </div>
+                        </div>
+                        <div className="text-right space-y-1">
+                            <div className="text-xs text-slate-500 font-medium">Advance: <span className="font-black text-slate-905 text-slate-900">₹{b2bSettings?.fashionAdvancePaymentAmount ?? 200}</span></div>
+                            <div className="text-xs text-slate-500 font-medium">Commission: <span className="font-black text-indigo-600">{b2bSettings?.fashionPlatformCharge ?? 0}%</span></div>
+                        </div>
+                    </div>
+
+                    {/* Grocery Card */}
+                    <div className="bg-emerald-50/30 border border-emerald-100 rounded-3xl p-6 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <span className="text-3xl bg-white p-3 rounded-2xl shadow-sm">🍎</span>
+                            <div>
+                                <h4 className="font-black text-gray-950 uppercase tracking-tight text-sm">Grocery Category</h4>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Fresh & Packaged Staples</p>
+                            </div>
+                        </div>
+                        <div className="text-right space-y-1">
+                            <div className="text-xs text-slate-500 font-medium">Advance: <span className="font-black text-slate-905 text-slate-900">₹{b2bSettings?.groceryAdvancePaymentAmount ?? 20}</span></div>
+                            <div className="text-xs text-slate-500 font-medium">Commission: <span className="font-black text-emerald-600">{b2bSettings?.groceryPlatformCharge ?? 0}%</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             {/* ------------------------------------------
                 NEW ORDERS & TOP SELLING PRODUCTS GRID

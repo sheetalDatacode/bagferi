@@ -674,6 +674,7 @@ export const getB2BSearchSuggestions = async (query, vendorFilterId) => {
         );
         if (!isDup) {
             suggestions.push({
+                id: p._id.toString(),
                 text: p.name,
                 context: 'In Products',
                 type: 'product',
@@ -691,6 +692,7 @@ export const getB2BSearchSuggestions = async (query, vendorFilterId) => {
         );
         if (!isDup) {
             suggestions.push({
+                id: gp._id.toString(),
                 text: gp.name,
                 context: 'In Grocery',
                 type: 'product',

@@ -24,14 +24,14 @@ const generateOrderNumber = () => {
 export const initiateCheckout = async (req, res, next) => {
   try {
     const userId = req.user._id || req.user.id;
-    const { shippingAddress, paymentMethod, vendorId } = req.body;
+    const { shippingAddress, paymentMethod, vendorId, paymentFlow, module } = req.body;
 
     const cart = await Cart.findOne({ user: userId });
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({ success: false, message: 'Cart is empty' });
     }
 
-    console.log('initiateCheckout req.body vendorId:', vendorId);
+    console.log('initiateCheckout req.body vendorId:', vendorId, 'module:', module);
     console.log('initiateCheckout cart.items vendors:', cart?.items?.map(item => ({
       vendor: item.vendor,
       vendorStr: item.vendor?.toString(),
@@ -39,6 +39,12 @@ export const initiateCheckout = async (req, res, next) => {
     })));
 
     let selectedItems = cart.items.filter(item => item.selected !== false);
+    if (module) {
+      selectedItems = selectedItems.filter(item => {
+        const itemModule = item.productModel === 'GroceryProduct' ? 'grocery' : 'fashion';
+        return itemModule === module;
+      });
+    }
     if (vendorId) {
       selectedItems = selectedItems.filter(item => {
         const itemVendorStr = item.vendor?._id ? item.vendor._id.toString() : item.vendor?.toString();
@@ -99,17 +105,144 @@ export const initiateCheckout = async (req, res, next) => {
       itemsByGroup[groupKey].push(item);
     });
 
-    const settings = await B2BSettings.findOne() || { advancePaymentAmount: 200 };
-    const advancePerOrder = settings.advancePaymentAmount;
+    const settings = await B2BSettings.findOne() || { 
+      advancePaymentAmount: 200,
+      fashionAdvancePaymentAmount: 200,
+      groceryAdvancePaymentAmount: 20
+    };
     
     let totalAdvanceRequired = 0;
     Object.keys(itemsByGroup).forEach(groupKey => {
       const items = itemsByGroup[groupKey];
+      const isGrocery = groupKey.endsWith('_grocery');
+      const advancePerOrder = isGrocery 
+        ? (settings.groceryAdvancePaymentAmount ?? 20) 
+        : (settings.fashionAdvancePaymentAmount ?? 200);
+
       const groupSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       totalAdvanceRequired += Math.min(advancePerOrder, groupSubtotal);
     });
 
     const numberOfOrders = Object.keys(itemsByGroup).length;
+
+    if (paymentFlow === 'full_cod') {
+      if (settings.allowFullCod === false) {
+        return res.status(400).json({ success: false, message: 'Cash on Delivery (Full COD) is currently disabled by Admin.' });
+      }
+
+      const createdOrders = [];
+      const codConvenienceFee = settings.codConvenienceFee ?? 20;
+
+      for (const [groupKey, items] of Object.entries(itemsByGroup)) {
+        const isGrocery = groupKey.endsWith('_grocery');
+        const vId = groupKey.split('_')[0];
+        const moduleName = isGrocery ? 'grocery' : 'fashion';
+
+        const platformCharge = isGrocery 
+          ? (settings.groceryPlatformCharge ?? 0) 
+          : (settings.fashionPlatformCharge ?? 0);
+
+        const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        const order = new Order({
+          orderNumber: generateOrderNumber(),
+          module: moduleName,
+          user: userId,
+          vendor: vId,
+          items: items.map(i => ({
+            product: i.product,
+            productModel: i.productModel,
+            quantity: i.quantity,
+            price: i.price,
+            size: i.size,
+            color: i.color,
+            selectedVariants: i.selectedVariants ? (i.selectedVariants instanceof Map ? Object.fromEntries(i.selectedVariants) : i.selectedVariants) : {},
+            selectedImageUrl: i.selectedImageUrl || null,
+          })),
+          totalAmount,
+          advancePayment: 0,
+          convenienceFee: codConvenienceFee,
+          remainingBalance: totalAmount + codConvenienceFee,
+          platformCharge,
+          paymentFlow: 'full_cod',
+          shippingAddress,
+          status: 'Pending',
+          paymentMethod: 'COD',
+          paymentStatus: 'Pending',
+        });
+
+        await order.save();
+        createdOrders.push(order);
+
+        // ── Reduce stock for each ordered item ──────────────────────────────────
+        for (const item of items) {
+          try {
+            if (item.productModel === 'GroceryProduct') {
+              const GroceryProduct = (await import('../models/GroceryProduct.model.js')).default;
+              await GroceryProduct.findByIdAndUpdate(
+                item.product,
+                { $inc: { stockQuantity: -item.quantity } },
+                { new: true }
+              ).then(async (updated) => {
+                if (updated && updated.stockQuantity < 0) {
+                  await GroceryProduct.findByIdAndUpdate(item.product, { stockQuantity: 0 });
+                }
+              });
+            } else {
+              const Product = (await import('../models/Product.model.js')).default;
+              await Product.findByIdAndUpdate(
+                item.product,
+                { $inc: { stockQuantity: -item.quantity } },
+                { new: true }
+              ).then(async (updated) => {
+                if (updated && updated.stockQuantity < 0) {
+                  await Product.findByIdAndUpdate(item.product, { stockQuantity: 0 });
+                }
+              });
+            }
+          } catch (stockErr) {
+            console.error('Failed to reduce stock for product', item.product, stockErr);
+          }
+        }
+        // ────────────────────────────────────────────────────────────────────────
+
+        // Debit platform charge from vendor's wallet
+        if (platformCharge > 0) {
+          await vendorWalletService.debitPendingOrBalance(
+            vId,
+            platformCharge,
+            `Platform charge for Full COD order ${order.orderNumber}`,
+            order._id.toString(),
+            'order'
+          );
+        }
+
+        // Platform Ledger entry
+        await PlatformLedger.create({
+          entryType: 'credit',
+          transactionType: 'PAYMENT_RECEIVED',
+          amount: platformCharge,
+          referenceId: order._id.toString(),
+          vendorId: vId,
+          description: `Platform charge for Full COD order ${order.orderNumber}`,
+          metadata: { type: 'order_platform_charge' }
+        });
+      }
+
+      // Clear processed selected items from cart
+      cart.items = cart.items.filter(item => 
+        item.selected === false || 
+        (vendorId && item.vendor.toString() !== vendorId.toString())
+      );
+      await cart.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Orders placed successfully via Cash on Delivery',
+        data: createdOrders,
+        orderCreated: true
+      });
+    }
 
     if (paymentMethod === 'Online') {
       // Create a single Razorpay order for the total advance
@@ -235,13 +368,26 @@ export const verifyCheckoutPayment = async (req, res, next) => {
       itemsByGroup[groupKey].items.push(item);
     });
 
-    const settings = await B2BSettings.findOne().sort({ createdAt: -1 }) || { advancePaymentAmount: 200, advancePaymentCommissionPercentage: 0 };
-    const advancePerOrder = settings.advancePaymentAmount;
-    const commissionPct = settings.advancePaymentCommissionPercentage;
+    const settings = await B2BSettings.findOne().sort({ createdAt: -1 }) || { 
+      advancePaymentAmount: 200, 
+      advancePaymentCommissionPercentage: 0,
+      fashionAdvancePaymentAmount: 200,
+      fashionPlatformCharge: 0,
+      groceryAdvancePaymentAmount: 20,
+      groceryPlatformCharge: 0
+    };
     const createdOrders = [];
 
     for (const [groupKey, group] of Object.entries(itemsByGroup)) {
       const items = group.items;
+      const isGrocery = group.module === 'grocery';
+      const advancePerOrder = isGrocery 
+        ? (settings.groceryAdvancePaymentAmount ?? 20) 
+        : (settings.fashionAdvancePaymentAmount ?? 200);
+      const platformCharge = isGrocery 
+        ? (settings.groceryPlatformCharge ?? 0) 
+        : (settings.fashionPlatformCharge ?? 0);
+
       const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const advancePaidForGroup = Math.min(advancePerOrder, totalAmount);
       
@@ -263,6 +409,8 @@ export const verifyCheckoutPayment = async (req, res, next) => {
         totalAmount,
         advancePayment: advancePaidForGroup,
         remainingBalance: totalAmount - advancePaidForGroup > 0 ? totalAmount - advancePaidForGroup : 0,
+        platformCharge,
+        paymentFlow: 'advance_cod',
         shippingAddress,
         status: 'Pending',
         paymentMethod: 'Online',
@@ -306,7 +454,7 @@ export const verifyCheckoutPayment = async (req, res, next) => {
       }
       // ────────────────────────────────────────────────────────────────────────
 
-      const vendorShare = advancePaidForGroup * (1 - (commissionPct / 100));
+      const vendorShare = advancePaidForGroup - platformCharge;
 
       // Platform Ledger (Full Advance comes to Platform)
       await PlatformLedger.create({
@@ -319,14 +467,24 @@ export const verifyCheckoutPayment = async (req, res, next) => {
         metadata: { type: 'order_advance' }
       });
 
-      // Vendor Wallet Transaction (Advance minus commission goes to vendor wallet)
-      await vendorWalletService.creditWallet(
-        group.vendorId,
-        vendorShare,
-        `Advance received for order ${order.orderNumber} (Admin deducted ${commissionPct}% commission)`,
-        order._id.toString(),
-        'order'
-      );
+      // Vendor Wallet Transaction (Advance minus flat platform charge)
+      if (vendorShare > 0) {
+        await vendorWalletService.creditWallet(
+          group.vendorId,
+          vendorShare,
+          `Advance received for order ${order.orderNumber} (Admin deducted flat ₹${platformCharge} platform charge)`,
+          order._id.toString(),
+          'order'
+        );
+      } else if (vendorShare < 0) {
+        await vendorWalletService.debitPendingOrBalance(
+          group.vendorId,
+          Math.abs(vendorShare),
+          `Platform charge correction for order ${order.orderNumber} (flat ₹${platformCharge} platform charge exceeded advance payment of ₹${advancePaidForGroup})`,
+          order._id.toString(),
+          'order'
+        );
+      }
     }
 
     // Clear only the processed vendor's selected items from cart after successful order creation
@@ -386,18 +544,30 @@ export const updateVendorOrderStatus = async (req, res, next) => {
   try {
     const vendorId = req.user.vendorId || req.user._id || req.user.id;
     const { orderId } = req.params;
-    const { status, assignedStaff } = req.body;
+    const { status, assignedStaff, otp } = req.body;
 
     const order = await Order.findOne({ _id: orderId, vendor: vendorId });
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
+    if (status === 'Completed') {
+      if (order.assignedStaff?.name === 'Self Delivery') {
+        if (!otp) {
+          return res.status(400).json({ success: false, message: 'Delivery OTP is required for Self Delivery' });
+        }
+        if (order.deliveryOtp !== otp) {
+          return res.status(400).json({ success: false, message: 'Invalid Delivery OTP' });
+        }
+        order.deliveryOtp = null;
+      }
+    }
+
     if (status === 'Dispatched' && !order.deliveryOtp) {
       // Generate a 4-digit OTP for delivery
-      const otp = Math.floor(1000 + Math.random() * 9000).toString();
-      order.deliveryOtp = otp;
-      console.log(`[Delivery OTP] Order ${order.orderNumber}: ${otp}`);
+      const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+      order.deliveryOtp = otpCode;
+      console.log(`[Delivery OTP] Order ${order.orderNumber}: ${otpCode}`);
     }
 
     order.status = status;
@@ -614,6 +784,45 @@ export const acceptExchange = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Exchange request accepted. OTP generated successfully.',
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/orders/vendor/orders/:orderId/dispatch-exchange
+ * Vendor dispatches exchange request by assigning a staff member.
+ */
+export const dispatchExchange = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { assignedStaff } = req.body;
+    const vendorId = req.user.vendorId || req.user._id || req.user.id;
+
+    const order = await Order.findOne({ _id: orderId, vendor: vendorId });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (!order.exchangeRequest || order.exchangeRequest.status !== 'Accepted') {
+      return res.status(400).json({ success: false, message: 'Exchange request must be accepted first' });
+    }
+
+    if (assignedStaff) {
+      order.exchangeRequest.assignedStaff = {
+        name: assignedStaff.name,
+        mobile: assignedStaff.mobile,
+        assignedAt: new Date()
+      };
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Exchange staff assigned successfully',
       data: order,
     });
   } catch (error) {

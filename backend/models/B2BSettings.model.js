@@ -18,6 +18,35 @@ const b2bSettingsSchema = new mongoose.Schema(
             min: 0,
             max: 100
         },
+        fashionAdvancePaymentAmount: {
+            type: Number,
+            default: 200,
+            min: 0
+        },
+        fashionPlatformCharge: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+        groceryAdvancePaymentAmount: {
+            type: Number,
+            default: 20,
+            min: 0
+        },
+        groceryPlatformCharge: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
+        allowFullCod: {
+            type: Boolean,
+            default: true
+        },
+        codConvenienceFee: {
+            type: Number,
+            default: 20,
+            min: 0
+        },
         enableVideoFileUpload: {
             type: Boolean,
             default: true
