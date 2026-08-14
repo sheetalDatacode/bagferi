@@ -192,16 +192,22 @@ const AdminOrders = () => {
                                         <td className="px-6 py-4 align-top">
                                             <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                                                 <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-xs text-gray-500 font-bold">Total Amount</span>
+                                                    <span className="text-xs text-gray-500 font-bold">Subtotal</span>
                                                     <span className="font-black text-gray-900">₹{order.totalAmount}</span>
                                                 </div>
+                                                {order.paymentMethod === 'COD' && order.convenienceFee > 0 && (
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-xs text-gray-500 font-bold">COD Charge</span>
+                                                        <span className="font-black text-gray-900">₹{order.convenienceFee}</span>
+                                                    </div>
+                                                )}
                                                 <div className="flex justify-between items-center mb-2">
                                                     <span className="text-xs text-gray-500 font-bold">Advance Paid</span>
                                                     <span className="font-black text-green-600">₹{order.advancePayment || 0}</span>
                                                 </div>
                                                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                                                     <span className="text-xs text-gray-500 font-bold">Balance</span>
-                                                    <span className="font-black text-red-600">₹{order.remainingBalance || (order.totalAmount - (order.advancePayment || 0))}</span>
+                                                    <span className="font-black text-red-600">₹{order.remainingBalance !== undefined ? order.remainingBalance : (order.totalAmount - (order.advancePayment || 0))}</span>
                                                 </div>
                                                 <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-center bg-gray-200 text-gray-700 py-1 rounded">
                                                     Method: {order.paymentMethod}
@@ -210,12 +216,17 @@ const AdminOrders = () => {
                                         </td>
                                         <td className="px-6 py-4 align-top">
                                             <div className="flex flex-col gap-2">
-                                                <span className={`px-2 py-1 rounded text-xs font-bold w-fit ${getStatusColor(order.status)}`}>
-                                                    {order.status}
-                                                </span>
-                                                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                                                    Payment: {order.paymentStatus}
-                                                </span>
+                                                 <span className={`px-2 py-1 rounded text-xs font-bold w-fit ${getStatusColor(order.status)}`}>
+                                                     {order.status}
+                                                 </span>
+                                                 {order.status === 'Cancelled' && order.cancelledBy && (
+                                                     <span className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded capitalize w-fit font-bold">
+                                                         By {order.cancelledBy}
+                                                     </span>
+                                                 )}
+                                                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                                                     Payment: {order.paymentStatus}
+                                                 </span>
                                                 <button
                                                     onClick={() => handleViewBill(order)}
                                                     className="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 rounded-lg text-xs font-bold transition-colors w-fit"

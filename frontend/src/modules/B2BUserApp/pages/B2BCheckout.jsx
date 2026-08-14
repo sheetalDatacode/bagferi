@@ -29,7 +29,7 @@ const B2BCheckout = () => {
     const [cartTab, setCartTab] = useState('fashion'); // 'fashion' or 'grocery'
     const [fashionAdvancePerOrder, setFashionAdvancePerOrder] = useState(200);
     const [groceryAdvancePerOrder, setGroceryAdvancePerOrder] = useState(20);
-    const [selectedFlow, setSelectedFlow] = useState('advance_cod'); // 'advance_cod' or 'full_cod'
+    const [selectedFlow, setSelectedFlow] = useState('full_cod'); // 'advance_cod' or 'full_cod'
     const [allowFullCod, setAllowFullCod] = useState(true);
     const [codConvenienceFee, setCodConvenienceFee] = useState(20);
 
@@ -454,6 +454,7 @@ const B2BCheckout = () => {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {/* Option 1: Advance + COD */}
+                            {/*
                             <div 
                                 onClick={() => setSelectedFlow('advance_cod')}
                                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3 text-left ${selectedFlow === 'advance_cod' ? 'border-primary-600 bg-orange-50/30' : 'border-gray-100 bg-gray-50 hover:border-primary-300'}`}
@@ -468,6 +469,7 @@ const B2BCheckout = () => {
                                     </p>
                                 </div>
                             </div>
+                            */}
 
                             {/* Option 2: Pure COD */}
                             {allowFullCod && (
@@ -679,7 +681,12 @@ const B2BCheckout = () => {
                                 <span>Delivery</span>
                                 <span>Free</span>
                             </div>
-                                 {/* COD Convenience Fee is hidden from UI but added in Total Amount below */}
+                             {selectedFlow === 'full_cod' && convenienceFee > 0 && (
+                                 <div className="flex justify-between items-center text-sm text-gray-600 font-semibold">
+                                     <span>COD Charge</span>
+                                     <span className="text-gray-900 font-bold">₹{convenienceFee.toLocaleString('en-IN')}</span>
+                                 </div>
+                             )}
 
                                 <div className="border-t border-gray-100 pt-4 mt-2">
                                     <div className="flex justify-between items-end mb-2">

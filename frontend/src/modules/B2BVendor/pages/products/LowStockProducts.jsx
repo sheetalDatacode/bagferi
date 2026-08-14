@@ -95,10 +95,21 @@ const LowStockProducts = () => {
                     const categoryAttr = product.attributes?.find(attr => attr.name === 'category');
                     const category = product.category || categoryAttr?.value || 'N/A';
 
+                    let productImg = product.image;
+                    if (!productImg && Array.isArray(product.images) && product.images.length > 0) {
+                        productImg = product.images[0];
+                    }
+                    if (!productImg && Array.isArray(product.variants)) {
+                        const firstVariantWithImg = product.variants.find(v => v.imageUrl || (Array.isArray(v.images) && v.images.length > 0));
+                        if (firstVariantWithImg) {
+                            productImg = firstVariantWithImg.imageUrl || firstVariantWithImg.images[0];
+                        }
+                    }
+
                     return {
                         _id: product._id,
                         name: product.name,
-                        image: product.image,
+                        image: productImg,
                         price: product.price,
                         moq: product.minimumOrderQuantity || 1,
                         unit: product.unit || 'Pcs',
@@ -305,6 +316,18 @@ const LowStockProducts = () => {
                                                              onChange={(e) => {
                                                                  const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
                                                                  setEditingStock(prev => ({ ...prev, [product._id]: val }));
+                                                             }}
+                                                             onBlur={() => {
+                                                                 const val = editingStock[product._id];
+                                                                 if (val !== undefined && val !== '' && val !== product.stockQuantity) {
+                                                                     handleUpdateStock(product._id, val);
+                                                                 }
+                                                             }}
+                                                             onKeyDown={(e) => {
+                                                                 const val = editingStock[product._id];
+                                                                 if (e.key === 'Enter' && val !== undefined && val !== '' && val !== product.stockQuantity) {
+                                                                     handleUpdateStock(product._id, val);
+                                                                 }
                                                              }}
                                                              className="w-20 px-2 py-1 text-center font-extrabold text-slate-800 border border-gray-200 rounded-lg outline-none focus:border-primary-500 transition-all bg-gray-50 focus:bg-white"
                                                          />

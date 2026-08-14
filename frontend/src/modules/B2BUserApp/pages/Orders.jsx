@@ -183,7 +183,7 @@ const Orders = () => {
                                         <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-100">
                                             <div>
                                                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Total Amount</p>
-                                                <p className="text-base font-black text-primary-600">₹{order.totalAmount?.toLocaleString('en-IN')}</p>
+                                                <p className="text-base font-black text-primary-600">₹{(order.totalAmount + (order.paymentMethod === 'COD' ? (order.convenienceFee || 0) : 0))?.toLocaleString('en-IN')}</p>
                                             </div>
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <button 
@@ -397,13 +397,19 @@ const Orders = () => {
                                                     <span>Subtotal</span>
                                                     <span className="font-bold text-gray-800">₹{order.totalAmount?.toLocaleString('en-IN')}</span>
                                                 </div>
+                                                {order.paymentMethod === 'COD' && order.convenienceFee > 0 && (
+                                                    <div className="flex justify-between items-center text-gray-500 font-semibold">
+                                                        <span>COD Charge</span>
+                                                        <span className="font-bold text-gray-800">₹{order.convenienceFee.toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                )}
                                                 <div className="flex justify-between items-center text-gray-500 font-semibold">
                                                     <span>Advance Paid</span>
                                                     <span className="font-black text-green-600">₹{order.advancePayment?.toLocaleString('en-IN') || 0}</span>
                                                 </div>
                                                 <div className="border-t border-gray-200/60 pt-2 flex justify-between items-center font-bold text-gray-900">
-                                                    <span>Remaining COD</span>
-                                                    <span className="font-black text-primary-600">₹{(order.totalAmount - (order.advancePayment || 0)).toLocaleString('en-IN')}</span>
+                                                    <span>{order.paymentMethod === 'COD' ? 'Remaining COD' : 'Balance'}</span>
+                                                    <span className="font-black text-primary-600">₹{(order.remainingBalance !== undefined ? order.remainingBalance : (order.totalAmount - (order.advancePayment || 0))).toLocaleString('en-IN')}</span>
                                                 </div>
                                                 
                                                 {order.status === 'Dispatched' && order.deliveryOtp && (
@@ -539,16 +545,22 @@ const Orders = () => {
                             <div className="flex justify-end">
                                 <div className="w-full sm:w-80 bg-slate-900 text-white p-5 rounded-2xl space-y-3 shadow-md print:bg-transparent print:text-slate-900 print:shadow-none print:border print:border-gray-200 print:p-4">
                                     <div className="flex justify-between items-center text-xs text-slate-300 font-medium print:text-slate-700">
-                                        <span>Total Order Amount</span>
+                                        <span>Subtotal</span>
                                         <span className="font-bold text-white print:text-slate-900">₹{selectedOrderForInvoice.totalAmount?.toLocaleString('en-IN')}</span>
                                     </div>
+                                    {selectedOrderForInvoice.paymentMethod === 'COD' && selectedOrderForInvoice.convenienceFee > 0 && (
+                                        <div className="flex justify-between items-center text-xs text-slate-300 font-medium print:text-slate-700">
+                                            <span>COD Charge</span>
+                                            <span className="font-bold text-white print:text-slate-900">₹{selectedOrderForInvoice.convenienceFee.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between items-center text-xs text-emerald-400 font-bold border-t border-slate-800 pt-2 print:border-gray-200 print:text-emerald-700">
                                         <span>Paid Amount (Advance)</span>
                                         <span>₹{(selectedOrderForInvoice.advancePayment || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm font-black text-amber-400 border-t border-slate-700 pt-2 print:border-gray-200 print:text-slate-900">
                                         <span>Remaining Amount</span>
-                                        <span>₹{((selectedOrderForInvoice.totalAmount || 0) - (selectedOrderForInvoice.advancePayment || 0)).toLocaleString('en-IN')}</span>
+                                        <span>₹{(selectedOrderForInvoice.remainingBalance !== undefined ? selectedOrderForInvoice.remainingBalance : (selectedOrderForInvoice.totalAmount - (selectedOrderForInvoice.advancePayment || 0))).toLocaleString('en-IN')}</span>
                                     </div>
                                 </div>
                             </div>

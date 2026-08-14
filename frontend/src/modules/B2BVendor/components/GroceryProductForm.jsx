@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiSave, FiX, FiUpload, FiTrash2, FiImage, FiTag, FiDollarSign, FiList, FiChevronDown, FiSearch, FiCheck } from "react-icons/fi";
+import { FiSave, FiX, FiUpload, FiTrash2, FiImage, FiTag, FiDollarSign, FiList, FiChevronDown, FiSearch, FiCheck, FiPlus } from "react-icons/fi";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import api from "../../../shared/utils/api";
@@ -33,6 +33,7 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
     
     const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
     const [brandSearchQuery, setBrandSearchQuery] = useState("");
+    const [customBrandName, setCustomBrandName] = useState("");
     const brandDropdownRef = useRef(null);
 
     const [images, setImages] = useState([]); // UI state for new images
@@ -66,6 +67,65 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
         };
         fetchBrands();
     }, [formData.category, formData.subcategory]);
+
+    const handleAddBrand = async (nameToUse) => {
+        const brandName = (nameToUse || brandSearchQuery || "").trim();
+        if (!brandName) {
+            toast.error("Please enter a brand name");
+            return;
+        }
+        if (!formData.category) {
+            toast.error("Please select a category first");
+            return;
+        }
+        if (!formData.subcategory) {
+            toast.error("Please select a subcategory first");
+            return;
+        }
+
+        const catObj = categories.find(c => c.name === formData.category || c._id === formData.category);
+        const categoryId = catObj ? (catObj._id || catObj.id) : null;
+        
+        let subcategoryId = null;
+        if (catObj) {
+            const subcatObj = (catObj.subcategories || []).find(s => s.name === formData.subcategory || s._id === formData.subcategory);
+            if (subcatObj) {
+                subcategoryId = subcatObj._id || subcatObj.id;
+            }
+        }
+
+        if (!categoryId) {
+            toast.error("Invalid category");
+            return;
+        }
+
+        const toastId = toast.loading("Adding brand...");
+        try {
+            const payload = {
+                name: brandName,
+                type: 'grocery',
+                category: categoryId,
+            };
+            if (subcategoryId) {
+                payload.subcategory = subcategoryId;
+            }
+
+            const res = await api.post('/brands', payload);
+            if (res.success && res.data) {
+                toast.success("Brand added successfully", { id: toastId });
+                setBrands(prev => [...prev, res.data]);
+                setFormData(prev => ({ ...prev, brand: res.data.name }));
+                setBrandSearchQuery("");
+                setCustomBrandName("");
+                setIsBrandDropdownOpen(false);
+            } else {
+                toast.error(res.message || "Failed to add brand", { id: toastId });
+            }
+        } catch (error) {
+            console.error("Error adding brand:", error);
+            toast.error(error.response?.data?.message || error.message || "Failed to add brand", { id: toastId });
+        }
+    };
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -271,6 +331,16 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                                     </div>
                                 </div>
                                 <div className="overflow-y-auto custom-scrollbar p-1.5">
+                                    {brandSearchQuery.trim() && !brands.some(b => b.name.toLowerCase() === brandSearchQuery.trim().toLowerCase()) && (
+                                        <button
+                                            type="button"
+                                            onClick={handleAddBrand}
+                                            className="w-full text-left px-4 py-2 rounded-xl flex items-center justify-between text-sm transition-colors text-primary-600 font-bold hover:bg-primary-50"
+                                        >
+                                            <span>Add "{brandSearchQuery.trim()}"</span>
+                                            <FiPlus className="text-primary-600" />
+                                        </button>
+                                    )}
                                     {brands.filter(b => b.name.toLowerCase().includes(brandSearchQuery.toLowerCase())).length > 0 ? (
                                         brands.filter(b => b.name.toLowerCase().includes(brandSearchQuery.toLowerCase())).map((b) => (
                                             <button
@@ -294,6 +364,23 @@ const GroceryProductForm = ({ initialData, isEdit, productId }) => {
                                             <p className="text-gray-400 text-sm">No brands found</p>
                                         </div>
                                     )}
+                                </div>
+                                {/* Custom brand creation footer */}
+                                <div className="p-3 border-t border-gray-50 bg-gray-50/50 flex gap-2 items-center" onClick={e => e.stopPropagation()}>
+                                    <input
+                                        type="text"
+                                        placeholder="Add custom brand..."
+                                        value={customBrandName}
+                                        onChange={(e) => setCustomBrandName(e.target.value)}
+                                        className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => handleAddBrand(customBrandName)}
+                                        className="px-4 py-2 bg-primary-600 text-white text-xs font-bold rounded-xl hover:bg-primary-700 transition-colors shrink-0"
+                                    >
+                                        ADD
+                                    </button>
                                 </div>
                             </motion.div>
                         )}

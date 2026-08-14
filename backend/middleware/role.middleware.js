@@ -13,6 +13,7 @@ export const authorize = (...roles) => {
     }
 
     const allowedRoles = roles.includes('admin') ? [...roles, 'superadmin'] : roles;
+    console.log(`[Role Auth Debug] Route requires:`, allowedRoles, `User role:`, req.user?.role, `Matches:`, allowedRoles.includes(req.user?.role));
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,

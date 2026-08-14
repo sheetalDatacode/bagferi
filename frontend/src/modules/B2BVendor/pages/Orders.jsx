@@ -257,7 +257,11 @@ const VendorOrders = () => {
     };
 
     const filteredOrders = orders.filter(o => {
-        const matchesStatus = filter === 'All' || o.status === filter;
+        const matchesStatus = filter === 'All' 
+            ? true 
+            : filter === 'Exchanged' 
+                ? (o.exchangeRequest && o.exchangeRequest.status !== 'None')
+                : o.status === filter;
         const matchesModule = moduleFilter === 'All' || (o.module || 'fashion') === moduleFilter.toLowerCase();
         return matchesStatus && matchesModule;
     });
@@ -282,6 +286,7 @@ const VendorOrders = () => {
     const getMonthlyCollectionStats = () => {
         const monthlyTotal = {};
         const staffMonthly = {};
+        const allMonthsSet = new Set();
 
         if (shopDetails?.details && Array.isArray(shopDetails.details)) {
             shopDetails.details.forEach(staff => {
@@ -293,37 +298,26 @@ const VendorOrders = () => {
             if (order.status === 'Completed') {
                 const collected = order.remainingBalance !== undefined ? order.remainingBalance : (order.totalAmount - (order.advancePayment || 0));
                 const date = new Date(order.updatedAt || order.createdAt);
-                const monthName = date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-                
-                monthlyTotal[monthName] = (monthlyTotal[monthName] || 0) + collected;
+                const monthLabel = date.toLocaleString('en-US', { month: 'short', year: 'numeric' }); // e.g. "Aug 2026"
+                allMonthsSet.add(monthLabel);
 
-                if (order.assignedStaff?.name) {
-                    const staffName = order.assignedStaff.name;
-                    if (!staffMonthly[staffName]) {
-                        staffMonthly[staffName] = {};
-                    }
-                    staffMonthly[staffName][monthName] = (staffMonthly[staffName][monthName] || 0) + collected;
+                monthlyTotal[monthLabel] = (monthlyTotal[monthLabel] || 0) + collected;
+
+                const staffName = order.assignedStaff?.name || 'Self Delivery';
+                if (!staffMonthly[staffName]) {
+                    staffMonthly[staffName] = {};
                 }
+                staffMonthly[staffName][monthLabel] = (staffMonthly[staffName][monthLabel] || 0) + collected;
             }
         });
 
-        const monthlyTotalArray = Object.entries(monthlyTotal).map(([month, total]) => ({
-            month,
-            total
-        })).sort((a, b) => new Date(b.month) - new Date(a.month));
+        // Sort months chronologically
+        const sortedMonths = Array.from(allMonthsSet).sort((a, b) => new Date(a) - new Date(b));
 
-        const staffMonthlyArray = Object.entries(staffMonthly).map(([staffName, months]) => ({
-            staffName,
-            months: Object.entries(months).map(([month, total]) => ({
-                month,
-                total
-            })).sort((a, b) => new Date(b.month) - new Date(a.month))
-        })).sort((a, b) => a.staffName.localeCompare(b.staffName));
-
-        return { monthlyTotalArray, staffMonthlyArray };
+        return { monthlyTotal, staffMonthly, sortedMonths };
     };
 
-    const { monthlyTotalArray, staffMonthlyArray } = getMonthlyCollectionStats();
+    const { monthlyTotal, staffMonthly, sortedMonths } = getMonthlyCollectionStats();
 
     // Get all completed deliveries across all staff for the detailed history table
     const allCompletedDeliveries = [];
@@ -732,56 +726,58 @@ const VendorOrders = () => {
                         </div>
                     </div>
 
-                    {/* Monthly Collection Summary */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Month-Wise Total Collection */}
-                        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                            <h3 className="font-black text-gray-900 text-xs uppercase tracking-widest mb-4 pb-2 border-b border-gray-100 flex items-center gap-1.5">
-                                <span>📅</span> Month-Wise Total Collection
-                            </h3>
-                            {monthlyTotalArray.length === 0 ? (
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider text-center py-6">No collection records</p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {monthlyTotalArray.map(({ month, total }) => (
-                                        <div key={month} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                                            <span className="text-sm font-bold text-gray-700">{month}</span>
-                                            <span className="text-sm font-black text-primary-600">₹{total.toLocaleString('en-IN')}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Staff-Wise Monthly Collection */}
-                        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                            <h3 className="font-black text-gray-900 text-xs uppercase tracking-widest mb-4 pb-2 border-b border-gray-100 flex items-center gap-1.5">
-                                <span>👤</span> Staff Monthly Breakdown
-                            </h3>
-                            {staffMonthlyArray.length === 0 ? (
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider text-center py-6">No staff collection records</p>
-                            ) : (
-                                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
-                                    {staffMonthlyArray.map(({ staffName, months }) => (
-                                        <div key={staffName} className="space-y-2">
-                                            <h4 className="text-xs font-black text-gray-450 uppercase tracking-widest ml-1">{staffName}</h4>
-                                            <div className="grid grid-cols-1 gap-2">
-                                                {months.length === 0 ? (
-                                                    <p className="text-[10px] text-gray-400 font-medium italic ml-1 mb-1">
-                                                        No completed deliveries yet
-                                                    </p>
-                                                ) : months.map(({ month, total }) => (
-                                                    <div key={month} className="flex justify-between items-center px-3 py-2 bg-slate-50/50 border border-slate-100 rounded-xl">
-                                                        <span className="text-xs font-semibold text-gray-600">{month}</span>
-                                                        <span className="text-xs font-black text-emerald-600">₹{total.toLocaleString('en-IN')}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                    {/* Monthly Collection Summary Grid */}
+                    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm text-left">
+                        <h3 className="font-black text-gray-900 text-sm uppercase tracking-wider mb-4 pb-2 border-b border-gray-100 flex items-center gap-1.5">
+                            <span>📊</span> Month-Wise Staff Collection matrix
+                        </h3>
+                        {sortedMonths.length === 0 ? (
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider text-center py-8">No completed delivery collections found</p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse border border-gray-150 rounded-xl overflow-hidden text-xs">
+                                    <thead>
+                                        <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 font-black uppercase">
+                                            <th className="p-3">Staff Name</th>
+                                            {sortedMonths.map(month => (
+                                                <th key={month} className="p-3 text-right">{month}</th>
+                                            ))}
+                                            <th className="p-3 text-right text-primary-600">Total Collection</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {Object.entries(staffMonthly).map(([staffName, monthsData]) => {
+                                            const totalStaffCollection = Object.values(monthsData).reduce((sum, val) => sum + val, 0);
+                                            return (
+                                                <tr key={staffName} className="hover:bg-gray-50 font-medium">
+                                                    <td className="p-3 font-bold text-gray-900">{staffName}</td>
+                                                    {sortedMonths.map(month => (
+                                                        <td key={month} className="p-3 text-right text-gray-700">
+                                                            ₹{(monthsData[month] || 0).toLocaleString('en-IN')}
+                                                        </td>
+                                                    ))}
+                                                    <td className="p-3 text-right font-black text-primary-600">
+                                                        ₹{totalStaffCollection.toLocaleString('en-IN')}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {/* Total Month-Wise Row */}
+                                        <tr className="bg-gray-50/80 font-black border-t border-gray-200 text-gray-900">
+                                            <td className="p-3 uppercase">Total Month Wise</td>
+                                            {sortedMonths.map(month => (
+                                                <td key={month} className="p-3 text-right text-emerald-600">
+                                                    ₹{(monthlyTotal[month] || 0).toLocaleString('en-IN')}
+                                                </td>
+                                            ))}
+                                            <td className="p-3 text-right text-primary-600 font-black bg-primary-50/50">
+                                                ₹{Object.values(monthlyTotal).reduce((sum, val) => sum + val, 0).toLocaleString('en-IN')}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
 
                     {/* Filter and Detailed Table */}
@@ -1375,16 +1371,22 @@ const VendorOrders = () => {
                             <div className="flex justify-end">
                                 <div className="w-full sm:w-80 bg-slate-900 text-white p-5 rounded-2xl space-y-3 shadow-md">
                                     <div className="flex justify-between items-center text-xs text-slate-300 font-medium">
-                                        <span>Total Order Amount</span>
+                                        <span>Subtotal</span>
                                         <span className="font-bold text-white">₹{selectedOrderForInvoice.totalAmount?.toLocaleString('en-IN')}</span>
                                     </div>
+                                    {selectedOrderForInvoice.paymentMethod === 'COD' && selectedOrderForInvoice.convenienceFee > 0 && (
+                                        <div className="flex justify-between items-center text-xs text-slate-300 font-medium">
+                                            <span>COD Charge</span>
+                                            <span className="font-bold text-white">₹{selectedOrderForInvoice.convenienceFee.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between items-center text-xs text-emerald-400 font-bold border-t border-slate-800 pt-2">
                                         <span>Paid Amount (Advance)</span>
                                         <span>₹{(selectedOrderForInvoice.advancePayment || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm font-black text-amber-400 border-t border-slate-700 pt-2">
                                         <span>Remaining Amount</span>
-                                        <span>₹{((selectedOrderForInvoice.totalAmount || 0) - (selectedOrderForInvoice.advancePayment || 0)).toLocaleString('en-IN')}</span>
+                                        <span>₹{(selectedOrderForInvoice.remainingBalance !== undefined ? selectedOrderForInvoice.remainingBalance : (selectedOrderForInvoice.totalAmount - (selectedOrderForInvoice.advancePayment || 0))).toLocaleString('en-IN')}</span>
                                     </div>
                                 </div>
                             </div>

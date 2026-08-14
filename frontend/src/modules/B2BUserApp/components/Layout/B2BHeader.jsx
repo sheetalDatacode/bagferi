@@ -152,7 +152,28 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
         if (onSearchSubmit) {
             onSearchSubmit(query);
         } else {
-            navigate(`/b2b/catalog?search=${encodeURIComponent(query)}`);
+            const lowerSearch = query.toLowerCase();
+            const isGroceryKeyword = lowerSearch.includes('oil') || 
+                                     lowerSearch.includes('grocery') || 
+                                     lowerSearch.includes('food') || 
+                                     lowerSearch.includes('spices') || 
+                                     lowerSearch.includes('sugar') || 
+                                     lowerSearch.includes('rice') || 
+                                     lowerSearch.includes('wheat') || 
+                                     lowerSearch.includes('masala') || 
+                                     lowerSearch.includes('salt') || 
+                                     lowerSearch.includes('flour') || 
+                                     lowerSearch.includes('atta') || 
+                                     lowerSearch.includes('dal') || 
+                                     lowerSearch.includes('tea') || 
+                                     lowerSearch.includes('coffee') || 
+                                     lowerSearch.includes('paneer') || 
+                                     lowerSearch.includes('milk') || 
+                                     lowerSearch.includes('butter') || 
+                                     lowerSearch.includes('ghee');
+            
+            const routePath = isGroceryKeyword ? '/b2b/grocery' : '/b2b/catalog';
+            navigate(`${routePath}?search=${encodeURIComponent(query)}`);
         }
     };
 
@@ -166,7 +187,28 @@ const B2BHeader = ({ showBack = false, title = "Bulk Marketplace", sticky = true
         } else {
             // Otherwise, navigate to product catalog with search query
             if (query) {
-                navigate(`/b2b/catalog?search=${encodeURIComponent(query)}`);
+                const lowerSearch = query.toLowerCase();
+                const isGroceryKeyword = lowerSearch.includes('oil') || 
+                                         lowerSearch.includes('grocery') || 
+                                         lowerSearch.includes('food') || 
+                                         lowerSearch.includes('spices') || 
+                                         lowerSearch.includes('sugar') || 
+                                         lowerSearch.includes('rice') || 
+                                         lowerSearch.includes('wheat') || 
+                                         lowerSearch.includes('masala') || 
+                                         lowerSearch.includes('salt') || 
+                                         lowerSearch.includes('flour') || 
+                                         lowerSearch.includes('atta') || 
+                                         lowerSearch.includes('dal') || 
+                                         lowerSearch.includes('tea') || 
+                                         lowerSearch.includes('coffee') || 
+                                         lowerSearch.includes('paneer') || 
+                                         lowerSearch.includes('milk') || 
+                                         lowerSearch.includes('butter') || 
+                                         lowerSearch.includes('ghee');
+                
+                const routePath = isGroceryKeyword ? '/b2b/grocery' : '/b2b/catalog';
+                navigate(`${routePath}?search=${encodeURIComponent(query)}`);
             } else {
                 navigate('/b2b/catalog');
             }

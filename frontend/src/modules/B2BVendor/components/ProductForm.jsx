@@ -80,6 +80,7 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
     const [brands, setBrands] = useState([]);
     const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
     const [brandSearchQuery, setBrandSearchQuery] = useState("");
+    const [customBrandName, setCustomBrandName] = useState("");
 
     // Lock scroll when unit selection modal is open
     useScrollLock(isUnitDropdownOpen);
@@ -226,6 +227,66 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
         };
         fetchBrands();
     }, [formData.category, formData.subcategory, categories]);
+
+    const handleAddBrand = async (nameToUse) => {
+        const brandName = (nameToUse || brandSearchQuery || "").trim();
+        if (!brandName) {
+            toast.error("Please enter a brand name");
+            return;
+        }
+        if (!formData.category) {
+            toast.error("Please select a category first");
+            return;
+        }
+        if (!formData.subcategory) {
+            toast.error("Please select a subcategory first");
+            return;
+        }
+
+        const catObj = categories.find(c => c.name === formData.category);
+        const categoryId = catObj ? (catObj.id || catObj._id) : null;
+        
+        let subcategoryId = null;
+        if (catObj) {
+            const subcatObj = (catObj.subcategories || []).find(s => s.name === formData.subcategory);
+            if (subcatObj) {
+                subcategoryId = subcatObj.id || subcatObj._id;
+            }
+        }
+
+        if (!categoryId) {
+            toast.error("Invalid category");
+            return;
+        }
+
+        const toastId = toast.loading("Adding brand...");
+        try {
+            const payload = {
+                name: brandName,
+                type: 'fashion',
+                category: categoryId,
+            };
+            if (subcategoryId) {
+                payload.subcategory = subcategoryId;
+            }
+
+            const res = await api.post('/brands', payload);
+            if (res.success && res.data) {
+                toast.success("Brand added successfully", { id: toastId });
+                setBrands(prev => [...prev, res.data]);
+                setFormData(prev => ({ ...prev, brand: res.data.name }));
+                setBrandSearchQuery("");
+                setCustomBrandName("");
+                setIsBrandDropdownOpen(false);
+                if (errors.brand) setErrors(prev => ({ ...prev, brand: null }));
+            } else {
+                toast.error(res.message || "Failed to add brand", { id: toastId });
+            }
+        } catch (error) {
+            console.error("Error adding brand:", error);
+            toast.error(error.response?.data?.message || error.message || "Failed to add brand", { id: toastId });
+        }
+    };
 
     useEffect(() => {
         if (!isEdit && isDraftLoaded) {
@@ -1263,11 +1324,38 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                             {formData.brand === b.name && <FiCheck className="text-[#4f46e5]" />}
                                                         </button>
                                                     ))}
+                                                {brandSearchQuery.trim() && !brands.some(b => b.name.toLowerCase() === brandSearchQuery.trim().toLowerCase()) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleAddBrand}
+                                                        className="w-full text-left px-4 py-2.5 rounded-xl text-sm transition-colors flex items-center justify-between text-[#4f46e5] font-bold hover:bg-[#f5f3ff]"
+                                                    >
+                                                        <span>Add "{brandSearchQuery.trim()}"</span>
+                                                        <FiPlus className="text-[#4f46e5]" />
+                                                    </button>
+                                                )}
                                                 {brands.filter(b => b.name.toLowerCase().includes(brandSearchQuery.toLowerCase())).length === 0 && (
                                                     <div className="p-4 text-center text-gray-400 text-sm italic">
                                                         No brands found
                                                     </div>
                                                 )}
+                                            </div>
+                                            {/* Custom brand creation footer */}
+                                            <div className="p-3 border-t border-gray-50 bg-gray-50/50 flex gap-2 items-center" onClick={e => e.stopPropagation()}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Add custom brand..."
+                                                    value={customBrandName}
+                                                    onChange={(e) => setCustomBrandName(e.target.value)}
+                                                    className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition-all"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleAddBrand(customBrandName)}
+                                                    className="px-4 py-2 bg-[#4f46e5] text-white text-xs font-bold rounded-xl hover:bg-[#4338ca] transition-colors shrink-0"
+                                                >
+                                                    ADD
+                                                </button>
                                             </div>
                                         </motion.div>
                                     )}
@@ -1405,10 +1493,10 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                             <tbody className="divide-y divide-gray-50">
                                                 {formData.variants.map((v, idx) => (
                                                     <tr key={idx} className="group">
-                                                        <td className="py-3 pr-2 max-w-[200px]">
-                                                            <div className="flex flex-wrap gap-1.5 items-center">
+                                                        <td className="py-3 pr-2 max-w-[320px]">
+                                                            <div className="flex flex-wrap gap-2 items-center">
                                                                 {(v.images || (v.imageUrl ? [v.imageUrl] : [])).map((imgUrl, imgIdx) => (
-                                                                    <div key={imgIdx} className="relative w-8 h-8 rounded-lg border border-gray-200 overflow-hidden shrink-0 group/img">
+                                                                    <div key={imgIdx} className="relative w-14 h-14 rounded-xl border border-gray-200 overflow-hidden shrink-0 group/img shadow-sm">
                                                                         <img src={imgUrl} className="w-full h-full object-cover" alt="" />
                                                                         <button
                                                                             type="button"
@@ -1422,12 +1510,12 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                                                                             }}
                                                                             className="absolute inset-0 bg-red-600/70 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"
                                                                         >
-                                                                            <FiX size={10} />
+                                                                            <FiX size={14} />
                                                                         </button>
                                                                     </div>
                                                                 ))}
-                                                                <label className="w-8 h-8 rounded-lg border border-dashed border-gray-300 hover:border-indigo-500 bg-slate-50 flex items-center justify-center cursor-pointer transition-colors shrink-0">
-                                                                    <FiPlus className="text-gray-400 text-xs" />
+                                                                <label className="w-14 h-14 rounded-xl border border-dashed border-gray-300 hover:border-indigo-500 bg-slate-50 flex items-center justify-center cursor-pointer transition-colors shrink-0">
+                                                                    <FiPlus className="text-gray-400 text-sm" />
                                                                     <input
                                                                         type="file"
                                                                         accept="image/*"
@@ -1719,110 +1807,108 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                         {/* Right Section: Pricing & Images (4 cols) */}
                         <div className="lg:col-span-4 space-y-6">
                             {/* Media Gallery */}
-                            {(!formData.variants || formData.variants.length === 0) && (
-                                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                                    <div className="flex items-center justify-between mb-5">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg text-sm">
-                                                <FiImage />
-                                            </div>
-                                            <h3 className="text-lg font-bold text-gray-800">Media Gallery</h3>
+                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                                <div className="flex items-center justify-between mb-5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg text-sm">
+                                            <FiImage />
                                         </div>
+                                        <h3 className="text-lg font-bold text-gray-800">Media Gallery</h3>
                                     </div>
-
-                                    <div className="flex gap-3 mb-4">
-                                        <div className="grid grid-cols-2 flex-1 gap-3">
-                                            {formData.images.map((img, index) => (
-                                                <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 group">
-                                                    <img src={img} alt="" className="w-full h-full object-cover" />
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeImage(index)}
-                                                            className="p-1.5 bg-red-500 text-white rounded-full hover:scale-110 transition-transform"
-                                                        >
-                                                            <FiTrash2 size={14} />
-                                                        </button>
-                                                    </div>
-                                                    {index === 0 && (
-                                                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-[#4f46e5] text-[7px] text-white font-bold uppercase rounded">
-                                                            Cover
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-
-                                            {/* Action Buttons */}
-                                            <div className="col-span-2 flex gap-3">
-                                                 <div className="flex-1 relative">
-                                                     <input
-                                                         id="gallery-upload"
-                                                         type="file"
-                                                         onChange={(e) => handleMultipleImageUpload(e, false)}
-                                                         className="hidden"
-                                                         multiple
-                                                         accept="image/png, image/jpeg, image/webp"
-                                                         disabled={isUploading}
-                                                     />
-                                                     <button
-                                                         type="button"
-                                                         onClick={handleGalleryClick}
-                                                         disabled={isUploading}
-                                                         className="w-full flex flex-col items-center justify-center py-10 px-5 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-primary-50 hover:border-primary-200 cursor-pointer transition-all group relative overflow-hidden"
-                                                     >
-                                                         <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-[#4f46e5] transition-all shadow-sm mb-1">
-                                                             {isUploading ? <div className="w-5 h-5 border-2 border-[#4f46e5] border-t-transparent rounded-full animate-spin"></div> : <FiPlus size={24} />}
-                                                         </div>
-                                                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-[#4f46e5]">Gallery</span>
-                                                     </button>
-                                                 </div>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={handleCameraClick}
-                                                    disabled={isUploading}
-                                                    className="flex-1 flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-all group relative overflow-hidden"
-                                                >
-                                                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-600 transition-all shadow-sm mb-1">
-                                                        <FiCamera size={22} />
-                                                    </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-blue-600">Camera</span>
-                                                    <input
-                                                        ref={cameraInputRef}
-                                                        type="file"
-                                                        capture="environment"
-                                                        accept="image/*"
-                                                        onChange={(e) => handleMultipleImageUpload(e, true)}
-                                                        className="hidden"
-                                                        disabled={isUploading}
-                                                    />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {errors.images && <p className="text-[10px] text-red-500 font-bold mt-2 ml-1">{errors.images}</p>}
-                                    
-                                    <div className="mt-4 pt-4 border-t border-gray-100">
-                                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">YouTube Video Link (Optional)</label>
-                                        <input
-                                            type="url"
-                                            name="videoLink"
-                                            value={formData.videoLink || ""}
-                                            onChange={handleChange}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
-                                            placeholder="https://www.youtube.com/watch?v=..."
-                                        />
-                                        <p className="text-[10px] text-gray-400 font-medium mt-1 ml-1">If no image is added, this video will be shown instead. A Reel will also be automatically created.</p>
-                                    </div>
-
-                                    <p className="text-[10px] text-gray-400 leading-relaxed font-medium mt-4">
-                                        {MAX_PHOTOS === 0 ? "No photos allowed on this plan." : `First image is cover. Max ${MAX_PHOTOS < 0 ? 'unlimited' : MAX_PHOTOS} photos.`} Max 300KB each.
-                                    </p>
-                                    <p className="text-[10px] text-[#4f46e5] font-black uppercase tracking-wider mt-1">
-                                        Note: Please upload square images (1:1 ratio) for better display.
-                                    </p>
                                 </div>
-                            )}
+
+                                <div className="flex gap-3 mb-4">
+                                    <div className="grid grid-cols-1 flex-1 gap-4">
+                                        {formData.images.map((img, index) => (
+                                            <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-gray-100 group shadow-sm">
+                                                <img src={img} alt="" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeImage(index)}
+                                                        className="p-2.5 bg-red-500 text-white rounded-full hover:scale-110 transition-transform shadow-md"
+                                                    >
+                                                        <FiTrash2 size={18} />
+                                                    </button>
+                                                </div>
+                                                {index === 0 && (
+                                                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#4f46e5] text-[8px] text-white font-bold uppercase rounded-md shadow-sm">
+                                                        Cover
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+
+                                        {/* Action Buttons */}
+                                        <div className="flex gap-3 mt-2">
+                                             <div className="flex-1 relative">
+                                                 <input
+                                                     id="gallery-upload"
+                                                     type="file"
+                                                     onChange={(e) => handleMultipleImageUpload(e, false)}
+                                                     className="hidden"
+                                                     multiple
+                                                     accept="image/png, image/jpeg, image/webp"
+                                                     disabled={isUploading}
+                                                 />
+                                                 <button
+                                                     type="button"
+                                                     onClick={handleGalleryClick}
+                                                     disabled={isUploading}
+                                                     className="w-full flex flex-col items-center justify-center py-10 px-5 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-primary-50 hover:border-primary-200 cursor-pointer transition-all group relative overflow-hidden"
+                                                 >
+                                                     <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-[#4f46e5] transition-all shadow-sm mb-1">
+                                                         {isUploading ? <div className="w-5 h-5 border-2 border-[#4f46e5] border-t-transparent rounded-full animate-spin"></div> : <FiPlus size={24} />}
+                                                     </div>
+                                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-[#4f46e5]">Gallery</span>
+                                                 </button>
+                                             </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={handleCameraClick}
+                                                disabled={isUploading}
+                                                className="flex-1 flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-all group relative overflow-hidden"
+                                            >
+                                                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-600 transition-all shadow-sm mb-1">
+                                                    <FiCamera size={22} />
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-blue-600">Camera</span>
+                                                <input
+                                                    ref={cameraInputRef}
+                                                    type="file"
+                                                    capture="environment"
+                                                    accept="image/*"
+                                                    onChange={(e) => handleMultipleImageUpload(e, true)}
+                                                    className="hidden"
+                                                    disabled={isUploading}
+                                                />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {errors.images && <p className="text-[10px] text-red-500 font-bold mt-2 ml-1">{errors.images}</p>}
+                                
+                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">YouTube Video Link (Optional)</label>
+                                    <input
+                                        type="url"
+                                        name="videoLink"
+                                        value={formData.videoLink || ""}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                        placeholder="https://www.youtube.com/watch?v=..."
+                                    />
+                                    <p className="text-[10px] text-gray-400 font-medium mt-1 ml-1">If no image is added, this video will be shown instead. A Reel will also be automatically created.</p>
+                                </div>
+
+                                <p className="text-[10px] text-gray-400 leading-relaxed font-medium mt-4">
+                                    {MAX_PHOTOS === 0 ? "No photos allowed on this plan." : `First image is cover. Max ${MAX_PHOTOS < 0 ? 'unlimited' : MAX_PHOTOS} photos.`} Max 300KB each.
+                                </p>
+                                <p className="text-[10px] text-[#4f46e5] font-black uppercase tracking-wider mt-1">
+                                    Note: Please upload square images (1:1 ratio) for better display.
+                                </p>
+                            </div>
 
                             {/* Pricing */}
                             {(!formData.variants || formData.variants.length === 0) && (
