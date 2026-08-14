@@ -664,57 +664,47 @@ const B2BLanding = () => {
                     })));
                 }
             } else {
-                // Determine if we should search for vendors too
-                // Preserving product search as priority
                 const baseParams = { search: searchTerm, limit: 10, strict: isStrict };
                 if (selectedCity && selectedCity !== 'All Cities') {
                     baseParams.city = selectedCity;
                 }
-
-                const [productRes, groceryRes, vendorRes] = await Promise.all([
+                const [productRes, groceryRes] = await Promise.all([
                     api.get('/products', { params: { ...baseParams, vendorType: 'b2b' } }),
-                    api.get('/grocery/products', { params: { search: searchTerm, limit: 10 } }),
-                    api.get('/vendors', { params: baseParams })
+                    api.get('/grocery/products', { params: { search: searchTerm, limit: 10 } })
                 ]);
 
                 const products = productRes.success && productRes.data ? (Array.isArray(productRes.data) ? productRes.data : (productRes.data.products || [])) : [];
                 const groceryProducts = groceryRes.success && groceryRes.data ? (Array.isArray(groceryRes.data) ? groceryRes.data : (groceryRes.data.products || [])) : [];
-                const vendors = vendorRes.success && vendorRes.data ? (Array.isArray(vendorRes.data) ? vendorRes.data : (vendorRes.data.vendors || [])) : [];
-                const properties = [];
 
-                const mappedGrocery = groceryProducts.map(gp => ({ ...gp, isGrocery: true, itemType: 'grocery', formType: 'grocery' }));
-                const mergedProducts = [...products, ...mappedGrocery];
+                const lowerSearch = searchTerm.toLowerCase();
+                const isGroceryKeyword = lowerSearch.includes('oil') || 
+                                         lowerSearch.includes('grocery') || 
+                                         lowerSearch.includes('food') || 
+                                         lowerSearch.includes('spices') || 
+                                         lowerSearch.includes('sugar') || 
+                                         lowerSearch.includes('rice') || 
+                                         lowerSearch.includes('wheat') || 
+                                         lowerSearch.includes('masala') || 
+                                         lowerSearch.includes('salt') || 
+                                         lowerSearch.includes('flour') || 
+                                         lowerSearch.includes('atta') || 
+                                         lowerSearch.includes('dal') || 
+                                         lowerSearch.includes('tea') || 
+                                         lowerSearch.includes('coffee') || 
+                                         lowerSearch.includes('paneer') || 
+                                         lowerSearch.includes('milk') || 
+                                         lowerSearch.includes('butter') || 
+                                         lowerSearch.includes('ghee');
 
-                setPopupProducts(mergedProducts.map(p => ({ ...p, moq: p.moq || p.minimumOrderQuantity || 1 })));
-                setPopupVendors(vendors);
-                setPopupProperties(properties);
+                const isGroceryRelated = groceryProducts.length > 0 && (products.length === 0 || isGroceryKeyword);
 
-                // Correctly prioritize results
-                // If we found a real estate vendor (Developer/Broker), show the Office box
-                const hasOfficeMatch = vendors.some(v =>
-                    v.isRealEstate ||
-                    (v.businessType || '').toLowerCase().includes('developer') ||
-                    (v.businessType || '').toLowerCase().includes('broker') ||
-                    (v.businessType || '').toLowerCase().includes('office') ||
-                    (v.businessType || '').toLowerCase().includes('property')
-                );
-
-                if (hasOfficeMatch) {
-                    setActivePopup('stores');
-                } else if (properties.length > 0) {
-                    setActivePopup('properties');
-                } else if (vendors.length > 0) {
-                    setActivePopup('stores');
-                } else {
-                    setActivePopup('products'); // Default to products if no specific results
-                }
+                const routePath = isGroceryRelated ? '/b2b/grocery' : '/b2b/catalog';
+                navigateWithAuth(`${routePath}?search=${encodeURIComponent(searchTerm)}`);
+                return;
             }
         } catch (e) {
-            console.error("Error fetching popup data", e);
-            setPopupProducts([]);
-            setPopupVendors([]);
-            setPopupProperties([]);
-            setActivePopup('products');
+            console.error("Error redirecting search", e);
+            navigateWithAuth(`/b2b/catalog?search=${encodeURIComponent(searchTerm)}`);
         } finally {
             setIsSearching(false);
             setShowSuggestions(false);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiSearch, FiEdit, FiTrash2, FiPlus, FiPackage } from "react-icons/fi";
+import { FiSearch, FiEdit, FiTrash2, FiPlus, FiPackage, FiCheck } from "react-icons/fi";
 import { motion } from "framer-motion";
 import DataTable from "../../../Admin/components/DataTable";
 import Badge from "../../../../shared/components/Badge";
@@ -17,6 +17,41 @@ const ManageProducts = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [products, setProducts] = useState([]);
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null });
+    const [editingStock, setEditingStock] = useState({});
+    const [updatingStockId, setUpdatingStockId] = useState(null);
+
+    const handleUpdateStock = async (productId, newQty, formType) => {
+        if (newQty === '') return;
+        setUpdatingStockId(productId);
+        try {
+            if (formType === 'grocery') {
+                await api.put(`/grocery/vendor/products/${productId}`, {
+                    stockQuantity: Number(newQty)
+                });
+            } else {
+                await api.put(`/b2b-vendor/products/${productId}`, {
+                    stockQuantity: Number(newQty),
+                    availability: Number(newQty) > 0 ? "In Stock" : "Out of Stock"
+                });
+            }
+            toast.success("Stock quantity updated");
+            
+            // Clear editing state for this product
+            setEditingStock(prev => {
+                const copy = { ...prev };
+                delete copy[productId];
+                return copy;
+            });
+
+            // Refresh product lists
+            fetchProducts();
+        } catch (error) {
+            console.error('Error updating stock:', error);
+            toast.error('Failed to update stock');
+        } finally {
+            setUpdatingStockId(null);
+        }
+    };
 
     // Fetch products from API after checking if a shop exists
     useEffect(() => {
@@ -58,10 +93,21 @@ const ManageProducts = () => {
                     const categoryAttr = product.attributes?.find(attr => attr.name === 'category');
                     const category = product.category || categoryAttr?.value || 'N/A';
 
+                    let productImg = product.image;
+                    if (!productImg && Array.isArray(product.images) && product.images.length > 0) {
+                        productImg = product.images[0];
+                    }
+                    if (!productImg && Array.isArray(product.variants)) {
+                        const firstVariantWithImg = product.variants.find(v => v.imageUrl || (Array.isArray(v.images) && v.images.length > 0));
+                        if (firstVariantWithImg) {
+                            productImg = firstVariantWithImg.imageUrl || firstVariantWithImg.images[0];
+                        }
+                    }
+
                     return {
                         _id: product._id,
                         name: product.name,
-                        image: product.image,
+                        image: productImg,
                         price: product.price,
                         moq: product.minimumOrderQuantity || 1,
                         unit: product.unit || 'Pcs',
@@ -151,12 +197,45 @@ const ManageProducts = () => {
         { key: "category", label: "Category", sortable: true },
         { key: "price", label: "Exp. Price", sortable: true, render: (v) => `₹${v}` },
         { key: "moq", label: "Min. Order (MOQ)", sortable: true, render: (v, row) => `${v} ${row.unit}` },
-        { key: "stockQuantity", label: "Stock", sortable: true, render: (v, row) => {
+        { key: "stockQuantity", label: "Stock Qty", sortable: true, render: (v, row) => {
             const stockQty = row.stockQuantity ?? 0;
+            const currentVal = editingStock[row._id] !== undefined ? editingStock[row._id] : stockQty;
             return (
-                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${stockQty === 0 ? 'bg-red-100 text-red-700' : stockQty <= 10 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
-                    {stockQty === 0 ? 'Out of Stock' : stockQty <= 10 ? `Low Stock (${stockQty})` : `In Stock (${stockQty})`}
-                </span>
+                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <input
+                        type="number"
+                        value={currentVal}
+                        onChange={(e) => {
+                            const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
+                            setEditingStock(prev => ({ ...prev, [row._id]: val }));
+                        }}
+                        onBlur={() => {
+                            if (currentVal !== '' && currentVal !== stockQty) {
+                                handleUpdateStock(row._id, currentVal, row.formType);
+                            }
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && currentVal !== '' && currentVal !== stockQty) {
+                                handleUpdateStock(row._id, currentVal, row.formType);
+                            }
+                        }}
+                        className="w-16 px-1.5 py-0.5 text-center font-extrabold text-slate-800 border border-gray-200 rounded-lg outline-none focus:border-primary-500 transition-all bg-gray-50 focus:bg-white"
+                    />
+                    {editingStock[row._id] !== undefined && editingStock[row._id] !== stockQty && (
+                        <button
+                            onClick={() => handleUpdateStock(row._id, currentVal, row.formType)}
+                            disabled={updatingStockId === row._id || currentVal === ''}
+                            className="p-1 text-green-650 hover:bg-green-50 rounded-md transition-colors shrink-0"
+                            title="Save Stock"
+                        >
+                            {updatingStockId === row._id ? (
+                                <div className="w-3 h-3 border-2 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+                            ) : (
+                                <FiCheck size={12} className="stroke-[3]" />
+                            )}
+                        </button>
+                    )}
+                </div>
             );
         }},
         { key: "visibility", label: "Status", render: statusCell },

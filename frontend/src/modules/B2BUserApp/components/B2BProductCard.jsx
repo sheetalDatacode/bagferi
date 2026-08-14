@@ -40,8 +40,16 @@ const B2BProductCard = ({ product, viewMode = 'grid', trackContactClick, itemTyp
             ...(Array.isArray(product.images) ? product.images : [])
         ].filter(Boolean);
         if (allImages.length === 0 && Array.isArray(product.variants)) {
-            const variantImages = product.variants.map(v => v.imageUrl).filter(Boolean);
-            allImages = [...new Set(variantImages)];
+            const variantImages = [];
+            product.variants.forEach(v => {
+                if (v.imageUrl) variantImages.push(v.imageUrl);
+                if (Array.isArray(v.images)) {
+                    v.images.forEach(img => {
+                        if (img) variantImages.push(img);
+                    });
+                }
+            });
+            allImages = [...new Set(variantImages)].filter(Boolean);
         }
     }
 

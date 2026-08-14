@@ -105,6 +105,12 @@ const OrderBillModal = ({ isOpen, onClose, order }) => {
                                 <span>Subtotal</span>
                                 <span>₹{formatPrice(order.totalAmount)}</span>
                             </div>
+                            {order.paymentMethod === 'COD' && order.convenienceFee > 0 && (
+                                <div className="flex justify-between items-center text-sm font-bold text-gray-600">
+                                    <span>COD Charge</span>
+                                    <span>₹{formatPrice(order.convenienceFee)}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between items-center text-sm font-bold text-gray-600">
                                 <span>Advance Paid</span>
                                 <span className="text-green-600">- ₹{formatPrice(order.advancePayment || 0)}</span>
@@ -112,7 +118,7 @@ const OrderBillModal = ({ isOpen, onClose, order }) => {
                             <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
                                 <span className="text-base font-black text-gray-900">Balance Due</span>
                                 <span className="text-lg font-black text-red-600">
-                                    ₹{formatPrice(order.remainingBalance || (order.totalAmount - (order.advancePayment || 0)))}
+                                    ₹{formatPrice(order.remainingBalance !== undefined ? order.remainingBalance : (order.totalAmount - (order.advancePayment || 0)))}
                                 </span>
                             </div>
                             

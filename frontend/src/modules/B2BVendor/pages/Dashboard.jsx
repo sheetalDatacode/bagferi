@@ -288,7 +288,7 @@ const B2BVendorDashboard = () => {
                         </div>
                         <div className="text-right space-y-1">
                             <div className="text-xs text-slate-500 font-medium">Advance: <span className="font-black text-slate-905 text-slate-900">₹{b2bSettings?.fashionAdvancePaymentAmount ?? 200}</span></div>
-                            <div className="text-xs text-slate-500 font-medium">Commission: <span className="font-black text-indigo-600">{b2bSettings?.fashionPlatformCharge ?? 0}%</span></div>
+                            <div className="text-xs text-slate-500 font-medium">Commission: <span className="font-black text-indigo-600">₹{b2bSettings?.fashionPlatformCharge ?? 0}</span></div>
                         </div>
                     </div>
 
@@ -303,7 +303,7 @@ const B2BVendorDashboard = () => {
                         </div>
                         <div className="text-right space-y-1">
                             <div className="text-xs text-slate-500 font-medium">Advance: <span className="font-black text-slate-905 text-slate-900">₹{b2bSettings?.groceryAdvancePaymentAmount ?? 20}</span></div>
-                            <div className="text-xs text-slate-500 font-medium">Commission: <span className="font-black text-emerald-600">{b2bSettings?.groceryPlatformCharge ?? 0}%</span></div>
+                            <div className="text-xs text-slate-500 font-medium">Commission: <span className="font-black text-emerald-600">₹{b2bSettings?.groceryPlatformCharge ?? 0}</span></div>
                         </div>
                     </div>
                 </div>

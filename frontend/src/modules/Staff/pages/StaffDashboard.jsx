@@ -145,7 +145,7 @@ export default function StaffDashboard() {
                                         </p>
                                     </td>
                                     <td style={{ padding: '1rem', verticalAlign: 'middle', fontWeight: '800', color: '#667eea', fontSize: '1rem' }}>
-                                        ₹{order.remainingBalance !== undefined ? order.remainingBalance.toLocaleString('en-IN') : (order.totalAmount - (order.advancePayment || 0)).toLocaleString('en-IN')}
+                                        ₹{(order.remainingBalance !== undefined ? order.remainingBalance : (order.totalAmount + (order.paymentMethod === 'COD' ? (order.convenienceFee || 0) : 0) - (order.advancePayment || 0))).toLocaleString('en-IN')}
                                     </td>
                                     <td style={{ padding: '1rem', verticalAlign: 'middle', textAlign: 'center' }}>
                                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
@@ -337,7 +337,7 @@ export default function StaffDashboard() {
                                             </p>
                                         </td>
                                         <td style={{ padding: '1rem', verticalAlign: 'middle', fontWeight: '800', color: '#38a169', fontSize: '1rem' }}>
-                                            ₹{order.remainingBalance !== undefined ? order.remainingBalance.toLocaleString('en-IN') : (order.totalAmount - (order.advancePayment || 0)).toLocaleString('en-IN')}
+                                            ₹{(order.remainingBalance !== undefined ? order.remainingBalance : (order.totalAmount + (order.paymentMethod === 'COD' ? (order.convenienceFee || 0) : 0) - (order.advancePayment || 0))).toLocaleString('en-IN')}
                                         </td>
                                         <td style={{ padding: '1rem', verticalAlign: 'middle', textAlign: 'center', color: '#38a169', fontWeight: '750', fontSize: '0.875rem' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center' }}>
@@ -384,7 +384,7 @@ export default function StaffDashboard() {
                                 <div style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                                     <span style={{ fontWeight: '600', color: '#4a5568' }}>Collect from customer:</span>
                                     <span style={{ fontWeight: '800', fontSize: '1.25rem', color: '#667eea' }}>
-                                        ₹{selectedOrder.remainingBalance !== undefined ? selectedOrder.remainingBalance.toLocaleString('en-IN') : (selectedOrder.totalAmount - (selectedOrder.advancePayment || 0)).toLocaleString('en-IN')}
+                                        ₹{(selectedOrder.remainingBalance !== undefined ? selectedOrder.remainingBalance : (selectedOrder.totalAmount + (selectedOrder.paymentMethod === 'COD' ? (selectedOrder.convenienceFee || 0) : 0) - (selectedOrder.advancePayment || 0))).toLocaleString('en-IN')}
                                     </span>
                                 </div>
                             )}

@@ -303,10 +303,6 @@ const B2BCart = () => {
                                         <span className="text-gray-900 font-bold">₹{subtotal.toLocaleString('en-IN')}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm text-gray-600 font-semibold">
-                                        <span>Estimated Tax (5%)</span>
-                                        <span className="text-gray-900 font-bold">₹{tax.toLocaleString('en-IN')}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-sm text-gray-600 font-semibold">
                                         <span className="flex items-center gap-1"><FiTruck /> Delivery</span>
                                         <span className={deliveryFee === 0 ? "text-green-600 font-bold" : "text-gray-900 font-bold"}>
                                             {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee.toLocaleString('en-IN')}`}

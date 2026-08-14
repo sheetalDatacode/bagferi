@@ -15,7 +15,7 @@ const router = express.Router();
 router.get('/', getBrands);
 
 // Admin only routes for managing brands
-router.post('/', authenticate, authorize('admin', 'superadmin'), upload.single('logo'), createBrand);
+router.post('/', authenticate, authorize('admin', 'superadmin', 'vendor'), upload.single('logo'), createBrand);
 router.put('/:id', authenticate, authorize('admin', 'superadmin'), upload.single('logo'), updateBrand);
 router.delete('/:id', authenticate, authorize('admin', 'superadmin'), deleteBrand);
 
