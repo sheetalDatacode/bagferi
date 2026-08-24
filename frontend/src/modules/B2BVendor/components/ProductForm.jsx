@@ -31,16 +31,14 @@ const groupVariantsForUI = (flatVariants) => {
                 sizesList.push(v.size);
                 existing.size = sizesList.join(", ");
             }
-            if (existing.images.length === 0) {
-                if (v.images && Array.isArray(v.images)) {
-                    v.images.forEach(img => {
-                        if (img && !existing.images.includes(img)) {
-                            existing.images.push(img);
-                        }
-                    });
-                } else if (v.imageUrl && !existing.images.includes(v.imageUrl)) {
-                    existing.images.push(v.imageUrl);
-                }
+            if (v.images && Array.isArray(v.images)) {
+                v.images.forEach(img => {
+                    if (img && !existing.images.includes(img)) {
+                        existing.images.push(img);
+                    }
+                });
+            } else if (v.imageUrl && !existing.images.includes(v.imageUrl)) {
+                existing.images.push(v.imageUrl);
             }
         } else {
             grouped.push({
@@ -1805,134 +1803,110 @@ const B2BVendorProductForm = ({ initialData, isEdit, productId }) => {
                 {/* Right Section: Pricing & Images (4 cols) */}
                 <div className="lg:col-span-4 space-y-6">
                     {/* Media Gallery */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                        <div className="flex items-center justify-between mb-5">
-                            <div className="flex items-center gap-2">
-                                <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg text-sm">
-                                    <FiImage />
+                    {(!formData.variants || formData.variants.length === 0) && (
+                        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                            <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg text-sm">
+                                        <FiImage />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-800">Media Gallery</h3>
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-800">Media Gallery</h3>
                             </div>
-                        </div>
 
-                        {(!formData.variants || formData.variants.length === 0) ? (
-                            <>
-                                <div className="flex gap-3 mb-4">
-                                    <div className="grid grid-cols-1 flex-1 gap-4">
-                                        {formData.images.map((img, index) => (
-                                            <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-gray-100 group shadow-sm">
-                                                <img src={img} alt="" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeImage(index)}
-                                                        className="p-2.5 bg-red-500 text-white rounded-full hover:scale-110 transition-transform shadow-md"
-                                                    >
-                                                        <FiTrash2 size={18} />
-                                                    </button>
-                                                </div>
-                                                {index === 0 && (
-                                                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#4f46e5] text-[8px] text-white font-bold uppercase rounded-md shadow-sm">
-                                                        Cover
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-
-                                        {/* Action Buttons */}
-                                        <div className="flex gap-3 mt-2">
-                                            <div className="flex-1 relative">
-                                                <input
-                                                    id="gallery-upload"
-                                                    type="file"
-                                                    onChange={(e) => handleMultipleImageUpload(e, false)}
-                                                    className="hidden"
-                                                    multiple
-                                                    accept="image/png, image/jpeg, image/webp"
-                                                    disabled={isUploading}
-                                                />
+                            <div className="flex gap-3 mb-4">
+                                <div className="grid grid-cols-1 flex-1 gap-4">
+                                    {formData.images.map((img, index) => (
+                                        <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-gray-100 group shadow-sm">
+                                            <img src={img} alt="" className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <button
                                                     type="button"
-                                                    onClick={handleGalleryClick}
-                                                    disabled={isUploading}
-                                                    className="w-full flex flex-col items-center justify-center py-10 px-5 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-primary-50 hover:border-primary-200 cursor-pointer transition-all group relative overflow-hidden"
+                                                    onClick={() => removeImage(index)}
+                                                    className="p-2.5 bg-red-500 text-white rounded-full hover:scale-110 transition-transform shadow-md"
                                                 >
-                                                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-[#4f46e5] transition-all shadow-sm mb-1">
-                                                        {isUploading ? <div className="w-5 h-5 border-2 border-[#4f46e5] border-t-transparent rounded-full animate-spin"></div> : <FiPlus size={24} />}
-                                                    </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-[#4f46e5]">Gallery</span>
+                                                    <FiTrash2 size={18} />
                                                 </button>
                                             </div>
+                                            {index === 0 && (
+                                                <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#4f46e5] text-[8px] text-white font-bold uppercase rounded-md shadow-sm">
+                                                    Cover
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
 
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-3 mt-2">
+                                        <div className="flex-1 relative">
+                                            <input
+                                                id="gallery-upload"
+                                                type="file"
+                                                onChange={(e) => handleMultipleImageUpload(e, false)}
+                                                className="hidden"
+                                                multiple
+                                                accept="image/png, image/jpeg, image/webp"
+                                                disabled={isUploading}
+                                            />
                                             <button
                                                 type="button"
-                                                onClick={handleCameraClick}
+                                                onClick={handleGalleryClick}
                                                 disabled={isUploading}
-                                                className="flex-1 flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-all group relative overflow-hidden"
+                                                className="w-full flex flex-col items-center justify-center py-10 px-5 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-primary-50 hover:border-primary-200 cursor-pointer transition-all group relative overflow-hidden"
                                             >
-                                                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-600 transition-all shadow-sm mb-1">
-                                                    <FiCamera size={22} />
+                                                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-[#4f46e5] transition-all shadow-sm mb-1">
+                                                    {isUploading ? <div className="w-5 h-5 border-2 border-[#4f46e5] border-t-transparent rounded-full animate-spin"></div> : <FiPlus size={24} />}
                                                 </div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-blue-600">Camera</span>
-                                                <input
-                                                    ref={cameraInputRef}
-                                                    type="file"
-                                                    capture="environment"
-                                                    accept="image/*"
-                                                    onChange={(e) => handleMultipleImageUpload(e, true)}
-                                                    className="hidden"
-                                                    disabled={isUploading}
-                                                />
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-[#4f46e5]">Gallery</span>
                                             </button>
                                         </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleCameraClick}
+                                            disabled={isUploading}
+                                            className="flex-1 flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-gray-200 rounded-3xl hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-all group relative overflow-hidden"
+                                        >
+                                            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-600 transition-all shadow-sm mb-1">
+                                                <FiCamera size={22} />
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-blue-600">Camera</span>
+                                            <input
+                                                ref={cameraInputRef}
+                                                type="file"
+                                                capture="environment"
+                                                accept="image/*"
+                                                onChange={(e) => handleMultipleImageUpload(e, true)}
+                                                className="hidden"
+                                                disabled={isUploading}
+                                            />
+                                        </button>
                                     </div>
                                 </div>
-                                {errors.images && <p className="text-[10px] text-red-500 font-bold mt-2 ml-1">{errors.images}</p>}
+                            </div>
+                            {errors.images && <p className="text-[10px] text-red-500 font-bold mt-2 ml-1">{errors.images}</p>}
 
-                                <div className="mt-4 pt-4 border-t border-gray-100">
-                                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">YouTube Video Link (Optional)</label>
-                                    <input
-                                        type="url"
-                                        name="videoLink"
-                                        value={formData.videoLink || ""}
-                                        onChange={handleChange}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
-                                        placeholder="https://www.youtube.com/watch?v=..."
-                                    />
-                                    <p className="text-[10px] text-gray-400 font-medium mt-1 ml-1">If no image is added, this video will be shown instead. A Reel will also be automatically created.</p>
-                                </div>
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">YouTube Video Link (Optional)</label>
+                                <input
+                                    type="url"
+                                    name="videoLink"
+                                    value={formData.videoLink || ""}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
+                                    placeholder="https://www.youtube.com/watch?v=..."
+                                />
+                                <p className="text-[10px] text-gray-400 font-medium mt-1 ml-1">If no image is added, this video will be shown instead. A Reel will also be automatically created.</p>
+                            </div>
 
-                                <p className="text-[10px] text-gray-400 leading-relaxed font-medium mt-4">
-                                    {MAX_PHOTOS === 0 ? "No photos allowed on this plan." : `First image is cover. Max ${MAX_PHOTOS < 0 ? 'unlimited' : MAX_PHOTOS} photos.`} Max 300KB each.
-                                </p>
-                                <p className="text-[10px] text-[#4f46e5] font-black uppercase tracking-wider mt-1">
-                                    Note: Please upload square images (1:1 ratio) for better display.
-                                </p>
-                            </>
-                        ) : (
-                            <>
-                                <div className="mb-4">
-                                    <p className="text-xs text-amber-600 font-bold bg-amber-50 p-3 rounded-xl border border-amber-100">
-                                        Since you've added product variants, please upload images directly for each color variant in the "Product Variants" section above.
-                                    </p>
-                                    {errors.images && <p className="text-[10px] text-red-500 font-bold mt-2 ml-1">{errors.images}</p>}
-                                </div>
-
-                                <div className="mt-4 pt-4 border-t border-gray-100">
-                                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">YouTube Video Link (Optional)</label>
-                                    <input
-                                        type="url"
-                                        name="videoLink"
-                                        value={formData.videoLink || ""}
-                                        onChange={handleChange}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-gray-200 focus:border-primary-500 focus:bg-white rounded-xl transition-all outline-none"
-                                        placeholder="https://www.youtube.com/watch?v=..."
-                                    />
-                                    <p className="text-[10px] text-gray-400 font-medium mt-1 ml-1">Video will be displayed alongside your variant images. A Reel will also be automatically created.</p>
-                                </div>
-                            </>
-                        )}
-                    </div>
+                            <p className="text-[10px] text-gray-400 leading-relaxed font-medium mt-4">
+                                {MAX_PHOTOS === 0 ? "No photos allowed on this plan." : `First image is cover. Max ${MAX_PHOTOS < 0 ? 'unlimited' : MAX_PHOTOS} photos.`} Max 300KB each.
+                            </p>
+                            <p className="text-[10px] text-[#4f46e5] font-black uppercase tracking-wider mt-1">
+                                Note: Please upload square images (1:1 ratio) for better display.
+                            </p>
+                        </div>
+                    )}
 
                     {/* Pricing */}
                     {(!formData.variants || formData.variants.length === 0) && (
