@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
-    "build": "node node_modules/vite/bin/vite.js build",
+    "dev": "node init && vite --host",
+    "build": "node init && node node_modules/vite/bin/vite.js build",
     "add:vendor-products": "node scripts/addVendorProducts.js",
     "preview": "vite preview --host"
   },

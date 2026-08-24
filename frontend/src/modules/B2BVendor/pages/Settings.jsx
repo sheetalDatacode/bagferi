@@ -95,12 +95,12 @@ const B2BVendorSettings = () => {
         if (name.startsWith('address.')) {
             const addressField = name.split('.')[1];
             let finalValue = value;
-            
+
             // Fix state field spaces and invalid characters (allow only letters and spaces)
             if (addressField === 'state') {
                 finalValue = value.replace(/[^a-zA-Z\s]/g, '');
             }
-            
+
             setFormData(prev => ({
                 ...prev,
                 address: {
@@ -551,7 +551,7 @@ const B2BVendorSettings = () => {
                                 <p className="text-xs text-gray-500 mb-6">
                                     These are the current platform charges and advance payment settings configured by the administration.
                                 </p>
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Fashion Card */}
                                     <div className="bg-indigo-50/40 border border-indigo-100 rounded-2xl p-6 space-y-4">
@@ -621,7 +621,7 @@ const B2BVendorSettings = () => {
                                 </div>
                             </section>
                         </div>
-                    )}        )}
+                    )}
 
                     {activeTab === "profile" && (
                         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">
