@@ -5,14 +5,11 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   safelist: [
-    { pattern: /^bg-primary-(50|100|200|300|400|500|600|700|800|900|950)$/ },
-    { pattern: /^text-primary-(50|100|200|300|400|500|600|700|800|900|950)$/ },
-    { pattern: /^border-primary-(50|100|200|300|400|500|600|700|800|900|950)$/ },
-    { pattern: /^ring-primary-(50|100|200|300|400|500|600|700|800|900|950)$/ },
-    { pattern: /^shadow-primary-(50|100|200|300|400|500|600|700|800|900|950)$/ },
-    { pattern: /^hover:bg-primary-(50|100|200|300|400|500|600|700|800|900|950)$/ },
-    { pattern: /^focus:ring-primary-(50|100|200|300|400|500|600|700|800|900|950)$/ },
-    { pattern: /^focus:border-primary-(50|100|200|300|400|500|600|700|800|900|950)$/ },
+    { pattern: /^bg-primary-(50|100|200|300|400|500|600|700|800|900|950)$/, variants: ['hover', 'focus', 'active'] },
+    { pattern: /^text-primary-(50|100|200|300|400|500|600|700|800|900|950)$/, variants: ['hover', 'focus', 'active'] },
+    { pattern: /^border-primary-(50|100|200|300|400|500|600|700|800|900|950)$/, variants: ['hover', 'focus', 'active'] },
+    { pattern: /^ring-primary-(50|100|200|300|400|500|600|700|800|900|950)$/, variants: ['focus'] },
+    { pattern: /^shadow-primary-(50|100|200|300|400|500|600|700|800|900|950)$/, variants: ['hover', 'focus'] },
   ],
   theme: {
     extend: {
